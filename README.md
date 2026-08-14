@@ -71,7 +71,7 @@ implementation, written from scratch, serves the whole system.
 > mid-term report is explicitly a per-member contribution summary, and a viva may be called at any
 > stage on any part of the project.
 
----
+<!-- ---
 
 ## Workstreams
 
@@ -85,7 +85,7 @@ implementation, written from scratch, serves the whole system.
 Workstreams touch each other only through `include/oblivrec/`.
 `dpf.hpp` and `nonlinear.hpp` are frozen in week one — they are everyone's critical path.
 
----
+--- -->
 
 ## Staging
 
