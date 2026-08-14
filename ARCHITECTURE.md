@@ -1,59 +1,62 @@
 # ARCHITECTURE
 
-**System:** OblivRec — Private Top-*k* Recommendation over Secret-Shared Similarity Models
+**System:** OblivRec — Private Matrix Factorization with Private Delivery
 
-> **Purpose of this file.** This is the single source of truth for *how the system is built*.
-> Any code that contradicts this document is a bug in one of the two — resolve it by
-> amending this file first, then the code. Never the other way round. See
-> [RULES.md](RULES.md) for why this is enforced.
+> **Purpose of this file.** The single source of truth for *how the system is built*. Any code
+> that contradicts this document is a bug in one of the two — resolve it by amending this file
+> first, then the code. Never the other way round.
 >
-> **Status:** design frozen for Phase 2. Amendments require a PR that edits this file and
-> a note in the changelog at the bottom.
+> **Status:** rewritten 2026-08-15 after the instructor recommended [PIRSONA] and [NUDGE].
+> Amendments go in the Decisions Log (§11).
+
+**References**, both in [`references/`](references/):
+- **[PIRSONA]** Vadapalli, Bayatbabolghani, Henry. *You May Also Like… Privacy: Recommendation Systems Meet PIR.* PoPETs 2021(4):30–53.
+- **[NUDGE]** Henzinger, Dauterman, Corrigan-Gibbs, Boneh. *Nudge: A Private Recommendations Engine.* USENIX Security 2026.
 
 ---
 
 ## 1. System overview
 
+Three servers, run by independent parties, semi-honest, at most one compromised.
+
 ```
-                  ┌──────────────────────────────────────────────┐
-                  │  OFFLINE, IN THE CLEAR  (Python, one-time)   │
-                  │                                              │
-                  │  MovieLens ratings                           │
-                  │       │                                      │
-                  │       ▼                                      │
-                  │  item–item similarity  S_float ∈ R^{n×n}     │
-                  │       │  quantise, scale 2^f                 │
-                  │       ▼                                      │
-                  │  S ∈ Z_{2^ℓ}^{n×n}   +   metadata M          │
-                  └───────────────┬──────────────────────────────┘
-                                  │  replicated, identical, public
-                  ┌───────────────┴───────────────┐
-                  ▼                               ▼
-        ┌───────────────────┐          ┌───────────────────┐
-        │    SERVER 0       │          │    SERVER 1       │
-        │    holds S, M     │          │    holds S, M     │
-        └─────────┬─────────┘          └─────────┬─────────┘
-                  │      assumed NON-COLLUDING   │
-                  │                              │
-    ── Stage A ───┤  m DPF key shares  ──────────┤   (1 round)
-                  │  ◄── ⟨score⟩₀          ⟨score⟩₁ ──►
-                  │                              │
-    ── Stage B ───┤   oblivious top-k over ⟨score⟩   (interactive)
-                  │  ◄── ⟨T⟩₀              ⟨T⟩₁ ──►
-                  │                              │
-    ── Stage C ───┤  k DPF key shares over M ────┤   (1 round)
-                  │  ◄── ⟨M[T]⟩₀        ⟨M[T]⟩₁ ──►
-                  └──────────────┬───────────────┘
-                                 ▼
-                          ┌─────────────┐
-                          │   CLIENT    │  holds private profile P
-                          │  reconstructs T and M[T]
-                          └─────────────┘
+ ┌── TRAINING (periodic, all users) ────────────────────────────────────────┐
+ │                                                                          │
+ │  users ──⟦u⁽ⁱ⁾⟧──►  P₀   P₁   P₂     2-of-3 replicated shares of U       │
+ │                      │    │    │                                         │
+ │                      └────┴────┘                                         │
+ │              power iteration, ℓ rounds × d components                    │
+ │                           │                                              │
+ │        matvec: FREE (non-interactive under replicated sharing)           │
+ │        Trunc_t + ApproxNormalize: the ONLY interactive cost, via FSS     │
+ │                           │                                              │
+ │                           ▼                                              │
+ │            B ∈ R^{d×n}  IN THE CLEAR   (item embeddings)                 │
+ │            ⟦A⟧ ∈ R^{m×d}  secret-shared (user embeddings)                │
+ └──────────────────────────────────────────────────────────────────────────┘
+                             │
+ ┌── SERVING + DELIVERY (per user, online) ─────────────────────────────────┐
+ │                                                                          │
+ │   ⟦scores⟧ = ⟦a⁽ⁱ⁾⟧ · B      ──►  mask seen items  ──►  oblivious top-k  │
+ │                                                              │           │
+ │                                              ⟦T⟧ shares  ────┘           │
+ │                                                    │                     │
+ │                                                    ▼                     │
+ │                                            user reconstructs T           │
+ │                                                    │                     │
+ │            ◄── DPF-PIR fetch of the CONTENT D[T] ──┘   ◄── OUR ADDITION  │
+ │                                                                          │
+ │      servers harvest next round's ⟦consumption⟧ from these queries       │
+ │      ([PIRSONA]'s loop) ──────────────────────────────────► back to top  │
+ └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**The whole design in one sentence:** the client's profile is encoded as Distributed Point
-Function keys, so each server sees a pseudorandom key that reveals nothing, yet the two
-servers' outputs *add up* to exactly the scores the client wanted.
+**The design in three sentences.** Under 2-of-3 replicated secret sharing, multiplying a shared
+matrix by a shared vector is *non-interactive* — so if you express your algorithm as a sequence of
+matrix–vector products separated by a few cheap non-linear steps, almost all of it is free. Power
+iteration has exactly that shape, which is why [NUDGE] uses it instead of gradient descent. We
+take that training core and bolt on the PIR delivery layer that [NUDGE] explicitly leaves to
+"other means", closing the loop the way [PIRSONA] does.
 
 ---
 
@@ -61,290 +64,300 @@ servers' outputs *add up* to exactly the scores the client wanted.
 
 | Symbol | Meaning | Default |
 |---|---|---|
-| `n` | number of items in the catalogue | 3,706 (ML-1M) |
-| `m` | number of items in the client's profile | 10–200 |
-| `m̄` | **padded** profile size, a public constant | 256 |
-| `k` | number of recommendations returned | 10 |
-| `ℓ` | secret-sharing ring width, shares live in `Z_{2^ℓ}` | 64 |
-| `f` | fixed-point fractional bits | 20 |
-| `λ` | DPF security parameter / PRG block width | 128 |
-| `⟨x⟩_b` | server `b`'s additive share of `x`, so `⟨x⟩₀ + ⟨x⟩₁ = x mod 2^ℓ` | |
+| `m` | users | 6,040 (ML-1M) |
+| `n` | items | 3,706 (ML-1M) |
+| `d` | embedding dimension | 16 (dev) → 32 (target); [NUDGE] uses 20 |
+| `ℓ` | power-iteration inner rounds | 10 |
+| `b` | ring bit-width, `R = Z_{2^b}` | **64** dev, **128** target — see D9.1 |
+| `t` | fixed-point fractional bits | 20 (as [NUDGE]) |
+| `λ` | PRF seed / DPF security parameter | 128 |
+| `k` | recommendations returned | 10 |
+| `⟦x⟧` | 2-of-3 replicated sharing: `(x₀,x₁),(x₁,x₂),(x₂,x₀)` with `x₀+x₁+x₂ = x` | |
 
-**Why `Z_{2^64}` and not a prime field.** Native machine arithmetic, free modular reduction,
-and it is what Grotto and Duoram target. Truncation after fixed-point multiplication is the
-one place this costs us; see §4.3.
-
-**Why `m̄` is public and padded.** Profile size is metadata that a real deployment leaks
-anyway through timing, so we make it explicit and constant rather than pretending otherwise.
-Clients with `m < m̄` pad with DPF keys for point functions with value `0`. This is recorded
-in the leakage profile (§7).
+**Ring width is a live research question, not a settled constant.** [NUDGE] uses `b = 128`
+specifically because Netflix-scale `m` makes the accumulated sums overflow at 64 bits. At
+MovieLens scale `b = 64` may be sufficient and is roughly 2× cheaper in communication. **Find
+the crossover empirically** (D9.1) rather than assuming. `b = 128` uses `__int128`; the ring
+type is a template parameter from day one so this study costs nothing later.
 
 ---
 
-## 3. Offline pipeline (Python, `model/`)
+## 3. The 3PC substrate (W2, `src/mpc/`)
 
-Runs once. Produces artefacts that both servers load identically.
+### 3.1 2-out-of-3 replicated secret sharing
 
-| Step | Output | Notes |
-|---|---|---|
-| 1. Load ratings | `R ∈ R^{u×n}` sparse | MovieLens, downloaded by `scripts/fetch_data.py`. |
-| 2. Mean-centre per user | `R̃` | Removes user rating bias. |
-| 3. Item–item similarity | `S_float = shrunk cosine(R̃ᵀ R̃)` | Shrinkage `λ_s = 100` against low-support pairs. |
-| 4. Sparsify (optional) | top-`s` neighbours per row | Only for the DORAM variant (D7.3); the dense matrix is the default. |
-| 5. Quantise | `S = round(S_float · 2^f) mod 2^ℓ` | Signed two's-complement in the ring. |
-| 6. Metadata table | `M ∈ ({0,1}^L)^n`, `L = 256` bytes | Fixed-width records, zero-padded. Fixed width is a *security* requirement, not a convenience. |
-| 7. Emit | `model/out/S.bin`, `model/out/M.bin`, `model/out/params.json` | Byte-identical on both servers; verified by SHA-256 at startup. |
+`x ∈ R` is split as `x₀ + x₁ + x₂ = x`; party `i` holds the pair `(x_i, x_{i+1})`. Any two parties
+reconstruct; any one learns nothing.
 
-**Quality gate.** Step 5 must not degrade recommendations. `model/eval_quality.py` reports
-Recall@k and NDCG@k for `S_float` vs `S` and fails the build if Recall@10 drops by more than
-0.5% absolute. If we cannot hold that, `f` goes up and we re-check overflow headroom (§4.3).
+**"3PC with PRF" model.** Each *pair* of parties holds a shared PRF key, so they can generate
+correlated randomness — in particular zero-shares `(r_i − r_{i+1})` — with **no communication**.
+This is what makes the multiplication below cheap. Set up once at startup.
 
----
+### 3.2 Why matrix–vector is free
 
-## 4. Stage A — private scoring
+For a degree-two function, each party can compute a share of the product *locally* from its two
+shares, then re-randomize with a PRF zero-share and send **one** ring element to one neighbour.
+The consequence stated in [NUDGE] Thm 4.2: for a matrix–vector program, **communication scales
+only with the largest intermediate vector, not with the size of the input matrices.** Multiplying
+an `n×n` shared matrix by a shared `n`-vector costs `O(n)` communication, not `O(n²)`.
 
-### 4.1 The insight
+This is the single most important fact in the system. Everything else in the design follows from
+arranging the computation so that the expensive objects stay on the non-interactive side.
 
-The client wants `score = Σ_{(i,r) ∈ P} r · S[i, ·]`. This is a **weighted multi-point read**
-of `S`'s rows. A DPF gives us exactly that: a pair of short keys whose full-domain evaluations
-differ only at one hidden index.
+### 3.3 Matrix-vector program abstraction (`include/oblivrec/mvp.hpp`)
 
-### 4.2 The (2,2)-DPF (`src/dpf/`)
+Per [NUDGE] Def 4.1, a program is `P(v, M₁…M_ℓ) := f_ℓ(M_ℓ · … · f₂(M₂ · f₁(M₁·v)))`.
+We implement this abstraction directly, because it cleanly separates the free part from the
+interactive part and makes the round count obvious by inspection:
 
-We implement Boyle–Gilboa–Ishai (EUROCRYPT 2015, CCS 2016), the standard GGM-tree construction.
-
-- **Domain:** `[0, n)`, padded to `2^d` with `d = ⌈log₂ n⌉`.
-- **PRG:** AES-128 in fixed-key Davies–Meyer mode (`π(x) ⊕ x`) using AES-NI, expanding one
-  128-bit seed to two children plus two control bits. One `AESENC` chain per node.
-- **Key size:** `d · (λ + 2) + ℓ` bits. For `n = 4096, ℓ = 64`: **≈ 260 bytes**. Compare to
-  the `n · ℓ / 8 = 32 KB` a naive one-hot vector would cost. This factor is the entire reason
-  the system is practical, and it is the headline number for the W1 lit-survey slot.
-- **Output group:** `Z_{2^64}`, so the payload correction word carries the client's rating `r`
-  directly. The client does *not* send `r` separately — it is folded into the DPF payload,
-  so a server cannot even learn the rating distribution.
-- **API** (`include/oblivrec/dpf.hpp`):
-  ```cpp
-  struct DpfKey { uint8_t party; Block seed; std::vector<CorrectionWord> cw; uint64_t cw_out; };
-
-  std::pair<DpfKey, DpfKey> Gen(uint32_t alpha, uint64_t beta, uint32_t domain_bits);
-  uint64_t                  Eval(const DpfKey&, uint32_t x);
-  void                      EvalFull(const DpfKey&, std::span<uint64_t> out);  // O(2^d), one pass
-  ```
-- **Invariant, tested:** `EvalFull(k0)[x] + EvalFull(k1)[x] == (x == alpha ? beta : 0)` in `Z_{2^64}`,
-  for every `x`, for random `(alpha, beta)`. `tests/test_dpf.cpp` checks this exhaustively for
-  `d ≤ 16` and by sampling above.
-
-**Non-negotiable:** this is written by us. Not `libdpf`, not lifted from Duoram. See
-[RULES.md](RULES.md) R3.
-
-### 4.3 Server-side aggregation
-
-Client sends `m̄` key pairs (one key of each pair to each server). Server `b` computes:
-
-```
-⟨score⟩_b [j]  =  Σ_{t=0}^{m̄-1}  Σ_{i=0}^{n-1}  EvalFull(key_t^b)[i] · S[i][j]      (mod 2^ℓ)
-```
-
-Naively `O(m̄ · n²)`. Two optimisations, both mandatory:
-
-1. **Fuse the sum over `t` first.** Compute `w_b = Σ_t EvalFull(key_t^b) ∈ Z_{2^ℓ}^n` — cost
-   `O(m̄ · n)` — then a single vector–matrix product `w_b · S`, cost `O(n²)`. Total
-   `O(m̄·n + n²)` instead of `O(m̄·n²)`. This is the difference between minutes and milliseconds.
-2. **SIMD the matvec.** `n²` 64-bit multiply-accumulates, AVX2, row-major, cache-blocked.
-   For `n = 4096` that is 16.8M MACs ≈ 5 ms single-threaded.
-
-**Fixed-point truncation.** `w · S` produces a `2f`-scaled result. We truncate by `f` bits.
-Because both servers hold shares, local truncation introduces the standard 1-bit error with
-probability `2^{-(ℓ - 2f - log n)}`. With `ℓ=64, f=20, n=2^16` the headroom is 8 bits — safe,
-but **`model/eval_quality.py` must confirm empirically that truncation error does not change
-the top-*k***, not merely argue it. Document the measured mismatch rate.
-
-**Round complexity: 1.** Client → servers, servers → client. This matters more than bandwidth
-on the WAN profiles, which is the point §8 exists to demonstrate.
-
-### 4.4 Seen-item masking
-
-`score[j]` must be `−∞` for `j` already in the profile. The client folds this in for free:
-it sends `m̄` *additional* DPF keys with payload `−2^{ℓ-2}` targeting its own profile indices,
-into a separate accumulator that is added to `score`. No extra round, no server knowledge.
-
----
-
-## 5. Stage B — oblivious top-*k*
-
-Input: `⟨score⟩ ∈ Z_{2^ℓ}^n` held as shares. Output: `⟨T⟩`, shares of `k` indices.
-
-Everything here must be **data-independent**: the same instruction sequence and the same
-network trace regardless of the values. This is the layer where the project's intellectual
-content lives.
-
-### 5.1 Comparison primitive (`src/topk/compare.hpp`)
-
-A single swappable interface, three implementations, benchmarked against each other:
-
-| ID | Implementation | Cost | Status |
-|---|---|---|---|
-| `CMP_GC` | Garbled-circuit / GMW bit-decomposition comparison | `O(ℓ)` rounds or `O(ℓ)` AND gates | Baseline. Ship first. |
-| `CMP_DPF` | Grotto-style (2,2)-DPF comparison over `Z_{2^n}` | 1 round, small keys | D7.2. The "speaks the course's language" version. |
-| `CMP_PLAIN` | Plaintext, no privacy | free | Correctness oracle in tests only. |
-
-The interface is fixed now so W3 can build selection while W1 builds `CMP_DPF`:
 ```cpp
-class Comparator {         // returns ⟨1⟩ if a > b else ⟨0⟩, as a shared bit
-  virtual SharedBit gt(SharedVal a, SharedVal b) = 0;
-  virtual void      flush() = 0;   // batches, for round efficiency
+template <typename Ring>
+class MatVecProgram {
+  void push(const SharedMatrix<Ring>&, std::unique_ptr<NonLinear<Ring>>);
+  SharedVec<Ring> run(const SharedVec<Ring>& v);   // rounds == number of NonLinear stages
 };
 ```
-**`flush()` exists because round count dominates on WAN.** All comparisons at one level of a
-sorting network are independent and must be issued as a single batch.
 
-### 5.2 Selection algorithms
+---
 
-| ID | Algorithm | Comparisons | When it wins |
+## 4. Non-linear protocols (W2, `src/mpc/nonlinear/`)
+
+The **entire** interactive cost of training lives here. Both are built on function secret sharing,
+which evaluates zero-test and integer-comparison gates on shared inputs in a **single round**
+([NUDGE] Table 3) — the same DPF machinery W1 builds for the PIR layer.
+
+### 4.1 `Trunc_t` — fixed-point truncation
+
+After every multiplication of two `t`-scaled fixed-point values the result is `2t`-scaled and must
+be shifted back by `t`. Naive local shifting corrupts shares in two places, and both are fixed
+cheaply:
+
+1. **Low-order carries** — corrected with an integer comparison ([NUDGE] cites Escudero et al.).
+2. **High-order carries** — prevented by one bit of slack, requiring input `v ∈ [−2^{b−2}, 2^{b−2}]`.
+
+Cost: **3 rounds, `2dt·(λ+4) + 10db` bits** for a `d`-vector. Note the leading term is `λt`, not
+`λb` — this is the [NUDGE] improvement (≈ `b/t` = 6× less communication than prior truncation at
+`b=128, t=20`). Implement the improved version; benchmark it against the naive `2b·(λ+6)` variant,
+because that comparison is a clean, self-contained result for the report.
+
+### 4.2 `ApproxNormalize` — L2 normalization
+
+Power iteration must renormalize `v` every step or it overflows. This needs shares of `1/‖v‖`,
+which is the awkward one: inverse square root under MPC.
+
+- `‖v‖²` is a degree-two function → **free**, one round.
+- Seed: the most-significant-non-zero-bit of `‖v‖²` gives `2^{−⌊log‖v‖²⌋/2} ≈ 1/‖v‖`. Obtained via
+  `b+1` **simultaneous** integer comparisons using FSS — one round, no extra leakage. This is the
+  trick that avoids the `O(b)`-round or giant-lookup-table approaches.
+- Refine: standard Newton–Raphson, a constant number of steps (each doubles the correct digits).
+
+Cost: `O(1)` rounds, `O(db·λ + λb² + b³)` bits.
+
+**Correctness discipline.** Both protocols are tested against a cleartext fixed-point oracle over
+randomised inputs, with the observed error bound recorded. An approximate protocol whose error is
+not measured is not finished.
+
+---
+
+## 5. Private matrix factorization (W3, `src/mf/`)
+
+`ApproxFactor(U) → (A, B)`, per [NUDGE] Fig. 4:
+
+```
+B := 0 ∈ R^{d×n}
+for i in 1..d:
+    v := random n-vector
+    v := Normalize(SetOrthogonal(v, B))
+    for j in 1..ℓ:
+        v := Mul(Uᵀ, Mul(U, v))       # free: two matrix-vector products
+        v := SetOrthogonal(v, B)      # Gram-Schmidt against already-found rows
+        v := Normalize(v)             # interactive
+    B[i] := v                         # ← REVEALED IN THE CLEAR
+A := U · Bᵀ
+```
+
+**The load-bearing design decision, and it is not ours.** Each converged row of `B` is *opened*
+before the next component is computed. That is what keeps `SetOrthogonal` cheap — it is a
+Gram–Schmidt step against *public* vectors — and it is why the whole thing is tractable. It also
+means the item embedding model is public to all three servers. See §9.3.
+
+**Deferred truncation.** Truncations are performed as "add-then-truncate" rather than
+"truncate-then-add", and where `b` has slack we truncate by `2t` after every *other* multiplication
+instead of `t` after each. Halves the truncation count; costs headroom. The safe schedule depends
+on `b`, so it is derived, asserted at startup, and re-checked by the `b=64` vs `b=128` study.
+
+**Convergence.** `ℓ = O(log(n/ε)/γ)` where `γ` is the eigenvalue gap. Do not assume a fixed `ℓ` is
+enough — measure the residual against the cleartext oracle and report `ℓ` vs quality.
+
+---
+
+## 6. Serving (W3, `src/serve/`)
+
+1. `⟦scores⟧ := ⟦a⁽ⁱ⁾⟧ · B`. `B` is public, so this is a **local** linear map — free.
+2. **Seen-item masking.** `scores[j] := −∞` for items `i` already rated. The user supplies this as
+   a shared mask so no server learns which items those are.
+3. **Oblivious top-*k*** over `⟦scores⟧ ∈ R^n`. Data-independent instruction and network trace, by
+   construction. Comparator is the same FSS integer comparison as §4.
+
+| ID | Selector | Comparisons | Role |
 |---|---|---|---|
-| `SEL_SORT` | Batcher bitonic sort, take first `k` | `O(n log²n)` | Never the best, but simple and obviously oblivious. The baseline. |
-| `SEL_TOURN` | Oblivious tournament / bitonic top-*k* | `O(n + k log n)` amortised | The default. Small `k` is our regime. |
-| `SEL_HEAP` | PRAC-style oblivious heap over a DORAM | `O(k log n)` after `O(n)` build | D7.3. Only pays off at large `n`; **the crossover graph exists to find out where.** |
+| `SEL_SORT` | Batcher bitonic, take first `k` | `O(n log²n)` | Baseline, obviously oblivious. Ship first. |
+| `SEL_TOURN` | Oblivious tournament | `O(n + k log n)` | Default. Small `k` is our regime. |
 
-`SEL_SORT` and `SEL_TOURN` both scan all `n` entries — they are *index-free*. `SEL_HEAP` keeps
-an index and therefore needs a DORAM. That contrast is the thesis of the whole report:
-*this algorithm is easy in the clear and hard under privacy, and the reason is data-dependent
-memory access.*
+All comparisons at one level of the network are independent and **must be issued as a single
+batch** — round count dominates on WAN. The `flush()` in the comparator interface exists for this.
 
-### 5.3 Oblivious swap
-
-Everything reduces to: given shared bit `c` and shared values `a, b`, produce
-`(c ? b : a, c ? a : b)` without branching. One multiplication triple per swap, precomputed
-offline. The offline/online split is measured separately (§8).
+Output: shares `⟦T⟧` of the top-*k* indices, sent to the user.
 
 ---
 
-## 6. Stage C — private delivery
+## 7. Private delivery (W1, `src/pir/`) — our addition over [NUDGE]
 
-The top-*k* indices come out of Stage B as shares `⟨T⟩`. Two options were considered:
+[NUDGE] stops at step 6. The user now holds `T` and must actually *fetch* the films — and a
+cleartext fetch discards everything the previous two stages bought.
 
-- **Rejected:** have the servers perform a shared-index DORAM read into `M`. Correct, but it
-  requires Duoram-style shared-input reads and buys nothing, because the client is allowed
-  to know `T`.
-- **Chosen:** servers send `⟨T⟩_b` to the client; the client reconstructs `T` locally, then
-  issues `k` fresh DPF-PIR reads against the metadata table `M`. Simple, one extra round,
-  and the servers still never see `T`.
+### 7.1 The (2,2)-DPF (`src/dpf/`, W1)
 
-Metadata records are **fixed width `L = 256` bytes**, zero-padded. Variable-width records would
-leak title length through the response size. This is the kind of detail that separates a
-system from a demo; it goes in the report.
+Boyle–Gilboa–Ishai GGM-tree construction, written by us.
+
+- **PRG:** AES-128 fixed-key Davies–Meyer (`π(x) ⊕ x`) with AES-NI; one seed → two children plus
+  two control bits.
+- **Key size:** `d·(λ+2) + b` bits. For `n = 4096`: **≈ 260 bytes**, against `32 KB` for a naive
+  one-hot query. That factor is why this is practical, and it is W1's headline number.
+- **API** (`include/oblivrec/dpf.hpp`):
+  ```cpp
+  std::pair<DpfKey,DpfKey> Gen(uint32_t alpha, Ring beta, uint32_t domain_bits);
+  Ring                     Eval(const DpfKey&, uint32_t x);
+  void                     EvalFull(const DpfKey&, std::span<Ring> out);   // O(2^d), one pass
+  ```
+- **Invariant, tested exhaustively for `d ≤ 16`:**
+  `EvalFull(k0)[x] − EvalFull(k1)[x] == (x == alpha ? beta : 0)`.
+
+**This same DPF is the FSS gate in §4.** One implementation, two consumers. Do not fork it.
+
+### 7.2 The read
+
+The user reconstructs `T` locally, then issues `k` DPF-PIR reads against the replicated catalogue
+`D`. Each server does one `EvalFull` and an inner product against `D`; the shares sum to `D[T_j]`.
+
+**Records are fixed width** (`L = 256 B` for metadata; content records padded to a fixed block
+count). Variable width leaks through response size — this is a *security* requirement, not a
+convenience, and it goes in the report.
+
+### 7.3 Closing the [PIRSONA] loop
+
+[PIRSONA]'s idea: the servers extract secret-shared consumption histories **directly from the
+incoming PIR queries** — the query already encodes which item, in shared form, so the ratings for
+the next training round come for free with no separate upload step. We implement this, and it is
+what makes the system a genuine cycle rather than two bolted-together halves.
 
 ---
 
-## 7. Threat model and leakage profile
+## 8. Repository layout
 
-> This section is a **graded deliverable** (D5), not documentation. Most groups will not write
-> one. It costs one page and it is the strongest available signal of maturity.
+```
+include/oblivrec/   public headers — the contract between workstreams
+src/
+  common/           ring arithmetic (Z_{2^64}, Z_{2^128}), fixed-point, serialisation, PRG
+  dpf/              W1  DPF: GGM tree, AES-NI, Gen/Eval/EvalFull      ── used by BOTH halves
+  mpc/              W2  replicated sharing, PRF setup, matvec program
+  mpc/nonlinear/    W2  Trunc_t, ApproxNormalize, FSS compare/zero-test
+  mf/               W3  power iteration, SetOrthogonal, ApproxFactor
+  serve/            W3  score computation, masking, oblivious top-k
+  pir/              W1  DPF-PIR read layer, catalogue, consumption harvesting
+  net/              framing, batching, flush()
+  apps/             server0/1/2, user client, demo CLI
+model/              W2/W3  cleartext oracle + quality evaluation (Python)
+bench/              W4  sweeps, netem, figures
+tests/              unit + end-to-end; cleartext oracles
+references/         the two instructor-recommended papers
+```
 
-### 7.1 Adversary classes
+**Interface discipline.** Workstreams touch each other only through `include/oblivrec/`. W3 must be
+able to build against stub non-linear protocols before W2 finishes them; W2 must be able to build
+against a stub FSS gate before W1 finishes the DPF. **Fix those two headers in week one** — they
+are the critical path for everyone.
+
+---
+
+## 9. Threat model and leakage profile
+
+> A **graded deliverable** (D7), not documentation. Most groups will not write one. It costs one
+> page and it is the strongest available signal of maturity.
+
+### 9.1 Adversary classes
 
 | Adversary | Capability | Our guarantee |
 |---|---|---|
-| **A1. Semi-honest server (one of two)** | Follows the protocol, reads everything it sees | **Full profile privacy.** DPF key pseudorandomness ⇒ the transcript is simulatable from `(n, m̄, k)` alone. This is the headline claim. |
-| **A2. Both servers colluding** | Pool transcripts | **No guarantee.** Shares reconstruct. This assumption is the price of DPF efficiency and we state it in bold, everywhere. Route A2 (single-server PIR baseline) exists precisely to price this assumption. |
-| **A3. Malicious client** | Sends malformed DPF keys | Correctness of *its own* output is lost (it only hurts itself); but a flood of invalid keys is a **DoS vector** on full-domain evaluation. Mitigation is a Sabre-style logarithmic audit — D7.4, stretch. Unmitigated in the base system, and we say so. |
-| **A4. Malicious server** | Deviates, e.g. supplies a poisoned `S` | **Broken, interestingly.** See §7.3. This is D7.1 and our novelty candidate. |
-| **A5. Network observer** | Sees ciphertext sizes and timing | Sees `m̄`, `k`, `n`, query count, query times. All are query-independent constants by construction — *except* query timing. |
+| **A1. One semi-honest server** | Follows the protocol, reads its own view | **Full user privacy**, up to the leakage in §9.2. The headline claim. Matches [NUDGE]'s model exactly. |
+| **A2. One semi-honest server + arbitrarily many malicious users** | Above, plus colluding users | Still safe for honest users' ratings. Model *quality* is not protected without D9.3 input validation. |
+| **A3. Two or more colluding servers** | Pool views | **No guarantee.** Replicated shares reconstruct. Stated in bold, in the abstract. |
+| **A4. Malicious server** | Deviates from the protocol | **Out of scope**, as in [NUDGE] §3.1. It can corrupt correctness and availability. |
+| **A5. Malicious user** | Malformed DPF keys | Corrupts only its own output; but a flood of invalid keys is a **DoS** on `EvalFull`. Mitigation is a Sabre-style logarithmic audit — D9.4, stretch. Unmitigated in the base system, and we say so. |
+| **A6. Network observer** | Sizes and timing | Sees the public parameters and message timing only; all sizes are input-independent by construction. |
 
-### 7.2 Leakage profile (semi-honest, non-colluding)
+### 9.2 Leakage profile
 
-**Provably hidden:** profile item IDs, profile ratings, actual profile size `m`, the score
-vector, the top-*k* indices, the retrieved metadata.
+**Hidden:** individual ratings; which items a user rated; the user embeddings `A`; the score
+vectors; the top-*k* indices `T`; which content records a user fetches.
 
-**Leaked, by design:** `n` (public catalogue size), `k` (public), `m̄` (public padding
-constant), the number of queries a client makes, the wall-clock time of each query, and the
-fact that a query occurred at all.
+**Leaked by design:** `m, n, d, ℓ, k, b, t`; **the item embedding matrix `B`, in the clear**; the
+*number* of non-zero entries in each user's rating vector (eliminable by requiring a constant
+number of ratings, at a utility cost — [NUDGE] §3.1); message timing and query counts.
 
-**Leaked, and we should be honest about it:** query *timing correlation*. If a client queries
-immediately after a public event, that correlation is outside the protocol's protection.
-We do not claim to fix this.
+**Leaked and worth being honest about:** query *timing correlation* with external events sits
+outside the protocol's protection. We do not claim to fix it.
 
-### 7.3 The interesting failure: leakage in the ideal functionality
+### 9.3 The analysis that only we can do
 
-`F_rec` (REQUIREMENTS §4.2) is defined over a similarity matrix `S` **supplied by the servers**.
-A malicious server can choose `S` adversarially. Construct `S` so that item `x`'s row
-recommends canary item `c`, and no other row does. Then:
+Neither reference analyses the composition, because neither implements both halves.
 
-> `c ∈ T` ⟺ the client's profile contains `x`.
+`B` is public to every server. It is a complete latent-factor model of the catalogue. Therefore
+**a single observed fetch is not a single bit — it is a projection onto a known basis**, and a
+handful of observed fetches pins down a user's taste vector `a⁽ⁱ⁾` to a small region. This is the
+quantitative argument for why the delivery layer must be private, and it is the strongest claim
+our report can make:
 
-The protocol leaks nothing — but the client *acts* on the recommendation, and that action
-(a click, a watch) is observable. **No amount of better cryptography fixes this, because the
-leakage is in the functionality, not in the protocol.** This is structurally the same point
-Asharov et al. make about genomic search and PICS makes about contact discovery, arrived at
-independently. It is a real recurring theme, not a contrived framing.
+> *Given public `B` and `j` observed fetches, reconstruct `â⁽ⁱ⁾` and measure
+> `cos(â⁽ⁱ⁾, a⁽ⁱ⁾)` as a function of `j`.*
 
-**Defence (D7.1):** publish a Merkle commitment to `S`, have clients verify a random subset of
-rows via a separate audit query, and bound the number of adversarial rows a server can plant
-before detection. Measure the audit cost. This is the strongest single contribution available
-to us.
+Cheap to run (it is a least-squares fit against a public matrix), it directly motivates our
+contribution, and it is exactly the kind of result that separates a system from a demo.
 
 ---
 
-## 8. Evaluation architecture (`bench/`)
+## 10. Evaluation architecture (W4, `bench/`)
 
 ```
-bench/
-  scripts/run_sweep.py       # drives the whole matrix, writes JSONL
-  scripts/netem.sh           # applies the four network profiles inside Docker
-  scripts/make_figures.py    # JSONL → every figure in the report
-  results/*.jsonl            # raw, committed, append-only
-  figures/*.pdf              # generated, gitignored
+bench/scripts/run_sweep.py     drives the matrix, writes JSONL
+bench/scripts/netem.sh         the four network profiles inside Docker
+bench/scripts/make_figures.py  JSONL → every figure in the report
+bench/results/*.jsonl          raw, committed, append-only
+bench/figures/                 generated, gitignored
 ```
 
-**Rule:** figures are never hand-edited and never produced outside `make figures`. Raw JSONL is
-committed so results survive a machine change; figures are not.
+Every record: `{git_sha, host, profile, m, n, d, ell, b, t, k, stage, phase, wall_ms, cpu_ms,
+bytes_sent, timestamp}`. `phase ∈ {setup, matvec, truncate, normalize, fss, topk, pir, net}` so the
+microbenchmark breakdown falls out for free.
 
-Every measurement records: `{git_sha, host, profile, n, m, k, backend, selector, comparator,
-phase, wall_ms, cpu_ms, bytes_up, bytes_down, timestamp}`. Phase is one of
-`{offline, stage_a, stage_b, stage_c}` so the microbenchmark breakdown falls out for free.
+**Figures are never hand-edited and never produced outside `make figures`.** Raw JSONL is committed
+so results survive a machine change; figures are not.
 
-**Network profiles** (`netem.sh`): `local` (no shaping), `lan` (1 ms, 1 Gbps),
-`wan_a` (30 ms, 100 Mbps), `wan_b` (100 ms, 10 Mbps). Every headline number is reported on
-`wan_a` as well as `local`, because the ranking of the backends is expected to change between
-them, and that change *is* the result.
+Network profiles: `local`, `lan` (1 ms / 1 Gbps), `wan_a` (30 ms / 100 Mbps), `wan_b`
+(100 ms / 10 Mbps). Every headline number is reported on `wan_a` as well as `local`, because the
+ranking of approaches is expected to change between them and **that change is the result**.
 
 ---
 
-## 9. Repository layout
-
-```
-include/oblivrec/     public headers, the API surface between workstreams
-src/
-  common/             ring arithmetic, fixed-point, serialisation, PRNG
-  dpf/                W1 — GGM tree, AES-NI PRG, Gen/Eval/EvalFull
-  pir/                W1 — two-server read layer, Stage A aggregation
-  topk/               W3 — comparators, selectors, oblivious swap
-  net/                framing, batching, the flush() machinery
-  apps/               client, server0, server1, demo CLI
-model/                W2 — Python offline pipeline + quality eval
-bench/                W4 — sweeps, netem, figures
-tests/                unit + end-to-end; CMP_PLAIN is the oracle
-docs/                 report sources, threat model, lit survey
-scripts/              fetch_data.py, dev setup
-third_party/          MP-SPDZ / SimplePIR pinned as submodules (baselines only)
-data/                 gitignored, downloaded
-```
-
-**Interface discipline.** Workstreams touch each other only through `include/oblivrec/`.
-W3 must be able to build against a stub `Comparator` before W1 finishes `CMP_DPF`. Header
-changes require a heads-up in the team channel — this is the main source of merge pain in a
-4-person, 12-week project.
-
----
-
-## 10. Decisions log
-
-Amendments go here with a date and a reason. Do not silently change the body of this file.
+## 11. Decisions log
 
 | Date | Decision | Reason |
 |---|---|---|
-| 2026-08-15 | Scope = private retrieval, not private training | Avoids direct competition with PIRSONA; avoids the MPC fixed-point time sink. REQUIREMENTS §3. |
-| 2026-08-15 | Two-server DPF model as headline; single-server PIR as baseline | DPFs are the spine of the course; the baseline prices the non-collusion assumption honestly. |
-| 2026-08-15 | `Z_{2^64}` ring, `f = 20` fixed-point bits | Native arithmetic; matches Grotto/Duoram. Headroom verified in §4.3. |
-| 2026-08-15 | Fixed-width 256-byte metadata records | Variable width leaks title length via response size. |
-| 2026-08-15 | Client reconstructs `T`, then re-queries for metadata | Simpler than shared-index DORAM reads and loses nothing, since the client may learn `T`. |
+| 2026-08-15 | ~~Scope = private retrieval, not private training~~ **REVERSED** | The instructor recommended [PIRSONA] and [NUDGE]; both are centrally about private training. |
+| 2026-08-15 | Architecture = [NUDGE]'s 3PC power-iteration training core + [PIRSONA]'s PIR delivery loop | Fills the gap each paper leaves: [NUDGE] delegates private fetching to "other means"; [PIRSONA]'s 4PC training core is superseded. Composing is defensible; beating either is not. |
+| 2026-08-15 | 3 servers, 2-of-3 replicated sharing, semi-honest honest-majority | Matches [NUDGE] exactly. One fewer non-colluding party than [PIRSONA]'s 4PC. |
+| 2026-08-15 | Power iteration, not gradient descent | Matrix–vector products are non-interactive under replicated sharing; only truncation and normalization cost rounds. This is [NUDGE]'s core insight. |
+| 2026-08-15 | Ring width `b` is a template parameter; `b=64` dev, `b=128` target | [NUDGE] needs 128 at Netflix scale. Whether 64 suffices at MovieLens scale is an open, cheap, publishable question (D9.1). |
+| 2026-08-15 | One DPF implementation serves both the FSS gates and the PIR layer | Same primitive, two consumers. Forking it would double the work and the bug surface. |
+| 2026-08-15 | Build order S1 (serving+delivery) → S2 (training) → S3 (composition) | S1 is lower-risk, demos early, and its DPF is a prerequisite for S2's non-linear gates. |
+| 2026-08-15 | Fixed-width records throughout | Variable width leaks through response size. |

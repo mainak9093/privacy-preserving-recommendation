@@ -10,9 +10,10 @@
 
 ---
 
-## W1 — Function-secret-sharing core
+## W1 — FSS core and private delivery
 
-*Owner: TBD*
+*Owner: Mainak Sarkar* — DPF (AES-NI GGM tree), FSS comparison/zero-test gates, DPF-PIR read layer,
+consumption harvesting.
 
 | Date | Hours | What was done | Artefact (commit / file / result) |
 |---|---|---|---|
@@ -20,9 +21,10 @@
 
 ---
 
-## W2 — Model and secure scoring
+## W2 — 3PC substrate and non-linear protocols
 
-*Owner: TBD*
+*Owner: Aditya Anand* — replicated 2-of-3 sharing, PRF setup, matrix-vector programs, `Trunc_t`,
+`ApproxNormalize`, the ring-width study.
 
 | Date | Hours | What was done | Artefact |
 |---|---|---|---|
@@ -30,9 +32,10 @@
 
 ---
 
-## W3 — Oblivious selection and delivery
+## W3 — Factorization and serving
 
-*Owner: TBD*
+*Owner: Shrasti Dwivedi* — power iteration / `ApproxFactor`, `SetOrthogonal`, score computation,
+seen-item masking, oblivious top-*k*, cleartext quality oracle.
 
 | Date | Hours | What was done | Artefact |
 |---|---|---|---|
@@ -42,7 +45,8 @@
 
 ## W4 — Evaluation and security analysis
 
-*Owner: TBD*
+*Owner: Anushka Gupta* — benchmark harness, `tc netem` profiles, baselines B1–B5, threat model,
+leakage profile, the public-`B` reconstruction analysis, reproducibility.
 
 | Date | Hours | What was done | Artefact |
 |---|---|---|---|
