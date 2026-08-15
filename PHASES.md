@@ -19,6 +19,11 @@ from Aug 25.
 staging **S1 (serving + delivery) → S2 (training) → S3 (composition)** and the fallback if S2
 stalls. Build in that order; S1 gives a demo early and its DPF is a prerequisite for S2 anyway.
 
+> **On ownership.** `T1`–`T4` are the four *survey tracks* (live now); `W1`–`W4` are the four
+> *implementation streams* (provisional, Phase 2 onward). **Neither is assigned to a person
+> yet** — that happens at the kickoff, and the implementation streams may not survive the
+> instructor meeting intact. Labels exist so the work can be discussed, not to allocate it.
+
 **Module timing works in our favour.** By Aug 31 the course will have covered Module 0 and most of
 Module 1 (PIR). Module 2 (MPC) and Module 3 (Private Memory Access) land during our core
 implementation window. The design depends on Modules 1–3 and **not** on Module 4 (ZKP), which is
@@ -28,19 +33,23 @@ taught too late to build on.
 
 ## Phase 0 — Mobilisation · Aug 15 → Aug 21
 
-| # | Task | Owner | Done when |
-|---|---|---|---|
-| 0.1 | ~~Register the group with TA Sonu Sharma~~ | Mainak | ✅ **done 2026-08-15** |
-| 0.2 | **Reply to the instructor and book the meeting he offered** ("We can have a detailed conversation next week if you like"). Take [REQUIREMENTS.md §11](REQUIREMENTS.md) — above all, confirm the composition framing | Mainak | Meeting scheduled |
-| 0.3 | Confirm the W1–W4 assignment in [MEMORY.md](MEMORY.md) §4 | All | Table agreed |
-| 0.4 | Everyone clones, C++17 + CMake + Python 3.11 building | All | `cmake --build build` on 4 machines |
-| 0.5 | **Everyone reads both reference papers end to end.** Not skimmed | All | Discussed at the first sync |
-| 0.6 | Weekly 45-min sync booked; shared channel agreed | Mainak | Invite out |
-| 0.7 | MovieLens-100K and 1M fetched | W3 | `data/` populated, checksums match |
-| 0.8 | **Freeze the two critical-path headers**: `dpf.hpp` (FSS gate) and `nonlinear.hpp`. Everyone else stubs against them | W1 + W2 | Headers merged to `main` |
-| 0.9 | MP-SPDZ compiling in Docker (de-risks baseline B4 early) | W4 | Tutorial runs |
+> **No code in this phase.** The project is in its survey phase; the implementation scaffold
+> has been parked under [`archive/scaffold-2026-08-15/`](archive/scaffold-2026-08-15/) and the
+> protocol design demoted to [`design/ARCHITECTURE-draft-v1.md`](design/ARCHITECTURE-draft-v1.md)
+> until the survey and the instructor meeting settle the architecture.
 
-**Exit criterion:** meeting booked, papers read, headers frozen, everyone builds.
+| # | Task | Done when |
+|---|---|---|
+| 0.1 | ~~Register the group with TA Sonu Sharma~~ | ✅ **done 2026-08-15** |
+| 0.2 | **Reply to the instructor and book the meeting he offered.** Take [REQUIREMENTS.md §11](REQUIREMENTS.md) — Q1 (composition framing) and Q2 (build on the Nudge artifact or reimplement) are the two that unblock everything | Meeting scheduled |
+| 0.3 | **Everyone reads [PIRSONA] and [NUDGE] end to end.** Not skimmed — the viva is individual | Discussed at the kickoff |
+| 0.4 | Assign the four survey tracks T1–T4 ([`report/README.md`](report/README.md)) | Agreed at kickoff |
+| 0.5 | Weekly 45-min sync booked; shared channel agreed | Invite out |
+| 0.6 | `report/` builds on everyone's machine — `latexmk -pdf survey.tex` | 4 machines, 4 PDFs |
+| 0.7 | MovieLens-100K and 1M fetched (`python scripts/fetch_data.py`) | `data/` populated, checksums match |
+
+**Exit criterion:** meeting booked, both base papers read by everyone, tracks assigned, the
+report skeleton building.
 
 ---
 
@@ -65,33 +74,38 @@ summaries — that is the most common failure mode. The arc writes itself from o
                      └─► "…and that is what we intend to build."
 ```
 
-| Slot | Member | Content | Core reading |
+| Slot | Track | Content | Core reading |
 |---|---|---|---|
-| 1 | **W1** | Problem, threat model, and FSS/DPFs as the enabling primitive. `O(log n)`-size keys. PIR as the delivery mechanism. | BGI *Function Secret Sharing* (EUROCRYPT'15); BGI *Improvements and Extensions* (CCS'16); Evans–Kolesnikov–Rosulek ch. 3 |
-| 2 | **W2** | Secret sharing and MPC: replicated 2-of-3, honest majority, the PRF model; fixed-point arithmetic, truncation, normalization — the real cost centres. | [NUDGE] §4; Evans–Kolesnikov–Rosulek; Lindell *How to Simulate It* |
-| 3 | **W3** | Collaborative filtering under privacy: matrix factorization, Nikolaenko et al.'s garbled circuits, [PIRSONA]'s 4PC Boolean MF, [NUDGE]'s power iteration. Why the algorithm choice is a cryptographic decision. | [PIRSONA] §2–3; [NUDGE] §2, §5; Nikolaenko et al. (CCS'13) |
-| 4 | **W4** | How this literature is evaluated; the PIR landscape; leakage beyond the protocol; **the gap we fill** — [NUDGE] delegates fetching to "other means", [PIRSONA]'s training core is superseded, and nobody has measured the composition. | [NUDGE] §3.1 non-goals, §9; [PIRSONA] §1; SimplePIR (USENIX Sec'23); Spiral (S&P'22) |
+| 1 | **T1** | Problem, threat model, and FSS/DPFs as the enabling primitive. `O(log n)`-size keys — 260 bytes against 32 KB. The same DPF is a comparison gate *and* a PIR read layer. | BGI (EUROCRYPT'15); BGI (CCS'16); **the July 2026 DPF/FSS survey, arXiv 2607.27696**; Araki et al. (CCS'16) |
+| 2 | **T2** | Private training: matrix factorization, Nikolaenko et al.'s garbled circuits, [PIRSONA]'s 4PC Boolean MF, [NUDGE]'s power iteration. **Why the algorithm choice is a cryptographic decision.** | [PIRSONA] §3–4; [NUDGE] §4–5; Nikolaenko et al. (CCS'13) |
+| 3 | **T3** | Private retrieval — the literature that grew up in parallel and has barely been cited by the recommendation line. Linear scan → sublinear → relaxed guarantees. | SANNS; Tiptoe (SOSP'23); **Pacmann**; Compass (NSDI'24); **Wally**; Panther (CCS'25); P²RAG |
+| 4 | **T4** | What "private" means; how this literature is evaluated; **the gap we fill** — [NUDGE] delegates fetching to "other means", [PIRSONA]'s training core is superseded, and nobody has connected the two. | [NUDGE] §3.1 non-goals and §9; [PIRSONA] §1–2; SimplePIR; Spiral; PrivateRec; PICS; Asharov et al. |
 
 ### Tasks
 
-| # | Task | Owner | Deadline |
-|---|---|---|---|
-| 1.1 | 1-page structured note per paper into `docs/survey/notes/` | Each | Aug 22 |
-| 1.2 | **Implement a (2,2)-DPF from scratch, ~200 lines, one afternoon** | W1 | Aug 22 |
-| 1.3 | Agree the deck outline and the single narrative arc | All | Aug 23 |
-| 1.4 | Draft the survey report (10–14 pages, IEEE two-column) | All, W4 edits | Aug 26 |
-| 1.5 | Build the shared deck; one template, no per-member styling | W3 owns the deck | Aug 27 |
-| 1.6 | Timed dry run of the full 30 min. Cut anything that overruns | All | Aug 28 |
-| 1.7 | Record — good microphone, quiet room, one take per member | All | Aug 29 |
-| 1.8 | Upload **unlisted** to YouTube; verify in a private window | Mainak | Aug 30 |
-| 1.9 | Submit report + link | Mainak | **Aug 31** |
+| # | Task | Deadline |
+|---|---|---|
+| 1.1 | Seed [`report/references.bib`](report/references.bib); scaffold `report/` | ✅ Aug 15 |
+| 1.2 | 1-page structured note per paper into [`report/notes/`](report/notes/), using `_template.md` | Aug 22 |
+| 1.3 | **Synthesis meeting** — agree the gap statement in `notes/_synthesis.md` and the single narrative arc. **Nothing gets written before this** | Aug 23 |
+| 1.4 | **Forward-citation sweep of [NUDGE], Tiptoe and Pacmann.** If someone has already composed a private-ANN backend with a private-MF recommender, we must know now | Aug 23 |
+| 1.5 | Draft sections into `report/sections/` | Aug 26 |
+| 1.6 | Assemble full draft; one person edits the whole thing for a single voice | Aug 27 |
+| 1.7 | Build the shared deck; one template, no per-slot styling | Aug 28 |
+| 1.8 | Timed dry run of the full 30 min. Cut anything that overruns | Aug 29 |
+| 1.9 | Record — good microphone, quiet room, one take per member | Aug 29 |
+| 1.10 | Upload **unlisted** to YouTube; verify in a private window | Aug 30 |
+| 1.11 | Submit report + link | **Aug 31** |
 
-> **1.2 is not optional and it is not a Phase-2 task.** The DPF is the single most reused component
-> in the system — it is the FSS gate inside truncation and normalization *and* the PIR read layer.
-> Building it before writing the survey costs one day and makes every paper in the course readable.
-> It also means Milestone 1 ships with working code already in the repo.
+> **Task 1.4 is the one that can sink the survey.** The central claim of §6 — that the
+> intersection of the two literatures is nearly empty — is falsifiable, and finding a
+> counterexample in October rather than August would be expensive. Do it before drafting.
 
-**Exit criterion:** report submitted, unlisted link verified, DPF passing its unit test.
+> **No DPF implementation in this phase.** An earlier version of this plan scheduled one here.
+> It is deferred: whether we write our own FSS core at all depends on the Nudge-artifact
+> decision (REQUIREMENTS §11 Q2), which the instructor meeting settles.
+
+**Exit criterion:** report submitted, unlisted link verified, no `[UNVERIFIED]` bib entry cited.
 
 ---
 

@@ -1,0 +1,112 @@
+%% ==========================================================================
+%%  SECTION 8 --- THE GAP AND OUR DIRECTION                     [Track T4]
+%%
+%%  Job: everything before this has been setup. Name the gap, state the two
+%%  concrete research questions arising from it, and say what we will build.
+%%  ~2 pages. This section is what the survey is FOR, and it is the one the
+%%  instructor will read most closely.
+%%
+%%  SOURCE: report/notes/_synthesis.md holds the argument in draft, including
+%%  the list of things that would KILL it. Do not write this section before
+%%  the synthesis meeting on 23 August.
+%% ==========================================================================
+\section{The Gap and Our Direction}
+\label{sec:gap}
+
+\subsection{The gap}
+\label{sec:gap:statement}
+
+\todo{One paragraph, stated flatly, drawing \S4, \S5 and \S6 together:
+      private training and private retrieval are two mature literatures that
+      have developed in parallel; the only system spanning both predates the
+      whole of the second; and the current best training system explicitly
+      declines the fetch problem. Nobody has plugged modern private-retrieval
+      machinery into a privately trained recommender.
+      Then the honest qualifier --- this is a gap in the ENGINEERING and in
+      the ANALYSIS, not an open theory problem. Claiming otherwise would be
+      the easiest way to lose credibility here.}
+
+\begin{figure}[t]
+\centering
+\todo{Figure: the two literature timelines side by side, 2013--2026, with the
+      single arrow between them (\pirsonaplain{}, 2021) and the dangling
+      ``other means'' arrow from \nudgeplain{}. This figure IS the argument;
+      if it works, the section could almost be read from it alone. TikZ.}
+\caption{Two parallel literatures, and the gap between them.}
+\label{fig:gap:timelines}
+\end{figure}
+
+\subsection{Research question 1: where is the crossover?}
+\label{sec:gap:n1}
+
+\todo{Develop the observation planted in \Cref{sec:retrieval:asymmetry}.
+      \nudgeplain{} publishes $\itemembed \in \R^{\dime \times \items}$ in the
+      clear, and user $i$ holds its own ratings $\uvec{i}$. So the user can
+      download $\itemembed$ once and compute its own top-$\topk$ LOCALLY, with
+      no cryptography. At MovieLens scale ($\dime=20$, $\items\approx 4000$)
+      that is under a megabyte.
+      But $\itemembed$ grows with the catalogue, and at Criteo scale
+      (hundreds of millions of items) downloading it is absurd --- at which
+      point the \S5 machinery becomes necessary.
+      THE QUESTION: as a function of $\items$, $\dime$, and client bandwidth,
+      where do the boundaries lie between (a) download $\itemembed$ and
+      compute locally, (b) private ANN over $\itemembed$, and (c) PIR fetch
+      against the catalogue?
+      Say why this is worth answering: every system in \S5 assumes its own
+      regime, and nobody has drawn the boundary. It is also cheap --- mostly
+      analysis plus measurement. \verify{confirm no prior work draws this
+      boundary before claiming novelty}}
+
+\subsection{Research question 2: what does a public $\itemembed$ leak?}
+\label{sec:gap:n2}
+
+\todo{Develop the thread from \Cref{sec:threat:leakage}. Every server holds
+      $\itemembed$ in the clear --- a complete latent-factor model of the
+      catalogue. So an observed fetch is not one bit about a user; it is a
+      PROJECTION ONTO A KNOWN BASIS, and a handful of fetches constrains the
+      taste vector sharply.
+      Make it concrete and falsifiable: given public $\itemembed$ and $j$
+      observed fetches, reconstruct $\hat{\avec{i}}$ by least squares and
+      measure $\cos(\hat{\avec{i}}, \avec{i})$ as a function of $j$.
+      Then the payoff: this is the QUANTITATIVE argument for why the delivery
+      layer must be private. It turns our contribution from an engineering
+      preference into a demonstrated necessity.
+      Note also that \nudgeplain{} \S9 offers DP on $\itemembed$ as a
+      mitigation, so the natural follow-up is what that costs in nDCG and
+      whether it actually blunts the attack.}
+
+\subsection{What we propose to build}
+\label{sec:gap:proposal}
+
+\todo{Keep this SHORT and do not over-commit --- the survey is not the design
+      document, and the architecture is settled at the instructor meeting.
+      Say: a private delivery layer for a privately-trained recommender,
+      composing a \nudgeplain{}-style training core with a DPF-PIR fetch layer
+      and \pirsonaplain{}'s harvest loop, evaluated end to end under the
+      standard set in \Cref{sec:eval:ourstandard}.
+      Then state both open decisions HONESTLY rather than pretending they are
+      settled:
+      (a) whether to build on the \nudgeplain{} reference artifact
+          (\url{https://github.com/NudgeArtifact/private-recs}, MIT-licensed
+          Go) or reimplement the training core;
+      (b) whether the serving layer needs cryptography at all in our
+          parameter regime --- which is exactly \Cref{sec:gap:n1}.
+      Presenting both framings neutrally is the point; the instructor meeting
+      decides.}
+
+\subsection{Threats to this reading of the literature}
+\label{sec:gap:threats}
+
+\todo{Include this subsection. A survey that only looks for confirming
+      evidence is worthless, and saying so explicitly is the strongest
+      credibility signal available in a document with no experimental results.
+      List honestly:
+      (1) someone may already have composed a private-ANN backend with a
+          private-MF recommender --- \Cref{sec:both:empty} depends on a
+          forward-citation sweep we must actually run;
+      (2) the \Cref{sec:gap:n1} crossover may sit so far out that
+          $\itemembed$ is downloadable at every realistic catalogue size,
+          reducing RQ1 to a one-line observation;
+      (3) the \Cref{sec:gap:n2} reconstruction may already be folded into the
+          standard embedding-inversion literature.
+      For each, say what evidence would settle it.}

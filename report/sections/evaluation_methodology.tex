@@ -1,0 +1,67 @@
+%% ==========================================================================
+%%  SECTION 7 --- HOW THIS LITERATURE IS EVALUATED               [Track T4]
+%%
+%%  Job: two purposes at once. (a) Give the reader the tools to judge the
+%%  numbers in \S4 and \S5. (b) Commit US, in writing, to the same standard --
+%%  so the final report is measured against a bar we set ourselves.
+%%  ~1 page. Short, concrete, and unusually valuable: most surveys skip it.
+%% ==========================================================================
+\section{How This Literature Is Evaluated}
+\label{sec:eval}
+
+\todo{Open by justifying the section's existence: the numbers in \S4 and \S5
+      are not comparable unless the reader knows what was held fixed. This
+      section makes the comparison rules explicit --- and commits us to them.}
+
+\subsection{Metrics that matter}
+\label{sec:eval:metrics}
+
+\todo{Four families, each with an example from the surveyed work:
+      (a) wall-clock --- but always paired with hardware. \nudgeplain{}'s
+          50 minutes is on THREE 192-CORE MACHINES; the number is meaningless
+          without that.
+      (b) communication --- server-to-server bytes (40\,GB for \nudgeplain{} on
+          Netflix) and per-client bytes (298\,KB serving).
+      (c) client-side cost --- storage and bandwidth. This is what separates
+          Pacmann (614\,MB client storage) from Tiptoe.
+      (d) QUALITY --- nDCG@$\topk$, Recall@$\topk$. A private recommender that
+          recommends badly has solved nothing. \nudgeplain{} scores 0.29 nDCG@20
+          against 0.31 for non-private neural models; that gap IS the result.}
+
+\subsection{Network models}
+\label{sec:eval:network}
+
+\todo{Make the point sharply, because it is where course projects fail:
+      results in this literature FLIP under network constraints, because
+      round complexity starts to dominate bandwidth. A localhost number tells
+      you almost nothing about a deployment.
+      Standard practice is \texttt{tc netem} with LAN and WAN profiles ---
+      e.g.\ 30\,ms/100\,Mbps and 100\,ms/10\,Mbps. Note which surveyed papers
+      report WAN numbers and which report LAN only. \nudgeplain{}'s headline is
+      LAN. \verify{check each paper's setup section before asserting this}}
+
+\subsection{Baselines}
+\label{sec:eval:baselines}
+
+\todo{The three baselines this literature expects, and why each is needed:
+      (a) the plaintext system --- gives the honest slowdown factor;
+      (b) a generic-MPC-framework implementation (MP-SPDZ) --- the ``why not
+          just use a framework'' answer;
+      (c) at least one published secure system --- the credibility test.
+      Observe that the strongest papers report the UNFLATTERING comparison
+      too. A slowdown stated plainly reads as confidence; a slowdown omitted
+      reads as evasion.}
+
+\subsection{The standard we hold ourselves to}
+\label{sec:eval:ourstandard}
+
+\todo{Write this as a commitment, in the first person, and keep it to five
+      bullets. It is quoted back at us in the final report:
+      (1) a written threat model and an explicit leakage profile;
+      (2) baselines including the unflattering ones;
+      (3) WAN numbers, not just localhost;
+      (4) a microbenchmark breakdown --- where do the milliseconds go;
+      (5) reproducibility: one command per figure, a README a stranger can
+          follow.
+      None of these requires cryptographic novelty, and most groups will do
+      none of them.}

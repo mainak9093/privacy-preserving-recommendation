@@ -1,0 +1,177 @@
+%% ==========================================================================
+%%  preamble.tex --- packages, theorem environments, notation macros.
+%%
+%%  SHARED BY ALL THREE MILESTONE DOCUMENTS:
+%%      survey.tex    Milestone 1, literature survey      (31 Aug 2026)
+%%      midterm.tex   Milestone 2, per-member report      (12 Sep 2026)
+%%      final.tex     Milestone 3, final report           ( 6 Nov 2026)
+%%
+%%  One preamble and one references.bib for the whole semester, so notation
+%%  and citations cannot drift between documents.  If you need a symbol,
+%%  add it HERE -- never redefine it inside a section file.
+%% ==========================================================================
+
+% ---------- page geometry & fonts -----------------------------------------
+\usepackage[letterpaper,margin=1.15in]{geometry}
+% Palatino text + matching math.  newpx is built on TeX Gyre Pagella, so it
+% needs no URW base-35 fonts -- which a minimal TinyTeX install does not ship.
+% If newpx is unavailable, `mathpazo' is the drop-in substitute wherever the
+% URW fonts *are* present.
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{newpxtext}
+\usepackage{microtype}
+
+% ---------- mathematics ---------------------------------------------------
+% Order matters: amsmath must be loaded before newpxmath.
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{newpxmath}
+\usepackage{stmaryrd}          % \llbracket \rrbracket -- secret-sharing brackets
+
+% ---------- floats, tables, algorithms ------------------------------------
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{graphicx}
+\graphicspath{{figures/}}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\floatname{algorithm}{Algorithm}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds,calc}
+
+% ---------- colour & links ------------------------------------------------
+\usepackage{xcolor}
+\definecolor{CiteGreen}{RGB}{0,120,60}
+\definecolor{LinkRed}{RGB}{160,20,20}
+\definecolor{UrlBlue}{RGB}{20,60,170}
+\definecolor{DraftOrange}{RGB}{200,90,0}
+\usepackage[
+  colorlinks=true,
+  citecolor=CiteGreen,
+  linkcolor=LinkRed,
+  urlcolor=UrlBlue,
+  bookmarksnumbered=true
+]{hyperref}
+\usepackage{cleveref}
+
+% ==========================================================================
+%  Theorem environments.  One counter runs through
+%  Definition/Theorem/Lemma/Proposition/Observation; Claim has its own.
+% ==========================================================================
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{observation}[theorem]{Observation}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{claim}{Claim}[section]
+
+\theoremstyle{definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+\theoremstyle{plain}
+
+% NOTE.  cleveref cannot tell these apart --- they share the `theorem'
+% counter, so \Cref would call every one of them "Theorem".  Write
+% `Remark~\ref{...}', `Example~\ref{...}' explicitly.  \Cref is safe for
+% sections, figures and tables.
+
+% Bold, unpunctuated "Proof" head (amsthm defaults to italic "Proof.").
+\makeatletter
+\renewenvironment{proof}[1][\proofname]{\par
+  \pushQED{\qed}%
+  \normalfont \topsep6\p@\@plus6\p@\relax
+  \trivlist
+  \item[\hskip\labelsep\bfseries #1\@addpunct{}]\ignorespaces
+}{%
+  \popQED\endtrivlist\@endpefalse
+}
+\makeatother
+
+% ==========================================================================
+%  Draft notes.  Flip to \draftfalse for a clean submission copy; nothing
+%  else in the document changes.
+%
+%      \todo{...}    something still to be written
+%      \verify{...}  a claim that must be checked against the paper
+%      \gap{...}     a place where the survey must argue the gap explicitly
+%
+%  Before submitting, find what is outstanding:
+%      grep -rn '\\todo{\|\\verify{\|\\gap{' sections/ *.tex
+% ==========================================================================
+\newif\ifdraft
+\drafttrue
+
+\newcommand{\draftnote}[1]{%
+  \ifdraft{\color{DraftOrange}\sffamily\small[\,#1\,]}\fi}
+\newcommand{\todo}[1]{\draftnote{\textbf{TODO:} #1}}
+\newcommand{\verify}[1]{\draftnote{\textbf{VERIFY:} #1}}
+\newcommand{\gap}[1]{\draftnote{\textbf{GAP-ARGUMENT:} #1}}
+
+% ==========================================================================
+%  PROJECT NOTATION.
+%
+%  Fixed here, once, for all three documents.  Follows [NUDGE] where the two
+%  base papers disagree, since its notation is the more standard.  Do not
+%  introduce a competing symbol in a section file --- add it here instead,
+%  and say so at the weekly sync so nobody duplicates it.
+% ==========================================================================
+
+% ---- parties and sharing -------------------------------------------------
+\newcommand{\party}[1]{P_{#1}}                 % server P_0, P_1, P_2
+\newcommand{\shr}[1]{\llbracket #1 \rrbracket} % replicated / additive sharing
+\newcommand{\ring}{\mathcal{R}}                % the ring Z_{2^b}
+\newcommand{\Ztwo}[1]{\mathbb{Z}_{2^{#1}}}
+\newcommand{\bits}{b}                          % ring bit-length
+\newcommand{\fracbits}{t}                      % fixed-point fractional bits
+\newcommand{\seclen}{\lambda}                  % PRF seed / security parameter
+
+% ---- the recommendation problem -----------------------------------------
+\newcommand{\users}{m}                         % number of users
+\newcommand{\items}{n}                         % number of items
+\newcommand{\dime}{d}                          % embedding dimension
+\newcommand{\iters}{\ell}                      % power-iteration rounds
+\newcommand{\topk}{k}                          % recommendations returned
+\newcommand{\ratings}{\mathbf{U}}              % user-item rating matrix, m x n
+\newcommand{\userembed}{\mathbf{A}}            % user embeddings, m x d (SECRET)
+\newcommand{\itemembed}{\mathbf{B}}            % item embeddings, d x n (PUBLIC)
+\newcommand{\uvec}[1]{\mathbf{u}^{(#1)}}       % user i's rating vector
+\newcommand{\avec}[1]{\mathbf{a}^{(#1)}}       % user i's embedding
+
+% ---- protocols -----------------------------------------------------------
+\DeclareMathOperator{\Trunc}{Trunc}
+\DeclareMathOperator{\ApproxNormalize}{ApproxNormalize}
+\DeclareMathOperator{\ApproxFactor}{ApproxFactor}
+\DeclareMathOperator{\SetOrthogonal}{SetOrthogonal}
+\DeclareMathOperator{\Normalize}{Normalize}
+\DeclareMathOperator{\Gen}{Gen}
+\DeclareMathOperator{\Eval}{Eval}
+\DeclareMathOperator{\EvalFull}{EvalFull}
+\newcommand{\dpf}{\mathrm{DPF}}
+\newcommand{\fss}{\mathrm{FSS}}
+
+% ---- shorthand for the two base papers ----------------------------------
+%  Use \pirsona and \nudge in prose so the naming stays uniform; the macros
+%  cite as well as name, so `\nudge{} publishes $\itemembed$ in the clear'
+%  produces both the name and the citation.
+\newcommand{\pirsona}{\textsc{Pirsona}\,\cite{pirsona2021}}
+\newcommand{\nudge}{\textsc{Nudge}\,\cite{nudge2026}}
+\newcommand{\pirsonaplain}{\textsc{Pirsona}}
+\newcommand{\nudgeplain}{\textsc{Nudge}}
+\newcommand{\sys}{\textsc{OblivRec}}           % our system, working name
+
+% ---- generic -------------------------------------------------------------
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\set}[1]{\left\{#1\right\}}
+\newcommand{\abs}[1]{\left\lvert#1\right\rvert}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\inner}[2]{\left\langle #1, #2 \right\rangle}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator{\poly}{poly}

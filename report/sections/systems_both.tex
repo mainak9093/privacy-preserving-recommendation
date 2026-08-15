@@ -1,0 +1,81 @@
+%% ==========================================================================
+%%  SECTION 6 --- SYSTEMS THAT ATTEMPT BOTH HALVES              [Track T4]
+%%
+%%  Job: the payoff of \S4 and \S5. Show that the intersection is nearly
+%%  EMPTY, and that its one real occupant predates the whole of \S5.
+%%  ~1.5 pages. Short, and the most important section in the survey.
+%% ==========================================================================
+\section{Systems That Attempt Both Halves}
+\label{sec:both}
+
+\todo{Open by restating \Cref{sec:intro:two-halves}: a recommender that
+      protects its users must do BOTH. \S4 surveyed one half, \S5 the other.
+      This section asks who has done both --- and the answer is very nearly
+      nobody.}
+
+\subsection{\pirsonaplain{} as an end-to-end system}
+\label{sec:both:pirsona}
+
+\todo{Now cover \pirsonaplain{}'s DELIVERY half, deferred from
+      \Cref{sec:training:pirsona}. Three things:
+      (1) Hafiz--Henry multiserver PIR for the fetch, in its computationally
+          1-private DPF-compressed variant;
+      (2) THE HARVEST LOOP --- the servers extract secret-shared consumption
+          histories DIRECTLY from the incoming PIR queries, so training data
+          arrives as a by-product of delivery with no separate upload. No
+          other system in either \S4 or \S5 does this. Give it its own
+          paragraph; it is the most reusable idea in the paper.
+      (3) users hold no local state and never actively participate in
+          training --- contrast with federated learning explicitly.}
+
+\begin{figure}[t]
+\centering
+\todo{Figure: the \pirsonaplain{} cycle --- fetch $\to$ harvest $\to$ factorise
+      $\to$ recommend $\to$ fetch. One loop, drawn once. TikZ.
+      This figure and \Cref{fig:prim:ggm} are the two the video needs.}
+\caption{The \pirsonaplain{} delivery--training cycle.}
+\label{fig:both:pirsona-loop}
+\end{figure}
+
+\subsection{Partial attempts}
+\label{sec:both:partial}
+
+\todo{Honest accounting of near-misses, so the gap claim is not overstated:
+      PrivateRec (arXiv 2204.08146) names both training and serving, but is
+      differentially private and federated rather than MPC + PIR --- a
+      different point in the \Cref{tab:threat:families} taxonomy.
+      Trusted-hardware deployments do both, by assuming the problem away.
+      Anonymity networks (Tor, private relay) are what \nudgeplain{} actually
+      suggests, and provide traffic-analysis-vulnerable anonymity rather than
+      cryptographic privacy. Say why that is a weaker guarantee.}
+
+\subsection{The intersection is nearly empty}
+\label{sec:both:empty}
+
+\verify{Before this claim ships, run a forward-citation sweep of \nudgeplain{},
+        Tiptoe and Pacmann. If someone has already composed a modern private-ANN
+        backend with a private-MF recommender, we must find it NOW, not in
+        October. This is the single most falsifiable claim in the survey.}
+
+\todo{State the finding plainly and without overclaiming:
+      (1) \pirsonaplain{} (2021) is essentially the only system spanning both
+          halves cryptographically;
+      (2) its training core has since been superseded --- \nudgeplain{} reports
+          beating the bespoke four-party protocol with 8$\times$ less
+          communication and ONE FEWER non-colluding party;
+      (3) its retrieval core predates the entire \S5 literature, all of which
+          is 2023 or later;
+      (4) \nudgeplain{} improves half the problem and explicitly declines the
+          other half.
+      Therefore nobody has built a system with a modern training core AND a
+      modern retrieval layer. That sentence is the survey's finding.}
+
+\begin{table}[t]
+\centering
+\todo{Table: the two-by-two. Rows = private training yes/no, columns =
+      private delivery yes/no, cells = the systems. The point of the table is
+      the sparse cell. Make it visually obvious --- this is the slide that
+      ends the video.}
+\caption{Coverage of the two halves across the surveyed systems.}
+\label{tab:both:matrix}
+\end{table}

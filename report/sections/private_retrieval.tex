@@ -1,0 +1,101 @@
+%% ==========================================================================
+%%  SECTION 5 --- PRIVATE RETRIEVAL                             [Track T3]
+%%
+%%  Job: show that the "other means" \S4 ends on is not a hand-wave -- it is a
+%%  large, fast-moving literature that has almost entirely appeared SINCE
+%%  \pirsonaplain{} (2021), and that none of it has been applied back to
+%%  recommendation. ~2.5 pages. This is the section that makes the survey
+%%  distinctive; the field expects \S4, it does not expect \S5.
+%% ==========================================================================
+\section{Private Retrieval}
+\label{sec:retrieval}
+
+\todo{Open by connecting to \S4's closing quote: here is what ``other means''
+      actually contains. Then the framing --- serving a recommendation is
+      a nearest-neighbour query, so this literature and the recommendation
+      literature are solving adjacent problems without citing each other.}
+
+\subsection{The problem: private nearest-neighbour search}
+\label{sec:retrieval:problem}
+
+\todo{Formalise. A client holds query vector $q$; a server holds a corpus of
+      vectors; the client wants the top-$\topk$ by inner product or distance,
+      and the server must learn nothing about $q$ or the result.
+      Then the DEFINING difficulty, which is the same lesson as
+      \Cref{sec:prim:oram}: in the clear you use an index (k-d tree, LSH,
+      IVF, HNSW), and an index is useful precisely BECAUSE traversal is
+      data-dependent. Obliviousness forbids exactly that. So you either scan
+      linearly and lose the index, or keep the index and need ORAM.
+      State this as the organising axis of the whole section.}
+
+\subsection{Linear-scan approaches}
+\label{sec:retrieval:linear}
+
+\todo{SANNS (USENIX Sec'20) as the origin point --- secure approximate $k$-NN
+      combining HE with garbled circuits.
+      Then Tiptoe (SOSP'23): private search over a web-scale corpus, built on
+      SimplePIR-family machinery. Note the same first author as \nudgeplain{}.
+      The barrier: the server must touch EVERY entry per query, so throughput
+      is bounded --- \verify{Wally reports Tiptoe at 909 QPS with 17.4\,MB
+      communication on a 3.2M-entry database; check against the Wally paper
+      before citing}.
+      Everything in \S\ref{sec:retrieval:sublinear} exists to break that bound.}
+
+\subsection{Sublinear and indexed approaches}
+\label{sec:retrieval:sublinear}
+
+\todo{Pacmann (eprint 2024/1600): graph-based ANN where the client walks the
+      graph, privately retrieving local neighbourhood information at each hop
+      using preprocessing-PIR (\Cref{sec:prim:pir}). Sublinear online, but
+      \verify{614\,MB client storage and an offline phase streaming the whole
+      database} --- state the cost honestly, it is the tradeoff that matters.
+      Compass (NSDI'24): ORAM over HNSW. Strongest privacy in the group,
+      heaviest cost.
+      MESS (arXiv 2607.28999, July 2026): the newest in this line,
+      multi-graph HNSW. Being current here is cheap and visible.}
+
+\subsection{Relaxing the guarantee}
+\label{sec:retrieval:relaxed}
+
+\todo{Wally (arXiv 2406.06761): uses DIFFERENTIAL PRIVACY plus batching to
+      break the linear-computation barrier, at the price of a weaker, DP-style
+      guarantee rather than full obliviousness.
+      Panther (CCS'25): private ANN in the single-server setting.
+      Make the tradeoff explicit --- this subsection is where the survey shows
+      it understands that ``private'' is a dial, not a switch. Refer back to
+      \Cref{tab:threat:families}.}
+
+\subsection{Private top-$\topk$ as a service}
+\label{sec:retrieval:topk}
+
+\todo{The retrieval-augmented-generation line, which arrived at the same
+      problem from a different direction and is worth including because it
+      shows the primitive is in demand beyond recommendation:
+      PIR-RAG (arXiv 2509.21325) and P$^2$RAG (arXiv 2603.14778, arbitrary
+      top-$\topk$). Also VIPIR (2606.11536) for GPU-accelerated PIR
+      throughput.}
+
+\begin{table}[t]
+\centering
+\todo{Table: system $\times$ \{setting (1-server/2-server/ORAM), online cost,
+      client storage, corpus scale, privacy notion\}. The privacy-notion
+      column is what makes this table worth printing --- these systems are
+      NOT directly comparable and the table should show why.}
+\caption{Private retrieval systems compared.}
+\label{tab:retrieval:compare}
+\end{table}
+
+\subsection{An observation about the recommendation setting}
+\label{sec:retrieval:asymmetry}
+
+\gap{First half of the \S8 argument. Set it up here; do not resolve it.}
+
+\todo{Every system above assumes the CORPUS is the server's secret and the
+      QUERY is the client's. But in the \nudgeplain{} setting the item
+      embedding matrix $\itemembed$ is PUBLIC by construction
+      (\Cref{alg:training:approxfactor}), and the user holds its own ratings
+      $\uvec{i}$. So the recommendation-serving instance of this problem is
+      strictly easier than the general one --- and in some parameter regimes
+      it may not need cryptography at all.
+      State the question and stop: how large must the catalogue be before
+      that stops being true? Answer it in \Cref{sec:gap}.}

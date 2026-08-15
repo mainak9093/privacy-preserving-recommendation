@@ -1,0 +1,115 @@
+%% ==========================================================================
+%%  SECTION 4 --- PRIVATE TRAINING                              [Track T2]
+%%
+%%  Job: trace the private matrix-factorisation line to its current state of
+%%  the art, and land ONE argument -- that the choice of ALGORITHM is a
+%%  CRYPTOGRAPHIC decision, not a machine-learning one. ~2.5 pages.
+%% ==========================================================================
+\section{Private Training}
+\label{sec:training}
+
+\todo{Frame: everyone in this line computes the same thing --- a low-rank
+      factorisation $\ratings \approx \userembed \cdot \itemembed$ --- and the
+      entire history is about which ALGORITHM for computing it survives being
+      run under cryptography. That is the section's thesis; state it first.}
+
+\subsection{Matrix factorisation, in the clear}
+\label{sec:training:mf}
+
+\todo{Half a page, no more. $\ratings \in \R^{\users \times \items}$,
+      embedding dimension $\dime \ll \min(\users,\items)$, minimise
+      $\norm{\ratings - \userembed\cdot\itemembed}_F$. Note that when
+      $\itemembed$ is orthonormal, $\userembed = \ratings \cdot \itemembed^\top$,
+      so recommendations for user $i$ depend only on $\uvec{i}$ and
+      $\itemembed$. \verify{\nudgeplain{} \S2} That fact does a lot of work
+      later --- flag it here and return to it in \S8.}
+
+\subsection{Garbled circuits: Nikolaenko et al.}
+\label{sec:training:gc}
+
+\todo{CCS'13. Gradient descent inside a garbled circuit. Establish it as the
+      baseline the field has been escaping ever since --- \nudgeplain{} reports
+      beating this family by FOUR ORDERS OF MAGNITUDE in communication and
+      compute. \verify{exact claim}. Say why: data-oblivious gradient descent
+      forces a circuit whose size scales with the whole rating matrix.}
+
+\subsection{\pirsonaplain{}: four-party Boolean factorisation}
+\label{sec:training:pirsona}
+
+\todo{PoPETs'21. \pirsona{} --- the instructor's paper, so be thorough.
+      Cover: the 4PC Boolean matrix factorisation; the new primitives it
+      contributes (4PC fixed-selection MUX/DeMUX, fast 3PC vector
+      normalisation for shared fixed-point vectors, 4PC well-formedness tests
+      for $(2,2)$-DPFs, one-round 3PC integer comparison); and the pairwise
+      non-collusion assumption it pays for them.
+      Its DELIVERY half belongs in \S6, not here --- cross-reference, do not
+      duplicate.}
+
+\subsection{\nudgeplain{}: power iteration as a matrix-vector program}
+\label{sec:training:nudge}
+
+\todo{USENIX Sec'26. The current state of the art, and the section's
+      centrepiece. Build the argument in this order:
+      (1) recall \Cref{obs:prim:matvec-free} --- matrix-vector work is free;
+      (2) therefore prefer an algorithm that is mostly matrix-vector products
+          separated by cheap non-linear steps;
+      (3) power iteration has exactly that shape and gradient descent does
+          not. THIS IS THE POINT OF THE WHOLE SECTION.
+      Then the matrix-vector program abstraction (Def 4.1) and Thm 4.2.}
+
+\begin{algorithm}[t]
+\caption{$\ApproxFactor$: matrix factorisation by power iteration \cite{nudge2026}}
+\label{alg:training:approxfactor}
+\todo{Transcribe \nudgeplain{} Fig.\ 4 faithfully, with a citation. Mark clearly
+      which lines are FREE (the two $\mathrm{Mul}$ calls) and which are
+      INTERACTIVE ($\Normalize$). Annotate the line where each row of
+      $\itemembed$ is OPENED IN THE CLEAR --- that is the design's load-bearing
+      trick and the hinge of \S8.}
+\end{algorithm}
+
+\subsubsection{The two protocols that cost anything}
+\label{sec:training:nonlinear}
+
+\todo{$\Trunc_{\fracbits}$: deterministic truncation with sign extension;
+      low-order carries fixed by an integer comparison, high-order carries
+      prevented by one bit of slack. 3 rounds,
+      $2\dime\fracbits(\seclen+4)+10\dime\bits$ bits. Emphasise WHY that is an
+      improvement: the leading term is $\seclen\fracbits$ rather than
+      $\seclen\bits$, giving $\approx\bits/\fracbits = 6\times$ at
+      $\bits=\seclen=128$, $\fracbits=20$.
+      $\ApproxNormalize$: shares of $1/\norm{v}$. $\norm{v}^2$ is degree-two
+      hence free; the inverse square root is seeded from the
+      most-significant-non-zero-bit via $\bits+1$ SIMULTANEOUS comparisons in
+      one round, then Newton--Raphson. Explain what this avoids --- the
+      $O(\bits)$-round route and the exponential-lookup-table route.
+      \verify{all constants against \nudgeplain{} \S4.3, Lemmas 4.3 and 4.4}}
+
+\subsection{The non-cryptographic alternatives}
+\label{sec:training:alternatives}
+
+\todo{Short --- one paragraph each, for contrast and completeness.
+      Federated MF (Chai et al.) and its leakage through gradients;
+      FHE-based MF (arXiv 2509.03024) and its cost;
+      Paillier/decentralised variants (PADER, 2601.10212);
+      recent secret-sharing recommenders (PRSI, 2411.18653).
+      The purpose here is to show we surveyed the field, and to justify why
+      \S8 targets the MPC line.}
+
+\begin{table}[t]
+\centering
+\todo{Table: system $\times$ \{parties, corruption model, algorithm, dataset,
+      scale reached, cost, quality metric\}. Include Nikolaenko,
+      \pirsonaplain{}, \nudgeplain{}, federated, FHE. Numbers must carry their
+      SETTING --- hardware and network --- or they are not numbers.}
+\caption{Private training systems compared.}
+\label{tab:training:compare}
+\end{table}
+
+\subsection{Where training now stands}
+\label{sec:training:standing}
+
+\todo{Close with: private training is essentially SOLVED at real scale ---
+      Netflix, 0.5M users, 50 minutes, quality on par with non-private MF.
+      Then the pivot that sets up \S5, quoting \nudgeplain{} \S3.1 verbatim:
+      it ``relies on other means\dots{} to let users fetch data items in a
+      private way.'' End the section on that quote.}

@@ -1,0 +1,61 @@
+%% ==========================================================================
+%%  SECTION 1 --- INTRODUCTION
+%%
+%%  Job: make the reader want the rest of the survey. Establish the problem,
+%%  the two halves, and the shape of the argument. Roughly 1.5 pages.
+%% ==========================================================================
+\section{Introduction}
+\label{sec:intro}
+
+\todo{Open with the concrete harm, not with a definition. \pirsonaplain{} \S1 does
+      this well --- consumption data is invaluable to ``unscrupulous marketers,
+      identity thieves\dots{} and hostile foreign agents''. Borrow the framing,
+      not the words.}
+
+\subsection{Two halves of one problem}
+\label{sec:intro:two-halves}
+
+\todo{The central framing device of the whole survey. A recommender that
+      protects its users must do two separate things:
+      (i) TRAIN a model on private ratings without learning them, and
+      (ii) DELIVER the recommended item without learning which item.
+      Doing only (i) is not enough --- the fetch betrays the recommendation.
+      Doing only (ii) is not enough --- the model was built from exposed data.
+      Establish this here and refer back to it in every later section.}
+
+\subsection{The apparent contradiction}
+\label{sec:intro:contradiction}
+
+\todo{Why this looked impossible: PIR hides WHICH item a user fetches, while
+      collaborative filtering works precisely by relating users to each other
+      through what they fetched. \pirsonaplain{} \S1 states this tension
+      explicitly --- quote it, then say it has been resolved twice over, in
+      two different ways, by two literatures that did not talk to each other.}
+
+\subsection{Scope of this survey}
+\label{sec:intro:scope}
+
+\todo{State what is in and what is out.
+      IN:  MPC- and PIR-based approaches; matrix factorisation; private
+           nearest-neighbour retrieval; the leakage that survives.
+      OUT: pure differential privacy without a cryptographic layer; trusted
+           hardware (mentioned in \S2 for contrast only); neural recommenders.
+      Say why the cuts were made --- an unjustified scope cut reads as an
+      unread paper.}
+
+\subsection{Contributions of this survey}
+\label{sec:intro:contributions}
+
+\todo{Be honest: a survey's contribution is a map and a gap, not a result.
+      Claim exactly three things:
+      (1) the first side-by-side treatment of the private-training and
+          private-retrieval literatures for recommendation;
+      (2) identification of a concrete, author-acknowledged gap between them;
+      (3) two cheap, checkable research questions arising from it (N1, N2 ---
+          see \Cref{sec:gap}).}
+
+\subsection{Roadmap}
+\label{sec:intro:roadmap}
+
+\todo{One short paragraph mapping \S2--\S9. Make the arc audible: primitives,
+      then training, then retrieval, then who tried both, then the gap.}

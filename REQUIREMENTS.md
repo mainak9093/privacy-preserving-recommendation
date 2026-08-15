@@ -6,9 +6,34 @@
 **Handout topic:** (a) Privacy-Preserving Recommendation Systems
 **Group size:** 4 · **Project weight:** 30% of course grade
 
+> ## ⚠ STATUS: §1–§3 and §6 stand · §4–§5 and §9–§10 are PROVISIONAL
+>
+> **The project is in its literature survey phase** (Milestone 1, 31 August). The scope,
+> the instructor's steer, and the non-goals below are settled. **The deliverable list (§4)
+> and the workstream split (§10) are not** — they are superseded pending two things:
+>
+> 1. **The survey itself.** See [`report/`](report/) and
+>    [`report/notes/_synthesis.md`](report/notes/_synthesis.md).
+> 2. **The instructor meeting**, which he offered on 15 August. Two questions decide the
+>    architecture: whether to build on [NUDGE]'s MIT-licensed reference artifact
+>    ([NudgeArtifact/private-recs](https://github.com/NudgeArtifact/private-recs)) or
+>    reimplement its training core, and whether the serving layer needs cryptography at
+>    all in our parameter regime.
+>
+> **Why §4/§5 are in doubt:** [NUDGE] publishes the item embedding matrix `B` in the clear
+> and each user holds their own ratings, so at MovieLens scale (~800 KB) a user can simply
+> download `B` and compute top-*k* locally with no cryptography. The oblivious-top-*k*
+> machinery this file specifies may be solving a problem that does not exist at our scale.
+> Where the crossover lies is now research question **N1** in the survey.
+>
+> The detailed protocol design has been demoted to
+> [`design/ARCHITECTURE-draft-v1.md`](design/ARCHITECTURE-draft-v1.md) and its source tree
+> parked under [`archive/scaffold-2026-08-15/`](archive/scaffold-2026-08-15/).
+
 > This file is the contract. If something is not in here, it is out of scope until the
 > team agrees to amend this file. See [PHASES.md](PHASES.md) for *when*, and
-> [ARCHITECTURE.md](ARCHITECTURE.md) for *how*.
+> [`design/ARCHITECTURE-draft-v1.md`](design/ARCHITECTURE-draft-v1.md) for the *how* as
+> currently drafted.
 
 ---
 
@@ -278,12 +303,28 @@ Not committed. `scripts/fetch_data.py` downloads them; `data/` is gitignored.
 Each stream is individually defensible in a viva and produces its own report section.
 People are assigned in [MEMORY.md](MEMORY.md) §4.
 
-| Stream | Owns | Lit-survey slot (7–8 min) |
+> **Ownership is deliberately unassigned.** Streams are named so the work can be talked
+> about; who takes which is decided at the kickoff, after the survey has clarified what the
+> implementation actually involves. The implementation streams below are **provisional** for
+> the same reason §4 is.
+
+**Survey tracks** (live now — see [`report/README.md`](report/README.md)):
+
+| Track | Survey sections | Video slot (7–8 min) |
 |---|---|---|
-| **W1 — FSS core & private delivery** | D2, D5.1, D5.2, D9.4 | Function secret sharing: BGI'15/'16, DPFs, PIR, and why one primitive serves both halves of this system. |
-| **W2 — 3PC substrate & non-linear protocols** | D1, D3, D9.1 | Secret sharing and MPC: replicated sharing, the honest-majority model, fixed-point arithmetic, truncation and normalization. |
-| **W3 — Factorization & serving** | D4, D5.1, D5.3, D9.2 | Collaborative filtering under privacy: matrix factorization, why power iteration beats gradient descent under MPC, PIRSONA's 4PC core vs Nudge's 3PC. |
-| **W4 — Evaluation & security analysis** | D6, D7, D8, D9.5 | Threat models and leakage: what the composition leaks that neither paper analyses; the public-`B` problem; how this literature is evaluated. |
+| **T1 — Primitives** | §3 | Function secret sharing: BGI'15/'16, DPFs, PIR, and why one primitive serves both halves of the problem. |
+| **T2 — Private training** | §4 | Matrix factorization under MPC: Nikolaenko → PIRSONA → Nudge, and why power iteration beats gradient descent. |
+| **T3 — Private retrieval** | §5 | Private nearest-neighbour search: SANNS → Tiptoe → Pacmann/Compass → Wally/Panther. |
+| **T4 — Threat models, systems, the gap** | §2, §6, §7, §8 | What "private" means, who has attempted both halves, how this field measures itself, and the gap we fill. |
+
+**Implementation streams** (provisional, start after Milestone 1):
+
+| Stream | Owns |
+|---|---|
+| **W1 — FSS core & private delivery** | D2, D5.1, D5.2, D9.4 |
+| **W2 — 3PC substrate & non-linear protocols** | D1, D3, D9.1 |
+| **W3 — Factorization & serving** | D4, D5.1, D5.3, D9.2 |
+| **W4 — Evaluation & security analysis** | D6, D7, D8, D9.5 |
 
 **Shared obligation:** every member reads [PIRSONA] and [NUDGE] in full and can explain the whole
 pipeline. The viva is individual and can cover any layer.
@@ -292,12 +333,22 @@ pipeline. The viva is individual and can cover any layer.
 
 ## 11. Open questions for the instructor
 
-He offered a detailed conversation — take it, and take these.
+He offered a detailed conversation — take it, and take these. **Q1 and Q2 are the ones that
+unblock the architecture; everything else can wait.**
 
 1. **Is the composition framing right?** Nudge's training core + PIRSONA's PIR delivery, measured
    end to end. Or does he want a straight reimplementation of one of the two?
-2. Is MovieLens-1M an acceptable scale given Nudge used 3×192-core machines for Netflix?
-3. Is the S1→S2→S3 staging acceptable, i.e. is a strong S1 with a partial S2 a reasonable landing
+2. **[NUDGE] ships a complete MIT-licensed reference implementation**
+   ([NudgeArtifact/private-recs](https://github.com/NudgeArtifact/private-recs): Go, AVX2/AES-NI,
+   `dcf/`, `dmsb/`, `multdpf/`, full 3PC protocol, phase benchmarks). **Build on it, or
+   reimplement the training core ourselves?** Building on it removes our largest schedule risk
+   and puts all of our own code on the delivery layer — the part Nudge leaves open.
+   Reimplementing gives a stronger viva story at real risk to the November deadline.
+3. **Does the serving layer need cryptography at all in our regime?** `B` is public and the user
+   holds its own ratings, so at MovieLens scale the user can download `B` (~800 KB) and compute
+   top-*k* locally. Is mapping that crossover (research question N1) a contribution he values?
+4. Is the public-`B` reconstruction analysis (§6.3, research question N2) worth pursuing?
+5. Is MovieLens-1M an acceptable scale given Nudge used 3×192-core machines for Netflix?
+6. Is the S1→S2→S3 staging acceptable, i.e. is a strong S1 with a partial S2 a reasonable landing
    zone if the schedule bites?
-4. Is the public-`B` leakage analysis (§6.3) a contribution he would value, or a distraction?
-5. Confirm 3PC honest-majority semi-honest is the right model to target rather than PIRSONA's 4PC.
+7. Confirm 3PC honest-majority semi-honest is the right model to target rather than PIRSONA's 4PC.

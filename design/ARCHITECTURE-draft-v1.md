@@ -1,13 +1,36 @@
-# ARCHITECTURE
+# ARCHITECTURE — DRAFT v1 (superseded pending the literature survey)
 
 **System:** OblivRec — Private Matrix Factorization with Private Delivery
 
-> **Purpose of this file.** The single source of truth for *how the system is built*. Any code
-> that contradicts this document is a bug in one of the two — resolve it by amending this file
-> first, then the code. Never the other way round.
+> ## ⚠ STATUS: NOT THE SOURCE OF TRUTH
 >
-> **Status:** rewritten 2026-08-15 after the instructor recommended [PIRSONA] and [NUDGE].
-> Amendments go in the Decisions Log (§11).
+> **This document predates the literature survey and parts of it are known to be wrong.**
+> It is kept because the reasoning is real and most of it will survive, but **do not
+> implement from it** and do not cite it as settled. It moves back to the repo root, as the
+> authoritative architecture, only after the survey's §8 and the instructor meeting.
+>
+> **Two things found on 2026-08-15, after this was written:**
+>
+> 1. **§5–§6 (oblivious top-*k* selection and serving) are probably unnecessary.** `B` is
+>    published in the clear (§5, and it is [NUDGE]'s own design), and each user holds their own
+>    ratings `u⁽ⁱ⁾`. At MovieLens scale `B` is `d×n` ≈ **800 KB** — the user downloads it once
+>    and computes top-*k* locally with no cryptography at all. The entire `Comparator` /
+>    `SEL_SORT` / `SEL_TOURN` apparatus in §5 solves a problem that may not exist in our
+>    parameter regime. **The open question is where the crossover lies** as the catalogue grows
+>    — that is now novelty candidate N1 in the survey plan, not a settled design.
+> 2. **[NUDGE] ships a complete MIT-licensed reference implementation**
+>    ([NudgeArtifact/private-recs](https://github.com/NudgeArtifact/private-recs): Go + AVX2/AES-NI,
+>    `dcf/`, `dmsb/`, `multdpf/`, full 3PC protocol, phase benchmarks). Whether §3–§5 get
+>    reimplemented by us or built upon is **deferred to the instructor meeting**.
+>
+> **What still stands:** §7 (private delivery via DPF-PIR) is the part [NUDGE] explicitly
+> delegates to "other means", and is the clearest candidate for our actual contribution.
+> §9 (threat model and leakage), especially **§9.3 (public-`B` reconstruction)**, stands and
+> is now novelty candidate N2.
+>
+> Original purpose statement, for the record: *the single source of truth for how the system
+> is built; any code that contradicts it is a bug in one of the two.* That role is suspended
+> until this document is promoted back.
 
 **References**, both in [`references/`](references/):
 - **[PIRSONA]** Vadapalli, Bayatbabolghani, Henry. *You May Also Like… Privacy: Recommendation Systems Meet PIR.* PoPETs 2021(4):30–53.

@@ -1,0 +1,100 @@
+%% ==========================================================================
+%%  SECTION 3 --- CRYPTOGRAPHIC BUILDING BLOCKS                 [Track T1]
+%%
+%%  Job: give the reader exactly the primitives needed to follow \S4 and \S5,
+%%  and land ONE argument -- that function secret sharing is what makes both
+%%  halves of the problem tractable, with the SAME construction serving as a
+%%  comparison gate in training and as a read layer in retrieval.
+%%  ~2 pages. Resist the urge to write a crypto textbook.
+%% ==========================================================================
+\section{Cryptographic Building Blocks}
+\label{sec:prim}
+
+\todo{Frame the section by its punchline, stated up front: one primitive
+      (FSS) turns out to be load-bearing on both sides of the problem. Every
+      subsection below is evidence for that claim.}
+
+\subsection{Secret sharing}
+\label{sec:prim:sharing}
+
+\todo{Additive sharing over a ring; then 2-out-of-3 REPLICATED sharing
+      (Araki et al., CCS'16), which is what \nudgeplain{} uses: $x = x_0+x_1+x_2$
+      with $\party{i}$ holding $(x_i, x_{i+1})$. Introduce $\shr{x}$ notation
+      (macro in preamble.tex).
+      Then the ``3PC with PRF'' model --- each PAIR of parties shares a PRF
+      key, so correlated randomness costs no communication.}
+
+\begin{observation}
+\label{obs:prim:matvec-free}
+\todo{THE key fact of the whole survey, stated as a numbered observation so
+      later sections can point at it. Under replicated sharing, a degree-two
+      function costs one round and $3\dime\bits$ bits, and consequently a
+      shared-matrix $\times$ shared-vector product communicates in proportion
+      to the largest intermediate VECTOR, not to the size of the input
+      MATRIX. \nudgeplain{} Thm 4.2. \verify{quote the exact bound}}
+\end{observation}
+
+\subsection{Function secret sharing and distributed point functions}
+\label{sec:prim:fss}
+
+\todo{Boyle--Gilboa--Ishai (EUROCRYPT'15, CCS'16). Define a $(2,2)$-DPF:
+      $\Gen(\alpha,\beta) \to (k_0,k_1)$ with
+      $\Eval(k_0,x)-\Eval(k_1,x) = \beta$ iff $x=\alpha$, else $0$, and
+      each key alone pseudorandom.
+      The GGM-tree construction in a paragraph plus one figure. Key size
+      $\dime(\seclen+2)+\bits$ bits --- for $\items=4096$ that is $\approx$260
+      bytes against 32\,KB for a one-hot vector. THAT RATIO IS THE POINT; give
+      it as a concrete number, not asymptotically.
+      Cite the July 2026 DPF/FSS survey (arXiv 2607.27696) as the entry point,
+      and mention the current frontier: shorter information-theoretic keys
+      (2604.24385), multi-party DDH constructions (2603.17453), GPU FSS
+      (FuseFSS 2606.09551).}
+
+\begin{figure}[t]
+\centering
+\todo{Figure: the GGM tree, showing the two parties' paths diverging only on
+      the path to $\alpha$. TikZ. This is the one figure a viewer of the video
+      will remember --- make it good.}
+\caption{The GGM-tree construction of a $(2,2)$-distributed point function.}
+\label{fig:prim:ggm}
+\end{figure}
+
+\subsection{FSS as a comparison gate}
+\label{sec:prim:fss-compare}
+
+\todo{Distributed comparison functions and zero-tests evaluated on shared
+      inputs in a SINGLE round (\nudgeplain{} Table 3). Grotto (CCS'23) for
+      fast comparison over $\Ztwo{n}$. This is what \S4 needs.}
+
+\subsection{Private information retrieval}
+\label{sec:prim:pir}
+
+\todo{Multi-server (information-theoretic, needs non-collusion) versus
+      single-server (computational, needs LWE and a lot of compute).
+      Hafiz--Henry (PoPETs'19.4) is the scheme \pirsonaplain{} builds on, and its
+      computationally 1-private variant is DPF-compressed --- so this is the
+      SAME primitive as \Cref{sec:prim:fss}, in a different role. Say so
+      explicitly; it is the section's thesis.
+      Then SimplePIR/DoublePIR (USENIX Sec'23) and Spiral (S\&P'22) for the
+      single-server line, and Corrigan-Gibbs--Kogan (EUROCRYPT'20) for the
+      preprocessing paradigm that \S5 depends on.}
+
+\subsection{Oblivious RAM}
+\label{sec:prim:oram}
+
+\todo{Keep this SHORT --- it matters only for the indexed approaches in \S5.
+      Path ORAM (CCS'13), then Floram (CCS'17), Duoram (USENIX Sec'23) and
+      PRAC (PoPETs'24). One sentence on why an index and obliviousness are in
+      tension: an index is useful precisely because traversal is
+      data-dependent, and data-dependent traversal is what obliviousness
+      forbids.}
+
+\subsection{Fixed-point arithmetic over rings}
+\label{sec:prim:fixedpoint}
+
+\todo{Why this deserves its own subsection rather than a footnote: it is
+      where the real engineering cost sits. Represent $v \in \R$ as
+      $\lfloor v \cdot 2^{\fracbits} \rfloor \in \ring$; addition is free,
+      multiplication needs a TRUNCATION afterwards, and repeated multiplication
+      needs NORMALIZATION to stop values growing. Those two operations are the
+      entire interactive cost of \S4. Forward-reference it.}

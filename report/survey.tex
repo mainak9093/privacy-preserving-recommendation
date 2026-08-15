@@ -1,0 +1,79 @@
+%% ==========================================================================
+%%  MILESTONE 1 --- LITERATURE SURVEY.  Due 31 August 2026.  Worth 10%.
+%%
+%%  Handout: "a literature survey report; and a 30-minute recorded
+%%  presentation (approximately 7-8 minutes per member)... uploaded to
+%%  YouTube as an unlisted video."
+%%
+%%  THIS FILE IS THE OUTLINE.  Every section that the survey will contain has
+%%  its \input line below, in order.  A section that is not yet written is
+%%  present but commented, so the structure of the argument is always visible
+%%  from this one file.  Do not reorder without saying so at the sync --- the
+%%  order IS the argument (see report/README.md, "The narrative arc").
+%%
+%%  Build:   latexmk -pdf survey.tex
+%%  Clean:   set \draftfalse in preamble.tex to suppress \todo/\verify notes
+%% ==========================================================================
+\documentclass[11pt]{article}
+\input{preamble}
+
+\begin{document}
+
+% --------------------------------------------------------------------------
+\title{\bfseries Privacy-Preserving Recommendation Systems:\\
+       From Private Training to Private Delivery\\[0.4em]
+       \large A Literature Survey}
+
+\author{Mainak Sarkar \and Shrasti Dwivedi \and Anushka Gupta \and Aditya Anand}
+
+\date{CS670: Cryptographic Techniques for Privacy Preservation\\
+      Indian Institute of Technology Kanpur \\
+      31 August 2026}
+
+\maketitle
+
+% --------------------------------------------------------------------------
+\input{sections/abstract}
+
+\tableofcontents
+\newpage
+
+% --------------------------------------------------------------------------
+%  THE ARGUMENT, IN ORDER.
+%
+%  1-2  frame the problem and establish that "private" is not one thing
+%  3    the primitive that makes both halves tractable
+%  4    how far private TRAINING has come            -> ends at Nudge
+%  5    how far private RETRIEVAL has come           -> a parallel literature
+%  6    who has tried to do both                     -> essentially only PIRSONA
+%  7    how this field measures itself               -> what we will be held to
+%  8    THE GAP, and what we propose to build
+% --------------------------------------------------------------------------
+
+\input{sections/introduction}            % 1  Introduction
+\input{sections/threat_models}           % 2  What "Private" Means
+\input{sections/primitives}              % 3  Cryptographic Building Blocks
+\input{sections/private_training}        % 4  Private Training
+\input{sections/private_retrieval}       % 5  Private Retrieval
+\input{sections/systems_both}            % 6  Systems That Attempt Both
+\input{sections/evaluation_methodology}  % 7  How This Literature Is Evaluated
+\input{sections/gap_and_direction}       % 8  The Gap and Our Direction
+\input{sections/conclusion}              % 9  Conclusion
+
+% --------------------------------------------------------------------------
+%  DRAFTING AID --- \nocite{*} renders every seeded reference even though the
+%  sections do not cite them yet, so the reading list is visible in the built
+%  PDF and every bib entry is checked for syntax on each build.
+%  *** DELETE THIS LINE BEFORE SUBMITTING *** --- the bibliography must list
+%  what the survey actually cites, not everything we looked at.
+\nocite{*}
+
+\bibliographystyle{alpha}
+\bibliography{references}
+
+% --------------------------------------------------------------------------
+\appendix
+% Comparison tables too large for the body go here.
+% \input{sections/appendix_comparison}    %  A  Full system comparison table
+
+\end{document}

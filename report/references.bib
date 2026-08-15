@@ -1,0 +1,471 @@
+%% ==========================================================================
+%%  references.bib --- ONE bibliography for all three milestone documents.
+%%
+%%  VERIFICATION DISCIPLINE.  Every entry carries a status comment:
+%%
+%%    %% [VERIFIED]   metadata checked against the actual PDF, in hand
+%%    %% [LISTING]    metadata from a publisher/arXiv listing, PDF not read
+%%    %% [UNVERIFIED] from a search result only --- author list, page numbers
+%%                    and even the venue may be WRONG. Fix before citing.
+%%
+%%  Most entries below are [UNVERIFIED] because they were seeded from a
+%%  literature search on 2026-08-15, not from the papers. Part of the reading
+%%  assignment is to promote your track's entries to [VERIFIED] as you read.
+%%  DO NOT SUBMIT with [UNVERIFIED] entries still cited --- a wrong citation
+%%  in a survey is the cheapest possible way to lose credibility.
+%%
+%%  Key format: firstauthorYEAR or systemnameYEAR (lowercase).
+%%
+%%  ------------------------------------------------------------------------
+%%  ABOUT THE "Warning--to sort, need author or key" MESSAGES FROM BIBTEX
+%%
+%%  Several entries below deliberately have NO author field. That is not an
+%%  oversight and it is not a bug: those papers were found through a search
+%%  listing, and their author lists were NOT confirmed. Guessing an author
+%%  list to silence the warning would put a fabricated citation into a
+%%  literature survey -- far worse than a noisy build.
+%%
+%%  Treat each warning as a work item: read the paper, then fill in the real
+%%  authors and flip the entry to [VERIFIED]. When the warnings stop, the
+%%  bibliography is done.
+%%  ------------------------------------------------------------------------
+%% ==========================================================================
+
+
+%% ==========================================================================
+%%  THE TWO BASE PAPERS --- recommended by the instructor
+%% ==========================================================================
+
+%% [VERIFIED] against references/Recommendation System PIR.pdf
+@article{pirsona2021,
+  author  = {Vadapalli, Adithya and Bayatbabolghani, Fattaneh and Henry, Ryan},
+  title   = {You May Also Like\ldots{} Privacy: Recommendation Systems Meet {PIR}},
+  journal = {Proceedings on Privacy Enhancing Technologies},
+  volume  = {2021},
+  number  = {4},
+  pages   = {30--53},
+  year    = {2021},
+  doi     = {10.2478/popets-2021-0059},
+  url     = {https://petsymposium.org/popets/2021/popets-2021-0059.php}
+}
+
+%% [VERIFIED] against references/Nudge A Private Recommendations Engine.pdf
+%% Full version: https://eprint.iacr.org/2026/179
+@inproceedings{nudge2026,
+  author    = {Henzinger, Alexandra and Dauterman, Emma and
+               Corrigan-Gibbs, Henry and Boneh, Dan},
+  title     = {Nudge: A Private Recommendations Engine},
+  booktitle = {35th {USENIX} Security Symposium ({USENIX} Security 26)},
+  year      = {2026},
+  address   = {Baltimore, MD, USA},
+  publisher = {USENIX Association},
+  url       = {https://www.usenix.org/conference/usenixsecurity26/presentation/henzinger},
+  note      = {Artifact: \url{https://github.com/NudgeArtifact/private-recs}}
+}
+
+
+%% ==========================================================================
+%%  A. PRIMITIVES --- function secret sharing, secret sharing, MPC
+%% ==========================================================================
+
+%% [UNVERIFIED] page numbers not checked
+@inproceedings{bgi2015,
+  author    = {Boyle, Elette and Gilboa, Niv and Ishai, Yuval},
+  title     = {Function Secret Sharing},
+  booktitle = {Advances in Cryptology -- {EUROCRYPT} 2015},
+  year      = {2015},
+  publisher = {Springer}
+}
+
+%% [UNVERIFIED]
+@inproceedings{bgi2016,
+  author    = {Boyle, Elette and Gilboa, Niv and Ishai, Yuval},
+  title     = {Function Secret Sharing: Improvements and Extensions},
+  booktitle = {Proceedings of the 2016 {ACM} {SIGSAC} Conference on Computer
+               and Communications Security ({CCS})},
+  year      = {2016}
+}
+
+%% [LISTING] arXiv 2607.27696, July 2026. A current survey of the area --
+%% the best single entry point for Track T1. Author list not yet checked.
+@misc{dpfsurvey2026,
+  title        = {Distributed Point Functions and Function Secret Sharing},
+  year         = {2026},
+  eprint       = {2607.27696},
+  archivePrefix= {arXiv},
+  note         = {Survey}
+}
+
+%% [LISTING] arXiv 2604.24385
+@misc{itdpf2026,
+  title        = {Information-Theoretic Distributed Point Functions with Shorter Keys},
+  year         = {2026},
+  eprint       = {2604.24385},
+  archivePrefix= {arXiv}
+}
+
+%% [LISTING] arXiv 2603.17453
+@misc{ddhfss2026,
+  title        = {{DDH}-based Schemes for Multi-Party Function Secret Sharing},
+  year         = {2026},
+  eprint       = {2603.17453},
+  archivePrefix= {arXiv}
+}
+
+%% [LISTING] arXiv 2606.09551. Shows the current FSS engineering frontier (GPU).
+@misc{fusefss2026,
+  title        = {{FuseFSS}: Efficient Secure {LLM} Inference with Function Secret Sharing},
+  year         = {2026},
+  eprint       = {2606.09551},
+  archivePrefix= {arXiv}
+}
+
+%% [UNVERIFIED] The replicated 2-of-3 sharing / "3PC with PRF" model Nudge uses.
+@inproceedings{araki2016,
+  author    = {Araki, Toshinori and Furukawa, Jun and Lindell, Yehuda and
+               Nof, Ariel and Ohara, Kazuma},
+  title     = {High-Throughput Semi-Honest Secure Three-Party Computation
+               with an Honest Majority},
+  booktitle = {Proceedings of the 2016 {ACM} {SIGSAC} Conference on Computer
+               and Communications Security ({CCS})},
+  year      = {2016}
+}
+
+%% [UNVERIFIED] Truncation on secret-shared data; the low-order carry fix Nudge cites.
+@inproceedings{escudero2020,
+  author    = {Escudero, Daniel and Ghosh, Satrajit and Keller, Marcel and
+               Rachuri, Rahul and Scholl, Peter},
+  title     = {Improved Primitives for {MPC} over Mixed Arithmetic-Binary Circuits},
+  booktitle = {Advances in Cryptology -- {CRYPTO} 2020},
+  year      = {2020}
+}
+
+%% [UNVERIFIED] Instructor's. Fast DPF-based comparison over Z_{2^n}.
+@inproceedings{grotto2023,
+  author    = {Storrier, Kyle and Vadapalli, Adithya and Lyons, Allan and
+               Henry, Ryan},
+  title     = {Grotto: Screaming Fast (2+1)-{PC} for $\mathbb{Z}_{2^n}$
+               via (2,2)-{DPF}s},
+  booktitle = {Proceedings of the 2023 {ACM} {SIGSAC} Conference on Computer
+               and Communications Security ({CCS})},
+  year      = {2023}
+}
+
+%% [UNVERIFIED] Instructor's. Relevant to malicious-client DPF audits.
+@inproceedings{sabre2022,
+  author    = {Vadapalli, Adithya and Storrier, Kyle and Henry, Ryan},
+  title     = {Sabre: Sender-Anonymous Messaging with Fast Audits},
+  booktitle = {2022 {IEEE} Symposium on Security and Privacy ({S\&P})},
+  year      = {2022}
+}
+
+%% [UNVERIFIED] Free textbook. The shared vocabulary for Track T2.
+@book{ekr2018,
+  author    = {Evans, David and Kolesnikov, Vladimir and Rosulek, Mike},
+  title     = {A Pragmatic Introduction to Secure Multi-Party Computation},
+  publisher = {Now Publishers},
+  year      = {2018},
+  url       = {https://securecomputation.org/}
+}
+
+%% [UNVERIFIED] You will be asked this in the viva.
+@misc{lindell2017simulate,
+  author = {Lindell, Yehuda},
+  title  = {How to Simulate It -- A Tutorial on the Simulation Proof Technique},
+  year   = {2017},
+  note   = {Cryptology ePrint Archive, Report 2016/046}
+}
+
+
+%% ==========================================================================
+%%  B. PRIVATE INFORMATION RETRIEVAL
+%% ==========================================================================
+
+%% [UNVERIFIED] The PIR scheme PIRSONA builds on. Exact title to be checked.
+@article{hafizhenry2019,
+  author  = {Hafiz, Syed Mahbub and Henry, Ryan},
+  title   = {A Bit More Than a Bit Is More Than a Bit Better:
+             Faster (Essentially) Optimal-Rate Many-Server {PIR}},
+  journal = {Proceedings on Privacy Enhancing Technologies},
+  volume  = {2019},
+  number  = {4},
+  year    = {2019}
+}
+
+%% [UNVERIFIED] Same first author as Nudge.
+@inproceedings{simplepir2023,
+  author    = {Henzinger, Alexandra and Hong, Matthew M. and
+               Corrigan-Gibbs, Henry and Meiklejohn, Sarah and
+               Vaikuntanathan, Vinod},
+  title     = {One Server for the Price of Two: Simple and Fast
+               Single-Server Private Information Retrieval},
+  booktitle = {32nd {USENIX} Security Symposium},
+  year      = {2023}
+}
+
+%% [UNVERIFIED]
+@inproceedings{spiral2022,
+  author    = {Menon, Samir Jordan and Wu, David J.},
+  title     = {Spiral: Fast, High-Rate Single-Server {PIR} via {FHE} Composition},
+  booktitle = {2022 {IEEE} Symposium on Security and Privacy ({S\&P})},
+  year      = {2022}
+}
+
+%% [UNVERIFIED] The preprocessing paradigm Pacmann depends on.
+@inproceedings{cgk2020,
+  author    = {Corrigan-Gibbs, Henry and Kogan, Dmitry},
+  title     = {Private Information Retrieval with Sublinear Online Time},
+  booktitle = {Advances in Cryptology -- {EUROCRYPT} 2020},
+  year      = {2020}
+}
+
+%% [LISTING] arXiv 2606.11536
+@misc{vipir2026,
+  title        = {{VIPIR}: A Versatile {GPU} Framework for Integrating
+                  Private Information Retrieval Protocols},
+  year         = {2026},
+  eprint       = {2606.11536},
+  archivePrefix= {arXiv}
+}
+
+%% [LISTING] arXiv 2509.13684
+@misc{pvpir2025,
+  title        = {Publicly Verifiable Private Information Retrieval Protocols
+                  Based on Function Secret Sharing},
+  year         = {2025},
+  eprint       = {2509.13684},
+  archivePrefix= {arXiv}
+}
+
+
+%% ==========================================================================
+%%  C. PRIVATE TRAINING --- the matrix-factorization line
+%% ==========================================================================
+
+%% [UNVERIFIED] The garbled-circuit baseline Nudge beats by 4 orders of magnitude.
+@inproceedings{nikolaenko2013,
+  author    = {Nikolaenko, Valeria and Ioannidis, Stratis and Weinsberg, Udi and
+               Joye, Marc and Taft, Nina and Boneh, Dan},
+  title     = {Privacy-Preserving Matrix Factorization},
+  booktitle = {Proceedings of the 2013 {ACM} {SIGSAC} Conference on Computer
+               and Communications Security ({CCS})},
+  year      = {2013}
+}
+
+%% [LISTING] arXiv 1906.05108. The federated alternative and its leakage.
+@misc{fedmf2019,
+  title        = {Secure Federated Matrix Factorization},
+  year         = {2019},
+  eprint       = {1906.05108},
+  archivePrefix= {arXiv}
+}
+
+%% [LISTING] arXiv 2509.03024. The FHE alternative, current.
+@misc{fherec2025,
+  title        = {Efficient Privacy-Preserving Recommendation on Sparse Data
+                  using Fully Homomorphic Encryption},
+  year         = {2025},
+  eprint       = {2509.03024},
+  archivePrefix= {arXiv}
+}
+
+%% [LISTING] arXiv 2601.10212
+@misc{pader2026,
+  title        = {{PADER}: Paillier-based Secure Decentralized Social Recommendation},
+  year         = {2026},
+  eprint       = {2601.10212},
+  archivePrefix= {arXiv}
+}
+
+%% [LISTING] arXiv 2411.18653
+@misc{prsi2024,
+  title        = {{PRSI}: Privacy-Preserving Recommendation Model Based on
+                  Vector Splitting and Interactive Protocols},
+  year         = {2024},
+  eprint       = {2411.18653},
+  archivePrefix= {arXiv}
+}
+
+%% [LISTING] arXiv 2204.08146. The ONLY prior work naming both training and
+%% serving -- but DP + federated, not MPC + PIR. Important contrast case for
+%% sections/systems_both.tex.
+@misc{privaterec2022,
+  title        = {{PrivateRec}: Differentially Private Training and Serving
+                  for Federated News Recommendation},
+  year         = {2022},
+  eprint       = {2204.08146},
+  archivePrefix= {arXiv}
+}
+
+
+%% ==========================================================================
+%%  D. PRIVATE RETRIEVAL / PRIVATE NEAREST-NEIGHBOUR SEARCH
+%%     The line that has almost entirely appeared SINCE PIRSONA (2021).
+%% ==========================================================================
+
+%% [UNVERIFIED] The origin point for secure approximate k-NN.
+@inproceedings{sanns2020,
+  author    = {Chen, Hao and Chillotti, Ilaria and Dong, Yihe and
+               Poburinnaya, Oxana and Razenshteyn, Ilya and Riazi, M. Sadegh},
+  title     = {{SANNS}: Scaling Up Secure Approximate $k$-Nearest Neighbors Search},
+  booktitle = {29th {USENIX} Security Symposium},
+  year      = {2020}
+}
+
+%% [UNVERIFIED] Same first author as Nudge. The linear-scan barrier.
+@inproceedings{tiptoe2023,
+  author    = {Henzinger, Alexandra and Dauterman, Emma and
+               Corrigan-Gibbs, Henry and Zeldovich, Nickolai},
+  title     = {Private Web Search with {Tiptoe}},
+  booktitle = {Proceedings of the 29th {ACM} Symposium on Operating Systems
+               Principles ({SOSP})},
+  year      = {2023}
+}
+
+%% [LISTING] Cryptology ePrint 2024/1600; also ICLR. Sublinear, but heavy client storage.
+@misc{pacmann2024,
+  author = {Zhou, Mingxun and Shi, Elaine and Fanti, Giulia},
+  title  = {{Pacmann}: Efficient Private Approximate Nearest Neighbor Search},
+  year   = {2024},
+  note   = {Cryptology ePrint Archive, Report 2024/1600}
+}
+
+%% [UNVERIFIED] ORAM over HNSW.
+@inproceedings{compass2024,
+  author    = {Zhu, Jinhao and Patel, Anna and Zaharia, Matei and Popa, Raluca Ada},
+  title     = {Compass: Encrypted Semantic Search with High Accuracy},
+  booktitle = {{USENIX} Symposium on Networked Systems Design and
+               Implementation ({NSDI})},
+  year      = {2024}
+}
+
+%% [LISTING] arXiv 2406.06761. Uses DP + batching to break the linear barrier.
+@misc{wally2024,
+  title        = {Scalable Private Search with {Wally}},
+  year         = {2024},
+  eprint       = {2406.06761},
+  archivePrefix= {arXiv}
+}
+
+%% [UNVERIFIED] CCS 2025. Single-server private ANN.
+@inproceedings{panther2025,
+  title     = {{Panther}: Private Approximate Nearest Neighbor Search in the
+               Single Server Setting},
+  booktitle = {Proceedings of the 2025 {ACM} {SIGSAC} Conference on Computer
+               and Communications Security ({CCS})},
+  year      = {2025}
+}
+
+%% [LISTING] arXiv 2607.28999, July 2026. Newest in this line.
+@misc{mess2026,
+  title        = {{MESS}: Fast and Private Semantic Search on Multi-Graph {HNSW}},
+  year         = {2026},
+  eprint       = {2607.28999},
+  archivePrefix= {arXiv}
+}
+
+%% [LISTING] arXiv 2509.21325
+@misc{pirrag2025,
+  title        = {{PIR-RAG}: A System for Private Information Retrieval in
+                  Retrieval-Augmented Generation},
+  year         = {2025},
+  eprint       = {2509.21325},
+  archivePrefix= {arXiv}
+}
+
+%% [LISTING] arXiv 2603.14778. Private top-k -- the exact operation our serving needs.
+@misc{p2rag2026,
+  title        = {{P$^2$RAG}: Efficient Privacy-Preserving {RAG} Service
+                  Supporting Arbitrary Top-$k$ Retrieval},
+  year         = {2026},
+  eprint       = {2603.14778},
+  archivePrefix= {arXiv}
+}
+
+
+%% ==========================================================================
+%%  E. OBLIVIOUS MEMORY
+%% ==========================================================================
+
+%% [UNVERIFIED]
+@inproceedings{pathoram2013,
+  author    = {Stefanov, Emil and van Dijk, Marten and Shi, Elaine and
+               Fletcher, Christopher and Ren, Ling and Yu, Xiangyao and
+               Devadas, Srinivas},
+  title     = {Path {ORAM}: An Extremely Simple Oblivious {RAM} Protocol},
+  booktitle = {Proceedings of the 2013 {ACM} {SIGSAC} Conference on Computer
+               and Communications Security ({CCS})},
+  year      = {2013}
+}
+
+%% [UNVERIFIED]
+@inproceedings{floram2017,
+  author    = {Doerner, Jack and Shelat, Abhi},
+  title     = {Scaling {ORAM} for Secure Computation},
+  booktitle = {Proceedings of the 2017 {ACM} {SIGSAC} Conference on Computer
+               and Communications Security ({CCS})},
+  year      = {2017}
+}
+
+%% [UNVERIFIED] Instructor's.
+@inproceedings{duoram2023,
+  author    = {Vadapalli, Adithya and Henry, Ryan and Goldberg, Ian},
+  title     = {Duoram: A Bandwidth-Efficient Distributed {ORAM} for
+               2- and 3-Party Computation},
+  booktitle = {32nd {USENIX} Security Symposium},
+  year      = {2023}
+}
+
+%% [UNVERIFIED] Instructor's.
+@article{prac2024,
+  author  = {Sasy, Sajin and Vadapalli, Adithya and Goldberg, Ian},
+  title   = {{PRAC}: Round-Efficient 3-Party {MPC} for Dynamic Data Structures},
+  journal = {Proceedings on Privacy Enhancing Technologies},
+  year    = {2024}
+}
+
+
+%% ==========================================================================
+%%  F. LEAKAGE, ATTACKS, AND WHAT PRIVACY DOES NOT BUY
+%% ==========================================================================
+
+%% [UNVERIFIED] "This attack works even against an ideal functionality."
+@article{asharov2018,
+  author  = {Asharov, Gilad and Halevi, Shai and Lindell, Yehuda and
+             Rabin, Tal},
+  title   = {Privacy-Preserving Search of Similar Patients in Genomic Data},
+  journal = {Proceedings on Privacy Enhancing Technologies},
+  volume  = {2018},
+  number  = {4},
+  year    = {2018}
+}
+
+%% [UNVERIFIED] Malicious server supplying inconsistent inputs across executions.
+@misc{pics2025,
+  title = {{PICS}: Private Intersection over Committed (and Reusable) Sets},
+  year  = {2025},
+  note  = {Cryptology ePrint Archive, Report 2025/1071}
+}
+
+%% [UNVERIFIED]
+@book{dworkroth2014,
+  author    = {Dwork, Cynthia and Roth, Aaron},
+  title     = {The Algorithmic Foundations of Differential Privacy},
+  publisher = {Now Publishers},
+  year      = {2014}
+}
+
+
+%% ==========================================================================
+%%  G. DATA
+%% ==========================================================================
+
+%% [UNVERIFIED]
+@article{movielens2015,
+  author  = {Harper, F. Maxwell and Konstan, Joseph A.},
+  title   = {The {MovieLens} Datasets: History and Context},
+  journal = {ACM Transactions on Interactive Intelligent Systems ({TiiS})},
+  volume  = {5},
+  number  = {4},
+  year    = {2015}
+}

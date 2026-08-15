@@ -48,14 +48,33 @@ implementation, written from scratch, serves the whole system.
 
 ---
 
+## Where we are: the literature survey
+
+**No implementation yet, deliberately.** Milestone 1 (31 August) is a literature survey report
+plus a 30-minute recorded presentation. The protocol design drafted before the survey has been
+demoted to [`design/ARCHITECTURE-draft-v1.md`](design/ARCHITECTURE-draft-v1.md) and its empty
+source tree parked under [`archive/scaffold-2026-08-15/`](archive/scaffold-2026-08-15/), because
+two findings put it in doubt:
+
+- **Nudge ships a complete MIT-licensed reference implementation**
+  ([NudgeArtifact/private-recs](https://github.com/NudgeArtifact/private-recs)) — so
+  reimplementing its training core may be wasted effort.
+- **`B` is public and each user holds their own ratings**, so at MovieLens scale (~800 KB) a
+  user can download `B` and compute top-*k* locally with no cryptography. What genuinely
+  remains open is the *fetch* — exactly what Nudge delegates to "other means".
+
+Both are settled at the instructor meeting. Until then, we read.
+
 ## Where to start
 
 | Read this | For |
 |---|---|
-| **[REQUIREMENTS.md](REQUIREMENTS.md)** | What we build, the instructor's steer, the gap we fill, deliverables, and the explicit non-goals. **Start here.** |
-| **[ARCHITECTURE.md](ARCHITECTURE.md)** | The technical design: replicated sharing, truncation and normalization, power iteration, the DPF, the PIR delivery layer, the threat model. The source of truth. |
-| **[PHASES.md](PHASES.md)** | Schedule, the three graded milestones, who owns what, and the risk register. |
-| **[references/](references/)** | The two papers. **Read both in full before writing any code.** |
+| **[report/](report/)** | **The live work.** The survey's LaTeX skeleton, the reading tracks, the bibliography, and per-paper notes. Start at [`report/README.md`](report/README.md). |
+| **[report/notes/_synthesis.md](report/notes/_synthesis.md)** | The argument the survey is built to make — and the list of things that would kill it. |
+| **[REQUIREMENTS.md](REQUIREMENTS.md)** | Scope, the instructor's steer, the gap, and the explicit non-goals. Note the status banner: the deliverable list is provisional. |
+| **[PHASES.md](PHASES.md)** | Schedule, the three graded milestones, and the risk register. |
+| **[references/](references/)** | The two base papers. **Read both in full before anything else.** |
+| [design/ARCHITECTURE-draft-v1.md](design/ARCHITECTURE-draft-v1.md) | The drafted protocol design. **Superseded pending the survey** — do not implement from it. |
 
 ---
 
@@ -101,32 +120,32 @@ S1 ships regardless and demos early; its DPF is a prerequisite for S2's non-line
 ## Layout
 
 ```
-include/oblivrec/   public headers — the contract between workstreams
-src/dpf/            W1  DPF: GGM tree, AES-NI          ── used by BOTH halves
-src/pir/            W1  DPF-PIR delivery, consumption harvesting
-src/mpc/            W2  replicated sharing, PRF setup, matrix-vector programs
-src/mpc/nonlinear/  W2  Trunc_t, ApproxNormalize, FSS compare / zero-test
-src/mf/             W3  power iteration, SetOrthogonal, ApproxFactor
-src/serve/          W3  scores, seen-item masking, oblivious top-k
-src/apps/           server0/1/2, user client, demo CLI
-model/              cleartext oracle and quality evaluation (Python)
-bench/              W4  sweeps, netem profiles, figure generation
-tests/              unit and end-to-end; cleartext oracles
+report/             THE LIVE WORK — survey.tex, midterm.tex, final.tex,
+                    one shared preamble.tex and references.bib,
+                    sections/, notes/, figures/, slides/
 references/         the two instructor-recommended papers
+design/             the drafted protocol design (superseded, see above)
+archive/            parked scaffolding, nothing deleted
+docs/               contribution log (required by the mid-term report)
+scripts/            fetch_data.py — MovieLens downloader, checksum-verified
+data/               downloaded datasets (gitignored)
 ```
 
 ---
 
 ## Build
 
-Requires a C++17 compiler with AES-NI, CMake ≥ 3.20, and Python 3.11.
-Benchmarks require Docker — `tc netem` is not available natively on Windows.
+The survey needs only a LaTeX toolchain (TinyTeX is enough):
 
 ```bash
-git clone <repo-url> && cd privacy-preserving-recommendation
-python scripts/fetch_data.py            # downloads MovieLens; data/ is not committed
-cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
-ctest --test-dir build
+git clone <repo-url> && cd privacy-preserving-recommendation/report
+latexmk -pdf survey.tex
+```
+
+Data, for later:
+
+```bash
+python scripts/fetch_data.py    # MovieLens-100K and 1M; data/ is not committed
 ```
 
 ---
@@ -151,4 +170,12 @@ ctest --test-dir build
 
 ## Status
 
-Phase 0 — mobilisation. See [PHASES.md](PHASES.md).
+**Phase 0/1 — mobilisation and literature survey.** Next actions, in order:
+
+1. **Book the instructor meeting** he offered. Questions Q1 and Q2 in
+   [REQUIREMENTS.md §11](REQUIREMENTS.md) unblock the architecture.
+2. **Everyone reads both base papers end to end**, then tracks are assigned at the kickoff.
+3. **Run the forward-citation sweep** (PHASES task 1.4) before drafting — the survey's central
+   claim depends on it.
+
+See [PHASES.md](PHASES.md).

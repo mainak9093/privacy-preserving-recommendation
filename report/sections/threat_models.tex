@@ -1,0 +1,64 @@
+%% ==========================================================================
+%%  SECTION 2 --- WHAT "PRIVATE" MEANS                          [Track T4]
+%%
+%%  Job: establish that "private recommendation" names several INCOMPARABLE
+%%  guarantees, so the numbers in later sections cannot be compared naively.
+%%  This section is what stops the survey from being a list. ~1.5 pages.
+%% ==========================================================================
+\section{What ``Private'' Means}
+\label{sec:threat}
+
+\todo{The point of this section: four communities all say ``privacy-preserving
+      recommendation'' and mean four different things. A reader who does not
+      have this straight will mis-read every comparison in \S4 and \S5.}
+
+\subsection{The four families}
+\label{sec:threat:families}
+
+\todo{One short paragraph each, with a representative citation and an honest
+      statement of what each does NOT protect.
+      (a) MPC / secret sharing --- \pirsonaplain{}, \nudgeplain{}. Strong,
+          but assumes non-collusion among a fixed set of servers.
+      (b) Homomorphic encryption --- single-server, no non-collusion
+          assumption, orders of magnitude slower.
+      (c) Federated learning + DP --- no cryptographic guarantee on the
+          intermediate model; \nudgeplain{} \S3.1 Remark 3.1 is explicit that
+          federated systems leak through logs and intermediate model versions.
+      (d) Trusted hardware --- deployed and fast, but trades cryptography for
+          hardware trust and is vulnerable to side channels.}
+
+\begin{table}[t]
+\centering
+\todo{Table: family $\times$ \{trust assumption, what is hidden, what leaks,
+      typical cost\}. This table is the section's deliverable --- if a reader
+      takes one thing from \S2, it should be this. Use booktabs.}
+\caption{Privacy notions for recommendation and what each actually buys.}
+\label{tab:threat:families}
+\end{table}
+
+\subsection{Corruption models}
+\label{sec:threat:corruption}
+
+\todo{Semi-honest versus malicious; honest majority versus dishonest
+      majority; static versus adaptive corruption. Define the real/ideal
+      paradigm briefly and cite Lindell's ``How to Simulate It''.
+      Be precise about the two base papers:
+      \nudgeplain{} is semi-honest, honest-majority, 3 servers, tolerates
+      compromise of the entire secret state of ONE;
+      \pirsonaplain{} is pairwise non-colluding across $s+1$ servers, with a
+      PIR layer that is computationally 1-private against a MALICIOUS server.
+      That difference matters and is easy to get wrong.}
+
+\subsection{Leakage that survives the protocol}
+\label{sec:threat:leakage}
+
+\gap{This subsection plants the seed for \S8. Do not resolve it here.}
+
+\todo{The idea that a protocol can be perfectly secure and still leak, because
+      the leakage is in the FUNCTIONALITY rather than the protocol. Two
+      independent arrivals at the same point:
+      Asharov et al.\ (PETS'18) on genomic search --- an adaptive querier
+      learns a great deal even against an IDEAL functionality;
+      PICS (eprint 2025/1071) on input inconsistency across executions.
+      Then note that \nudgeplain{} publishes $\itemembed$ in the clear by
+      design, and ask what that gives an adversary. Leave it hanging.}
