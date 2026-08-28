@@ -1,0 +1,97 @@
+%% ==========================================================================
+%%  SECTION 3 --- A TAXONOMY OF PRIVACY-PRESERVING RECOMMENDATION
+%%
+%%  THE SPINE OF THE SURVEY.  Absorbs the superseded sections/threat_models.tex.
+%%
+%%  Job: give the reader axes along which to place any system in the field,
+%%  then place every surveyed system on them.  This is what makes the document
+%%  a survey rather than an annotated bibliography, and it is where the
+%%  full-field coverage lives -- federated, DP and TEE approaches are
+%%  CLASSIFIED here even though only the cryptographic line is treated at
+%%  mechanism level later.
+%%
+%%  EVIDENCE: placement of a Tier C paper in Table~\ref{tab:taxonomy} is
+%%  permitted; prose claims about Tier C papers are not.
+%% ==========================================================================
+\section{A Taxonomy of Approaches}
+\label{sec:taxonomy}
+
+\todo{Open by stating the problem this section solves: papers in this field are
+      routinely compared as though they were alternatives when they in fact
+      protect different stages under different trust assumptions with
+      incomparable guarantees. The four axes below are what make the
+      comparison honest.}
+
+\subsection{Axis 1: the trust model}
+\label{sec:taxonomy:trust}
+
+\todo{Who must be trusted not to collude?
+      - SINGLE SERVER (no non-collusion assumption; needs HE or single-server
+        PIR --- computationally expensive)
+      - TWO OR MORE NON-COLLUDING SERVERS (cheap information-theoretic or
+        FSS-based protocols, at the price of an assumption about the world)
+      - USER-SIDE / FEDERATED (no server holds raw data, but intermediate
+        updates leak)
+      - TRUSTED HARDWARE (assumes the enclave; side channels out of scope here)
+      State plainly that these are not orderable by strength --- they are
+      different assumptions, not more or less of one.}
+
+\subsection{Axis 2: the privacy notion}
+\label{sec:taxonomy:notion}
+
+\todo{What does ``private'' formally mean in each case?
+      - CRYPTOGRAPHIC (simulation-based; the real/ideal paradigm --- cite
+        lindell2017, evans2018). Hides everything but the agreed output.
+      - DIFFERENTIAL PRIVACY (cite dwork2014; mcsherry2009 applied it to
+        recommendation). Bounds an individual's influence on the output;
+        says nothing about who sees the computation.
+      - ANONYMITY / MIXING (cite ishai2006 for the formal connection between
+        anonymity and cryptographic strength).
+      These compose but do not substitute. A system can be cryptographically
+      private and still leak through its output --- which is exactly
+      calandrino2011's attack, and the point section 9 returns to.}
+
+\subsection{Axis 3: which pipeline stage is protected}
+\label{sec:taxonomy:stage}
+
+\todo{Map onto Figure~\ref{fig:pipeline}: collection / training / serving /
+      delivery. THIS IS THE AXIS THE FIELD IS LEAST EXPLICIT ABOUT, and the
+      one that makes the survey's contribution. Most work protects training;
+      considerably less protects delivery; very little protects both.}
+
+\subsection{Axis 4: the adversary}
+\label{sec:taxonomy:adversary}
+
+\todo{Semi-honest versus malicious; static versus adaptive corruption;
+      the collusion threshold. Note that almost all deployed-scale systems in
+      this survey are semi-honest, and that this is a substantive limitation
+      rather than a technicality.}
+
+\begin{table}[t]
+\centering
+\todo{THE MASTER CLASSIFICATION TABLE --- the single most valuable object in
+      this survey. Rows: every surveyed system. Columns: trust model
+      (axis 1) | privacy notion (axis 2) | pipeline stage(s) covered
+      (axis 3) | adversary (axis 4) | evaluated scale.
+      Tier C papers may appear here, since placement follows from title and
+      abstract. Sort by pipeline stage so the sparsity of the delivery column
+      is visible at a glance --- that sparsity is a finding, and it should be
+      readable from the table without prose.
+      Use booktabs; this will need \small or a sideways float.}
+\caption{Classification of surveyed systems along the four axes of
+         Section~\ref{sec:taxonomy}.}
+\label{tab:taxonomy}
+\end{table}
+
+\subsection{Reading the table}
+\label{sec:taxonomy:reading}
+
+\todo{Two or three paragraphs drawing out what the table shows --- and ONLY
+      what it shows. Expected observations, to be confirmed once the table is
+      populated rather than assumed now:
+      (i) the training column is dense and the delivery column sparse;
+      (ii) the cheapest protocols consistently buy their speed with a
+           non-collusion assumption;
+      (iii) systems at the largest evaluated scale are semi-honest.
+      \verify{Do not write these until the table is filled --- they are
+      predictions, and the table may not support them.}}

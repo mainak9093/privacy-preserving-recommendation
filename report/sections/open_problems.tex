@@ -1,0 +1,81 @@
+%% ==========================================================================
+%%  SECTION 9 --- OPEN PROBLEMS
+%%
+%%  Reframed from the superseded sections/gap_and_direction.tex, which was
+%%  written as a pitch for our own project. This is a SURVEY section: it
+%%  reports the field's open problems, of which our interest is one item,
+%%  named briefly at the end and not dwelt on.
+%%
+%%  EVIDENCE: an "open problem" is only listed here if a surveyed paper says
+%%  it is open, or if the absence is visible in Table~\ref{tab:taxonomy}.
+%%  Do not invent open problems.
+%% ==========================================================================
+\section{Open Problems}
+\label{sec:open}
+
+\todo{One framing paragraph: these are drawn from limitations the surveyed
+      authors state themselves, and from gaps visible in
+      Table~\ref{tab:taxonomy}. Say so --- it is what separates a survey's
+      open-problems section from speculation.}
+
+\subsection{Malicious security at scale}
+\label{sec:open:malicious}
+
+\todo{Nearly every system evaluated at realistic scale is semi-honest.
+      nudge2026 lists malicious security as its first open question;
+      grotto2023 notes that pika2022 generalised its predecessor technique to
+      the malicious setting at a cost. Report what the papers say the barrier
+      is, without asserting a solution.}
+
+\subsection{Reducing the non-collusion assumption}
+\label{sec:open:collusion}
+
+\todo{The recurring trade: the fastest protocols assume two or three
+      non-colluding servers. nudge2026 explicitly poses serving private
+      recommendations with only two non-colluding parties as open. Contrast
+      with the single-server line (simplepir2023, spiral2022), which removes
+      the assumption at a computational cost. Present as a trade-off the field
+      has not resolved, not as a defect.}
+
+\subsection{The delivery stage}
+\label{sec:open:delivery}
+
+\todo{The sparse column in Table~\ref{tab:taxonomy}. nudge2026 states in its
+      non-goals that it relies on ``other means'' --- private relays, Tor, or
+      cryptographic PIR --- for users to fetch items privately. pirsona2021 is
+      one of the few systems to address collection, training and delivery
+      together. Meanwhile a substantial private-retrieval literature has
+      developed largely separately (section 6).
+      Report this as an observation about the literature; it is the gap our
+      own project engages with, but this section is not the place to argue
+      for that.}
+
+\subsection{Leakage through the recommendation itself}
+\label{sec:open:functionality}
+
+\todo{The deepest open problem, and worth stating carefully because it is not
+      a protocol failure. calandrino2011 attacks the recommender's INTENDED
+      OUTPUT: no protocol flaw is involved. A system can be
+      cryptographically perfect and still leak, because the functionality
+      itself is revealing. asharov2018 make a structurally similar point for
+      genomic similarity search.
+      Cryptography bounds who sees the computation; it does not bound what the
+      output implies. DP addresses this (mcsherry2009, and the DP extension in
+      nudge2026) at a utility cost. Note that composing cryptographic and
+      differential privacy in recommendation remains only partly explored.}
+
+\subsection{Evaluation and comparability}
+\label{sec:open:evaluation}
+
+\todo{Forward from section 8: the field lacks a shared benchmark. Papers use
+      different data sets, hardware, network models and quality metrics, so
+      published numbers are frequently not comparable. This is a tractable,
+      unglamorous open problem and worth naming as one.}
+
+\subsection{Scope of our own follow-on work}
+\label{sec:open:ours}
+
+\todo{THREE OR FOUR SENTENCES, NO MORE. The course project that follows this
+      survey engages with Section~\ref{sec:open:delivery}. Do not pitch, do
+      not claim novelty, do not promise results --- state the interest and
+      stop. Overselling here would undercut the survey's credibility.}

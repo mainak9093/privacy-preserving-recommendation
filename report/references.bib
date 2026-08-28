@@ -1,471 +1,1168 @@
 %% ==========================================================================
-%%  references.bib --- ONE bibliography for all three milestone documents.
+%%  references.bib --- CS670 literature survey
 %%
-%%  VERIFICATION DISCIPLINE.  Every entry carries a status comment:
+%%  PROVENANCE.  Every entry below was retrieved programmatically from the
+%%  DBLP computer science bibliography (https://dblp.org) on 2026-08-24 and
+%%  is reproduced as DBLP served it, with only three changes:
+%%    - the citation key was renamed from DBLP's key to a readable one
+%%      (the original DBLP key is preserved in the comment above each entry),
+%%    - DBLP housekeeping fields (timestamp/biburl/bibsource) were removed,
+%%    - DBLP homonym disambiguators ("Oded Goldreich 0001") were stripped.
+%%  Author lists, titles, venues, years, pages and DOIs are UNMODIFIED.
 %%
-%%    %% [VERIFIED]   metadata checked against the actual PDF, in hand
-%%    %% [LISTING]    metadata from a publisher/arXiv listing, PDF not read
-%%    %% [UNVERIFIED] from a search result only --- author list, page numbers
-%%                    and even the venue may be WRONG. Fix before citing.
+%%  Nothing here was typed from memory. An earlier version of this file
+%%  contained 28 entries seeded from search results with guessed metadata;
+%%  it is preserved as references.bib.pre-dblp and is NOT used.
+%%  One paper (Kim et al., FHE matrix factorization) was dropped because it
+%%  could not be resolved in DBLP -- unverifiable entries are omitted rather
+%%  than guessed.
 %%
-%%  Most entries below are [UNVERIFIED] because they were seeded from a
-%%  literature search on 2026-08-15, not from the papers. Part of the reading
-%%  assignment is to promote your track's entries to [VERIFIED] as you read.
-%%  DO NOT SUBMIT with [UNVERIFIED] entries still cited --- a wrong citation
-%%  in a survey is the cheapest possible way to lose credibility.
+%%  The single hand-built entry is nudge2026, whose USENIX Security 2026
+%%  proceedings are not yet indexed by DBLP. Its fields were transcribed from
+%%  the paper's own title page (references/Nudge A Private Recommendations
+%%  Engine.pdf); page numbers are deliberately omitted as the final page could
+%%  not be confirmed. The DBLP-verified ePrint record is also included as
+%%  nudge2026eprint.
 %%
-%%  Key format: firstauthorYEAR or systemnameYEAR (lowercase).
-%%
-%%  ------------------------------------------------------------------------
-%%  ABOUT THE "Warning--to sort, need author or key" MESSAGES FROM BIBTEX
-%%
-%%  Several entries below deliberately have NO author field. That is not an
-%%  oversight and it is not a bug: those papers were found through a search
-%%  listing, and their author lists were NOT confirmed. Guessing an author
-%%  list to silence the warning would put a fabricated citation into a
-%%  literature survey -- far worse than a noisy build.
-%%
-%%  Treat each warning as a work item: read the paper, then fill in the real
-%%  authors and flip the entry to [VERIFIED]. When the warnings stop, the
-%%  bibliography is done.
-%%  ------------------------------------------------------------------------
+%%  READING TIER (governs what the survey may assert about each work):
+%%    A = full PDF read      -- mechanism, quotes, specific numbers permitted
+%%    B = abstract/intro read -- problem, setting, headline claim only
+%%    C = metadata verified   -- taxonomy placement only, no prose claims
+%%  Tiers are recorded in report/notes/evidence.md, not here.
 %% ==========================================================================
 
-
-%% ==========================================================================
-%%  THE TWO BASE PAPERS --- recommended by the instructor
-%% ==========================================================================
-
-%% [VERIFIED] against references/Recommendation System PIR.pdf
-@article{pirsona2021,
-  author  = {Vadapalli, Adithya and Bayatbabolghani, Fattaneh and Henry, Ryan},
-  title   = {You May Also Like\ldots{} Privacy: Recommendation Systems Meet {PIR}},
-  journal = {Proceedings on Privacy Enhancing Technologies},
-  volume  = {2021},
-  number  = {4},
-  pages   = {30--53},
-  year    = {2021},
-  doi     = {10.2478/popets-2021-0059},
-  url     = {https://petsymposium.org/popets/2021/popets-2021-0059.php}
-}
-
-%% [VERIFIED] against references/Nudge A Private Recommendations Engine.pdf
-%% Full version: https://eprint.iacr.org/2026/179
+%% [TIER A] Transcribed from the paper's title page; not yet in DBLP.
 @inproceedings{nudge2026,
-  author    = {Henzinger, Alexandra and Dauterman, Emma and
-               Corrigan-Gibbs, Henry and Boneh, Dan},
-  title     = {Nudge: A Private Recommendations Engine},
-  booktitle = {35th {USENIX} Security Symposium ({USENIX} Security 26)},
-  year      = {2026},
-  address   = {Baltimore, MD, USA},
-  publisher = {USENIX Association},
-  url       = {https://www.usenix.org/conference/usenixsecurity26/presentation/henzinger},
-  note      = {Artifact: \url{https://github.com/NudgeArtifact/private-recs}}
-}
-
-
-%% ==========================================================================
-%%  A. PRIMITIVES --- function secret sharing, secret sharing, MPC
-%% ==========================================================================
-
-%% [UNVERIFIED] page numbers not checked
-@inproceedings{bgi2015,
-  author    = {Boyle, Elette and Gilboa, Niv and Ishai, Yuval},
-  title     = {Function Secret Sharing},
-  booktitle = {Advances in Cryptology -- {EUROCRYPT} 2015},
-  year      = {2015},
-  publisher = {Springer}
-}
-
-%% [UNVERIFIED]
-@inproceedings{bgi2016,
-  author    = {Boyle, Elette and Gilboa, Niv and Ishai, Yuval},
-  title     = {Function Secret Sharing: Improvements and Extensions},
-  booktitle = {Proceedings of the 2016 {ACM} {SIGSAC} Conference on Computer
-               and Communications Security ({CCS})},
-  year      = {2016}
-}
-
-%% [LISTING] arXiv 2607.27696, July 2026. A current survey of the area --
-%% the best single entry point for Track T1. Author list not yet checked.
-@misc{dpfsurvey2026,
-  title        = {Distributed Point Functions and Function Secret Sharing},
+  author       = {Alexandra Henzinger and
+                  Emma Dauterman and
+                  Henry Corrigan{-}Gibbs and
+                  Dan Boneh},
+  title        = {Nudge: {A} Private Recommendations Engine},
+  booktitle    = {35th {USENIX} Security Symposium, {USENIX} Security 2026,
+                  Baltimore, MD, USA, August 12-14, 2026},
+  publisher    = {{USENIX} Association},
   year         = {2026},
-  eprint       = {2607.27696},
-  archivePrefix= {arXiv},
-  note         = {Survey}
+  isbn         = {978-1-939133-58-8},
+  url          = {https://www.usenix.org/conference/usenixsecurity26/presentation/henzinger},
+  note         = {Full version: IACR ePrint 2026/179}
 }
-
-%% [LISTING] arXiv 2604.24385
-@misc{itdpf2026,
-  title        = {Information-Theoretic Distributed Point Functions with Shorter Keys},
-  year         = {2026},
-  eprint       = {2604.24385},
-  archivePrefix= {arXiv}
-}
-
-%% [LISTING] arXiv 2603.17453
-@misc{ddhfss2026,
-  title        = {{DDH}-based Schemes for Multi-Party Function Secret Sharing},
-  year         = {2026},
-  eprint       = {2603.17453},
-  archivePrefix= {arXiv}
-}
-
-%% [LISTING] arXiv 2606.09551. Shows the current FSS engineering frontier (GPU).
-@misc{fusefss2026,
-  title        = {{FuseFSS}: Efficient Secure {LLM} Inference with Function Secret Sharing},
-  year         = {2026},
-  eprint       = {2606.09551},
-  archivePrefix= {arXiv}
-}
-
-%% [UNVERIFIED] The replicated 2-of-3 sharing / "3PC with PRF" model Nudge uses.
-@inproceedings{araki2016,
-  author    = {Araki, Toshinori and Furukawa, Jun and Lindell, Yehuda and
-               Nof, Ariel and Ohara, Kazuma},
-  title     = {High-Throughput Semi-Honest Secure Three-Party Computation
-               with an Honest Majority},
-  booktitle = {Proceedings of the 2016 {ACM} {SIGSAC} Conference on Computer
-               and Communications Security ({CCS})},
-  year      = {2016}
-}
-
-%% [UNVERIFIED] Truncation on secret-shared data; the low-order carry fix Nudge cites.
-@inproceedings{escudero2020,
-  author    = {Escudero, Daniel and Ghosh, Satrajit and Keller, Marcel and
-               Rachuri, Rahul and Scholl, Peter},
-  title     = {Improved Primitives for {MPC} over Mixed Arithmetic-Binary Circuits},
-  booktitle = {Advances in Cryptology -- {CRYPTO} 2020},
-  year      = {2020}
-}
-
-%% [UNVERIFIED] Instructor's. Fast DPF-based comparison over Z_{2^n}.
-@inproceedings{grotto2023,
-  author    = {Storrier, Kyle and Vadapalli, Adithya and Lyons, Allan and
-               Henry, Ryan},
-  title     = {Grotto: Screaming Fast (2+1)-{PC} for $\mathbb{Z}_{2^n}$
-               via (2,2)-{DPF}s},
-  booktitle = {Proceedings of the 2023 {ACM} {SIGSAC} Conference on Computer
-               and Communications Security ({CCS})},
-  year      = {2023}
-}
-
-%% [UNVERIFIED] Instructor's. Relevant to malicious-client DPF audits.
-@inproceedings{sabre2022,
-  author    = {Vadapalli, Adithya and Storrier, Kyle and Henry, Ryan},
-  title     = {Sabre: Sender-Anonymous Messaging with Fast Audits},
-  booktitle = {2022 {IEEE} Symposium on Security and Privacy ({S\&P})},
-  year      = {2022}
-}
-
-%% [UNVERIFIED] Free textbook. The shared vocabulary for Track T2.
-@book{ekr2018,
-  author    = {Evans, David and Kolesnikov, Vladimir and Rosulek, Mike},
-  title     = {A Pragmatic Introduction to Secure Multi-Party Computation},
-  publisher = {Now Publishers},
-  year      = {2018},
-  url       = {https://securecomputation.org/}
-}
-
-%% [UNVERIFIED] You will be asked this in the viva.
-@misc{lindell2017simulate,
-  author = {Lindell, Yehuda},
-  title  = {How to Simulate It -- A Tutorial on the Simulation Proof Technique},
-  year   = {2017},
-  note   = {Cryptology ePrint Archive, Report 2016/046}
-}
-
-
-%% ==========================================================================
-%%  B. PRIVATE INFORMATION RETRIEVAL
-%% ==========================================================================
-
-%% [UNVERIFIED] The PIR scheme PIRSONA builds on. Exact title to be checked.
-@article{hafizhenry2019,
-  author  = {Hafiz, Syed Mahbub and Henry, Ryan},
-  title   = {A Bit More Than a Bit Is More Than a Bit Better:
-             Faster (Essentially) Optimal-Rate Many-Server {PIR}},
-  journal = {Proceedings on Privacy Enhancing Technologies},
-  volume  = {2019},
-  number  = {4},
-  year    = {2019}
-}
-
-%% [UNVERIFIED] Same first author as Nudge.
-@inproceedings{simplepir2023,
-  author    = {Henzinger, Alexandra and Hong, Matthew M. and
-               Corrigan-Gibbs, Henry and Meiklejohn, Sarah and
-               Vaikuntanathan, Vinod},
-  title     = {One Server for the Price of Two: Simple and Fast
-               Single-Server Private Information Retrieval},
-  booktitle = {32nd {USENIX} Security Symposium},
-  year      = {2023}
-}
-
-%% [UNVERIFIED]
-@inproceedings{spiral2022,
-  author    = {Menon, Samir Jordan and Wu, David J.},
-  title     = {Spiral: Fast, High-Rate Single-Server {PIR} via {FHE} Composition},
-  booktitle = {2022 {IEEE} Symposium on Security and Privacy ({S\&P})},
-  year      = {2022}
-}
-
-%% [UNVERIFIED] The preprocessing paradigm Pacmann depends on.
-@inproceedings{cgk2020,
-  author    = {Corrigan-Gibbs, Henry and Kogan, Dmitry},
-  title     = {Private Information Retrieval with Sublinear Online Time},
-  booktitle = {Advances in Cryptology -- {EUROCRYPT} 2020},
-  year      = {2020}
-}
-
-%% [LISTING] arXiv 2606.11536
-@misc{vipir2026,
-  title        = {{VIPIR}: A Versatile {GPU} Framework for Integrating
-                  Private Information Retrieval Protocols},
-  year         = {2026},
-  eprint       = {2606.11536},
-  archivePrefix= {arXiv}
-}
-
-%% [LISTING] arXiv 2509.13684
-@misc{pvpir2025,
-  title        = {Publicly Verifiable Private Information Retrieval Protocols
-                  Based on Function Secret Sharing},
-  year         = {2025},
-  eprint       = {2509.13684},
-  archivePrefix= {arXiv}
-}
-
-
-%% ==========================================================================
-%%  C. PRIVATE TRAINING --- the matrix-factorization line
-%% ==========================================================================
-
-%% [UNVERIFIED] The garbled-circuit baseline Nudge beats by 4 orders of magnitude.
+% dblp: conf/ccs/NikolaenkoIWJTB13
 @inproceedings{nikolaenko2013,
-  author    = {Nikolaenko, Valeria and Ioannidis, Stratis and Weinsberg, Udi and
-               Joye, Marc and Taft, Nina and Boneh, Dan},
-  title     = {Privacy-Preserving Matrix Factorization},
-  booktitle = {Proceedings of the 2013 {ACM} {SIGSAC} Conference on Computer
-               and Communications Security ({CCS})},
-  year      = {2013}
+  author       = {Valeria Nikolaenko and
+                  Stratis Ioannidis and
+                  Udi Weinsberg and
+                  Marc Joye and
+                  Nina Taft and
+                  Dan Boneh},
+  editor       = {Ahmad{-}Reza Sadeghi and
+                  Virgil D. Gligor and
+                  Moti Yung},
+  title        = {Privacy-preserving matrix factorization},
+  booktitle    = {2013 {ACM} {SIGSAC} Conference on Computer and Communications Security,
+                  CCS'13, Berlin, Germany, November 4-8, 2013},
+  pages        = {801--812},
+  publisher    = {{ACM}},
+  year         = {2013},
+  url          = {https://doi.org/10.1145/2508859.2516751},
+  doi          = {10.1145/2508859.2516751}
 }
 
-%% [LISTING] arXiv 1906.05108. The federated alternative and its leakage.
-@misc{fedmf2019,
+% dblp: journals/popets/VadapalliBH21
+@article{pirsona2021,
+  author       = {Adithya Vadapalli and
+                  Fattaneh Bayatbabolghani and
+                  Ryan Henry},
+  title        = {You May Also Like... Privacy: Recommendation Systems Meet {PIR}},
+  journal      = {Proc. Priv. Enhancing Technol.},
+  volume       = {2021},
+  number       = {4},
+  pages        = {30--53},
+  year         = {2021},
+  url          = {https://doi.org/10.2478/popets-2021-0059},
+  doi          = {10.2478/POPETS-2021-0059}
+}
+
+% dblp: journals/iacr/HenzingerDCB26
+@article{nudge2026eprint,
+  author       = {Alexandra Henzinger and
+                  Emma Dauterman and
+                  Henry Corrigan{-}Gibbs and
+                  Dan Boneh},
+  title        = {Nudge: {A} Private Recommendations Engine},
+  journal      = {{IACR} Cryptol. ePrint Arch.},
+  volume       = {2026},
+  pages        = {179},
+  year         = {2026},
+  url          = {https://eprint.iacr.org/2026/179}
+}
+
+% dblp: conf/sp/CalandrinoKNFS11
+@inproceedings{calandrino2011,
+  author       = {Joseph A. Calandrino and
+                  Ann Kilzer and
+                  Arvind Narayanan and
+                  Edward W. Felten and
+                  Vitaly Shmatikov},
+  title        = {"You Might Also Like: " Privacy Risks of Collaborative Filtering},
+  booktitle    = {32nd {IEEE} Symposium on Security and Privacy, {SP} 2011, 22-25 May
+                  2011, Berkeley, California, {USA}},
+  pages        = {231--246},
+  publisher    = {{IEEE} Computer Society},
+  year         = {2011},
+  url          = {https://doi.org/10.1109/SP.2011.40},
+  doi          = {10.1109/SP.2011.40}
+}
+
+% dblp: conf/sp/NarayananS08
+@inproceedings{narayanan2008,
+  author       = {Arvind Narayanan and
+                  Vitaly Shmatikov},
+  title        = {Robust De-anonymization of Large Sparse Datasets},
+  booktitle    = {2008 {IEEE} Symposium on Security and Privacy {(SP} 2008), 18-21 May
+                  2008, Oakland, California, {USA}},
+  pages        = {111--125},
+  publisher    = {{IEEE} Computer Society},
+  year         = {2008},
+  url          = {https://doi.org/10.1109/SP.2008.33},
+  doi          = {10.1109/SP.2008.33}
+}
+
+% dblp: conf/kdd/McSherryM09
+@inproceedings{mcsherry2009,
+  author       = {Frank McSherry and
+                  Ilya Mironov},
+  editor       = {John F. Elder IV and
+                  Fran{\c{c}}oise Fogelman{-}Souli{\'{e}} and
+                  Peter A. Flach and
+                  Mohammed Javeed Zaki},
+  title        = {Differentially Private Recommender Systems: Building Privacy into
+                  the Netflix Prize Contenders},
+  booktitle    = {Proceedings of the 15th {ACM} {SIGKDD} International Conference on
+                  Knowledge Discovery and Data Mining, Paris, France, June 28 - July
+                  1, 2009},
+  pages        = {627--636},
+  publisher    = {{ACM}},
+  year         = {2009},
+  url          = {https://doi.org/10.1145/1557019.1557090},
+  doi          = {10.1145/1557019.1557090}
+}
+
+% dblp: conf/recsys/ShmueliT17
+@inproceedings{shmueli2017,
+  author       = {Erez Shmueli and
+                  Tamir Tassa},
+  editor       = {Paolo Cremonesi and
+                  Francesco Ricci and
+                  Shlomo Berkovsky and
+                  Alexander Tuzhilin},
+  title        = {Secure Multi-Party Protocols for Item-Based Collaborative Filtering},
+  booktitle    = {Proceedings of the Eleventh {ACM} Conference on Recommender Systems,
+                  RecSys 2017, Como, Italy, August 27-31, 2017},
+  pages        = {89--97},
+  publisher    = {{ACM}},
+  year         = {2017},
+  url          = {https://doi.org/10.1145/3109859.3109881},
+  doi          = {10.1145/3109859.3109881}
+}
+
+% dblp: journals/expert/ChaiWCY21
+@article{chai2021,
+  author       = {Di Chai and
+                  Leye Wang and
+                  Kai Chen and
+                  Qiang Yang},
   title        = {Secure Federated Matrix Factorization},
+  journal      = {{IEEE} Intell. Syst.},
+  volume       = {36},
+  number       = {5},
+  pages        = {11--20},
+  year         = {2021},
+  url          = {https://doi.org/10.1109/MIS.2020.3014880},
+  doi          = {10.1109/MIS.2020.3014880}
+}
+
+% dblp: journals/corr/abs-1901-09888
+@article{ammadudin2019,
+  author       = {Muhammad Ammad{-}ud{-}din and
+                  Elena Ivannikova and
+                  Suleiman A. Khan and
+                  Were Oyomno and
+                  Qiang Fu and
+                  Kuan Eeik Tan and
+                  Adrian Flanagan},
+  title        = {Federated Collaborative Filtering for Privacy-Preserving Personalized
+                  Recommendation System},
+  journal      = {CoRR},
+  volume       = {abs/1901.09888},
   year         = {2019},
-  eprint       = {1906.05108},
-  archivePrefix= {arXiv}
+  url          = {http://arxiv.org/abs/1901.09888},
+  eprinttype   = {arXiv},
+  eprint       = {1901.09888}
 }
 
-%% [LISTING] arXiv 2509.03024. The FHE alternative, current.
-@misc{fherec2025,
-  title        = {Efficient Privacy-Preserving Recommendation on Sparse Data
-                  using Fully Homomorphic Encryption},
-  year         = {2025},
-  eprint       = {2509.03024},
-  archivePrefix= {arXiv}
+% dblp: journals/computer/KorenBV09
+@article{koren2009,
+  author       = {Yehuda Koren and
+                  Robert M. Bell and
+                  Chris Volinsky},
+  title        = {Matrix Factorization Techniques for Recommender Systems},
+  journal      = {Computer},
+  volume       = {42},
+  number       = {8},
+  pages        = {30--37},
+  year         = {2009},
+  url          = {https://doi.org/10.1109/MC.2009.263},
+  doi          = {10.1109/MC.2009.263}
 }
 
-%% [LISTING] arXiv 2601.10212
-@misc{pader2026,
-  title        = {{PADER}: Paillier-based Secure Decentralized Social Recommendation},
+% dblp: conf/icdm/HuKV08
+@inproceedings{hu2008,
+  author       = {Yifan Hu and
+                  Yehuda Koren and
+                  Chris Volinsky},
+  title        = {Collaborative Filtering for Implicit Feedback Datasets},
+  booktitle    = {Proceedings of the 8th {IEEE} International Conference on Data Mining
+                  {(ICDM} 2008), December 15-19, 2008, Pisa, Italy},
+  pages        = {263--272},
+  publisher    = {{IEEE} Computer Society},
+  year         = {2008},
+  url          = {https://doi.org/10.1109/ICDM.2008.22},
+  doi          = {10.1109/ICDM.2008.22}
+}
+
+% dblp: conf/www/LiangKHJ18
+@inproceedings{liang2018,
+  author       = {Dawen Liang and
+                  Rahul G. Krishnan and
+                  Matthew D. Hoffman and
+                  Tony Jebara},
+  editor       = {Pierre{-}Antoine Champin and
+                  Fabien Gandon and
+                  Mounia Lalmas and
+                  Panagiotis G. Ipeirotis},
+  title        = {Variational Autoencoders for Collaborative Filtering},
+  booktitle    = {Proceedings of the 2018 World Wide Web Conference on World Wide Web,
+                  {WWW} 2018, Lyon, France, April 23-27, 2018},
+  pages        = {689--698},
+  publisher    = {{ACM}},
+  year         = {2018},
+  url          = {https://doi.org/10.1145/3178876.3186150},
+  doi          = {10.1145/3178876.3186150}
+}
+
+% dblp: conf/recsys/DacremaCJ19
+@inproceedings{dacrema2019,
+  author       = {Maurizio Ferrari Dacrema and
+                  Paolo Cremonesi and
+                  Dietmar Jannach},
+  editor       = {Toine Bogers and
+                  Alan Said and
+                  Peter Brusilovsky and
+                  Domonkos Tikk},
+  title        = {Are we really making much progress? {A} worrying analysis of recent
+                  neural recommendation approaches},
+  booktitle    = {Proceedings of the 13th {ACM} Conference on Recommender Systems, RecSys
+                  2019, Copenhagen, Denmark, September 16-20, 2019},
+  pages        = {101--109},
+  publisher    = {{ACM}},
+  year         = {2019},
+  url          = {https://doi.org/10.1145/3298689.3347058},
+  doi          = {10.1145/3298689.3347058}
+}
+
+% dblp: journals/tiis/HarperK16
+@article{movielens2016,
+  author       = {F. Maxwell Harper and
+                  Joseph A. Konstan},
+  title        = {The MovieLens Datasets: History and Context},
+  journal      = {{ACM} Trans. Interact. Intell. Syst.},
+  volume       = {5},
+  number       = {4},
+  pages        = {19:1--19:19},
+  year         = {2016},
+  url          = {https://doi.org/10.1145/2827872},
+  doi          = {10.1145/2827872}
+}
+
+% dblp: journals/cacm/Shamir79
+@article{shamir1979,
+  author       = {Adi Shamir},
+  title        = {How to Share a Secret},
+  journal      = {Commun. {ACM}},
+  volume       = {22},
+  number       = {11},
+  pages        = {612--613},
+  year         = {1979},
+  url          = {https://doi.org/10.1145/359168.359176},
+  doi          = {10.1145/359168.359176}
+}
+
+% dblp: conf/focs/Yao86
+@inproceedings{yao1986,
+  author       = {Andrew Chi{-}Chih Yao},
+  title        = {How to Generate and Exchange Secrets (Extended Abstract)},
+  booktitle    = {27th Annual Symposium on Foundations of Computer Science, Toronto,
+                  Canada, 27-29 October 1986},
+  pages        = {162--167},
+  publisher    = {{IEEE} Computer Society},
+  year         = {1986},
+  url          = {https://doi.org/10.1109/SFCS.1986.25},
+  doi          = {10.1109/SFCS.1986.25}
+}
+
+% dblp: conf/crypto/Beaver91a
+@inproceedings{beaver1991,
+  author       = {Donald Beaver},
+  editor       = {Joan Feigenbaum},
+  title        = {Efficient Multiparty Protocols Using Circuit Randomization},
+  booktitle    = {Advances in Cryptology - {CRYPTO} '91, 11th Annual International Cryptology
+                  Conference, Santa Barbara, California, USA, August 11-15, 1991, Proceedings},
+  series       = {Lecture Notes in Computer Science},
+  volume       = {576},
+  pages        = {420--432},
+  publisher    = {Springer},
+  year         = {1991},
+  url          = {https://doi.org/10.1007/3-540-46766-1\_34},
+  doi          = {10.1007/3-540-46766-1\_34}
+}
+
+% dblp: conf/eurocrypt/Paillier99
+@inproceedings{paillier1999,
+  author       = {Pascal Paillier},
+  editor       = {Jacques Stern},
+  title        = {Public-Key Cryptosystems Based on Composite Degree Residuosity Classes},
+  booktitle    = {Advances in Cryptology - {EUROCRYPT} '99, International Conference
+                  on the Theory and Application of Cryptographic Techniques, Prague,
+                  Czech Republic, May 2-6, 1999, Proceeding},
+  series       = {Lecture Notes in Computer Science},
+  volume       = {1592},
+  pages        = {223--238},
+  publisher    = {Springer},
+  year         = {1999},
+  url          = {https://doi.org/10.1007/3-540-48910-X\_16},
+  doi          = {10.1007/3-540-48910-X\_16}
+}
+
+% dblp: conf/stoc/Gentry09
+@inproceedings{gentry2009,
+  author       = {Craig Gentry},
+  editor       = {Michael Mitzenmacher},
+  title        = {Fully homomorphic encryption using ideal lattices},
+  booktitle    = {Proceedings of the 41st Annual {ACM} Symposium on Theory of Computing,
+                  {STOC} 2009, Bethesda, MD, USA, May 31 - June 2, 2009},
+  pages        = {169--178},
+  publisher    = {{ACM}},
+  year         = {2009},
+  url          = {https://doi.org/10.1145/1536414.1536440},
+  doi          = {10.1145/1536414.1536440}
+}
+
+% dblp: conf/ccs/ArakiFLNO16
+@inproceedings{araki2016,
+  author       = {Toshinori Araki and
+                  Jun Furukawa and
+                  Yehuda Lindell and
+                  Ariel Nof and
+                  Kazuma Ohara},
+  editor       = {Edgar R. Weippl and
+                  Stefan Katzenbeisser and
+                  Christopher Kruegel and
+                  Andrew C. Myers and
+                  Shai Halevi},
+  title        = {High-Throughput Semi-Honest Secure Three-Party Computation with an
+                  Honest Majority},
+  booktitle    = {Proceedings of the 2016 {ACM} {SIGSAC} Conference on Computer and
+                  Communications Security, Vienna, Austria, October 24-28, 2016},
+  pages        = {805--817},
+  publisher    = {{ACM}},
+  year         = {2016},
+  url          = {https://doi.org/10.1145/2976749.2978331},
+  doi          = {10.1145/2976749.2978331}
+}
+
+% dblp: conf/eurocrypt/GilboaI14
+@inproceedings{gilboa2014,
+  author       = {Niv Gilboa and
+                  Yuval Ishai},
+  editor       = {Phong Q. Nguyen and
+                  Elisabeth Oswald},
+  title        = {Distributed Point Functions and Their Applications},
+  booktitle    = {Advances in Cryptology - {EUROCRYPT} 2014 - 33rd Annual International
+                  Conference on the Theory and Applications of Cryptographic Techniques,
+                  Copenhagen, Denmark, May 11-15, 2014. Proceedings},
+  series       = {Lecture Notes in Computer Science},
+  volume       = {8441},
+  pages        = {640--658},
+  publisher    = {Springer},
+  year         = {2014},
+  url          = {https://doi.org/10.1007/978-3-642-55220-5\_35},
+  doi          = {10.1007/978-3-642-55220-5\_35}
+}
+
+% dblp: conf/eurocrypt/BoyleGI15
+@inproceedings{bgi2015,
+  author       = {Elette Boyle and
+                  Niv Gilboa and
+                  Yuval Ishai},
+  editor       = {Elisabeth Oswald and
+                  Marc Fischlin},
+  title        = {Function Secret Sharing},
+  booktitle    = {Advances in Cryptology - {EUROCRYPT} 2015 - 34th Annual International
+                  Conference on the Theory and Applications of Cryptographic Techniques,
+                  Sofia, Bulgaria, April 26-30, 2015, Proceedings, Part {II}},
+  series       = {Lecture Notes in Computer Science},
+  volume       = {9057},
+  pages        = {337--367},
+  publisher    = {Springer},
+  year         = {2015},
+  url          = {https://doi.org/10.1007/978-3-662-46803-6\_12},
+  doi          = {10.1007/978-3-662-46803-6\_12}
+}
+
+% dblp: conf/ccs/BoyleGI16
+@inproceedings{bgi2016,
+  author       = {Elette Boyle and
+                  Niv Gilboa and
+                  Yuval Ishai},
+  editor       = {Edgar R. Weippl and
+                  Stefan Katzenbeisser and
+                  Christopher Kruegel and
+                  Andrew C. Myers and
+                  Shai Halevi},
+  title        = {Function Secret Sharing: Improvements and Extensions},
+  booktitle    = {Proceedings of the 2016 {ACM} {SIGSAC} Conference on Computer and
+                  Communications Security, Vienna, Austria, October 24-28, 2016},
+  pages        = {1292--1303},
+  publisher    = {{ACM}},
+  year         = {2016},
+  url          = {https://doi.org/10.1145/2976749.2978429},
+  doi          = {10.1145/2976749.2978429}
+}
+
+% dblp: conf/eurocrypt/BoyleCG0I0R21
+@inproceedings{boyle2021,
+  author       = {Elette Boyle and
+                  Nishanth Chandran and
+                  Niv Gilboa and
+                  Divya Gupta and
+                  Yuval Ishai and
+                  Nishant Kumar and
+                  Mayank Rathee},
+  editor       = {Anne Canteaut and
+                  Fran{\c{c}}ois{-}Xavier Standaert},
+  title        = {Function Secret Sharing for Mixed-Mode and Fixed-Point Secure Computation},
+  booktitle    = {Advances in Cryptology - {EUROCRYPT} 2021 - 40th Annual International
+                  Conference on the Theory and Applications of Cryptographic Techniques,
+                  Zagreb, Croatia, October 17-21, 2021, Proceedings, Part {II}},
+  series       = {Lecture Notes in Computer Science},
+  volume       = {12697},
+  pages        = {871--900},
+  publisher    = {Springer},
+  year         = {2021},
+  url          = {https://doi.org/10.1007/978-3-030-77886-6\_30},
+  doi          = {10.1007/978-3-030-77886-6\_30}
+}
+
+% dblp: journals/corr/abs-2607-27696
+@article{dpfsurvey2026,
+  author       = {Elette Boyle and
+                  Niv Gilboa and
+                  Yuval Ishai and
+                  Peter Scholl},
+  title        = {Distributed Point Functions and Function Secret Sharing},
+  journal      = {CoRR},
+  volume       = {abs/2607.27696},
   year         = {2026},
-  eprint       = {2601.10212},
-  archivePrefix= {arXiv}
+  url          = {https://doi.org/10.48550/arXiv.2607.27696},
+  doi          = {10.48550/ARXIV.2607.27696},
+  eprinttype   = {arXiv},
+  eprint       = {2607.27696}
 }
 
-%% [LISTING] arXiv 2411.18653
-@misc{prsi2024,
-  title        = {{PRSI}: Privacy-Preserving Recommendation Model Based on
-                  Vector Splitting and Interactive Protocols},
-  year         = {2024},
-  eprint       = {2411.18653},
-  archivePrefix= {arXiv}
+% dblp: conf/crypto/0001GKRS20
+@inproceedings{escudero2020,
+  author       = {Daniel Escudero and
+                  Satrajit Ghosh and
+                  Marcel Keller and
+                  Rahul Rachuri and
+                  Peter Scholl},
+  editor       = {Daniele Micciancio and
+                  Thomas Ristenpart},
+  title        = {Improved Primitives for {MPC} over Mixed Arithmetic-Binary Circuits},
+  booktitle    = {Advances in Cryptology - {CRYPTO} 2020 - 40th Annual International
+                  Cryptology Conference, {CRYPTO} 2020, Santa Barbara, CA, USA, August
+                  17-21, 2020, Proceedings, Part {II}},
+  series       = {Lecture Notes in Computer Science},
+  volume       = {12171},
+  pages        = {823--852},
+  publisher    = {Springer},
+  year         = {2020},
+  url          = {https://doi.org/10.1007/978-3-030-56880-1\_29},
+  doi          = {10.1007/978-3-030-56880-1\_29}
 }
 
-%% [LISTING] arXiv 2204.08146. The ONLY prior work naming both training and
-%% serving -- but DP + federated, not MPC + PIR. Important contrast case for
-%% sections/systems_both.tex.
-@misc{privaterec2022,
-  title        = {{PrivateRec}: Differentially Private Training and Serving
-                  for Federated News Recommendation},
+% dblp: journals/ftsec/EvansKR18
+@article{evans2018,
+  author       = {David Evans and
+                  Vladimir Kolesnikov and
+                  Mike Rosulek},
+  title        = {A Pragmatic Introduction to Secure Multi-Party Computation},
+  journal      = {Found. Trends Priv. Secur.},
+  volume       = {2},
+  number       = {2-3},
+  pages        = {70--246},
+  year         = {2018},
+  url          = {https://doi.org/10.1561/3300000019},
+  doi          = {10.1561/3300000019}
+}
+
+% dblp: books/sp/17/Lindell17
+@incollection{lindell2017,
+  author       = {Yehuda Lindell},
+  editor       = {Yehuda Lindell},
+  title        = {How to Simulate It - {A} Tutorial on the Simulation Proof Technique},
+  booktitle    = {Tutorials on the Foundations of Cryptography},
+  pages        = {277--346},
+  publisher    = {Springer International Publishing},
+  year         = {2017},
+  url          = {https://doi.org/10.1007/978-3-319-57048-8\_6},
+  doi          = {10.1007/978-3-319-57048-8\_6}
+}
+
+% dblp: journals/fttcs/DworkR14
+@article{dwork2014,
+  author       = {Cynthia Dwork and
+                  Aaron Roth},
+  title        = {The Algorithmic Foundations of Differential Privacy},
+  journal      = {Found. Trends Theor. Comput. Sci.},
+  volume       = {9},
+  number       = {3-4},
+  pages        = {211--407},
+  year         = {2014},
+  url          = {https://doi.org/10.1561/0400000042},
+  doi          = {10.1561/0400000042}
+}
+
+% dblp: conf/focs/IshaiKOS06
+@inproceedings{ishai2006,
+  author       = {Yuval Ishai and
+                  Eyal Kushilevitz and
+                  Rafail Ostrovsky and
+                  Amit Sahai},
+  title        = {Cryptography from Anonymity},
+  booktitle    = {47th Annual {IEEE} Symposium on Foundations of Computer Science, {FOCS}
+                  2006, Berkeley, California, USA, October 21-24, 2006, Proceedings},
+  pages        = {239--248},
+  publisher    = {{IEEE} Computer Society},
+  year         = {2006},
+  url          = {https://doi.org/10.1109/FOCS.2006.25},
+  doi          = {10.1109/FOCS.2006.25}
+}
+
+% dblp: conf/ndss/Demmler0Z15
+@inproceedings{aby2015,
+  author       = {Daniel Demmler and
+                  Thomas Schneider and
+                  Michael Zohner},
+  title        = {{ABY} - {A} Framework for Efficient Mixed-Protocol Secure Two-Party
+                  Computation},
+  booktitle    = {22nd Annual Network and Distributed System Security Symposium, {NDSS}
+                  2015, San Diego, California, USA, February 8-11, 2015},
+  publisher    = {The Internet Society},
+  year         = {2015},
+  url          = {https://www.ndss-symposium.org/ndss2015/aby---framework-efficient-mixed-protocol-secure-two-party-computation}
+}
+
+% dblp: conf/uss/Patra0SY21
+@inproceedings{aby22021,
+  author       = {Arpita Patra and
+                  Thomas Schneider and
+                  Ajith Suresh and
+                  Hossein Yalame},
+  editor       = {Michael D. Bailey and
+                  Rachel Greenstadt},
+  title        = {{ABY2.0:} Improved Mixed-Protocol Secure Two-Party Computation},
+  booktitle    = {30th {USENIX} Security Symposium, {USENIX} Security 2021, August 11-13,
+                  2021},
+  pages        = {2165--2182},
+  publisher    = {{USENIX} Association},
+  year         = {2021},
+  url          = {https://www.usenix.org/conference/usenixsecurity21/presentation/patra}
+}
+
+% dblp: conf/ccs/MohasselR18
+@inproceedings{aby32018,
+  author       = {Payman Mohassel and
+                  Peter Rindal},
+  editor       = {David Lie and
+                  Mohammad Mannan and
+                  Michael Backes and
+                  XiaoFeng Wang},
+  title        = {ABY\({}^{\mbox{3}}\): {A} Mixed Protocol Framework for Machine Learning},
+  booktitle    = {Proceedings of the 2018 {ACM} {SIGSAC} Conference on Computer and
+                  Communications Security, {CCS} 2018, Toronto, ON, Canada, October
+                  15-19, 2018},
+  pages        = {35--52},
+  publisher    = {{ACM}},
+  year         = {2018},
+  url          = {https://doi.org/10.1145/3243734.3243760},
+  doi          = {10.1145/3243734.3243760}
+}
+
+% dblp: conf/ccs/Keller20
+@inproceedings{mpspdz2020,
+  author       = {Marcel Keller},
+  editor       = {Jay Ligatti and
+                  Xinming Ou and
+                  Jonathan Katz and
+                  Giovanni Vigna},
+  title        = {{MP-SPDZ:} {A} Versatile Framework for Multi-Party Computation},
+  booktitle    = {{CCS} '20: 2020 {ACM} {SIGSAC} Conference on Computer and Communications
+                  Security, Virtual Event, USA, November 9-13, 2020},
+  pages        = {1575--1590},
+  publisher    = {{ACM}},
+  year         = {2020},
+  url          = {https://doi.org/10.1145/3372297.3417872},
+  doi          = {10.1145/3372297.3417872}
+}
+
+% dblp: conf/sp/MohasselZ17
+@inproceedings{secureml2017,
+  author       = {Payman Mohassel and
+                  Yupeng Zhang},
+  title        = {SecureML: {A} System for Scalable Privacy-Preserving Machine Learning},
+  booktitle    = {2017 {IEEE} Symposium on Security and Privacy, {SP} 2017, San Jose,
+                  CA, USA, May 22-26, 2017},
+  pages        = {19--38},
+  publisher    = {{IEEE} Computer Society},
+  year         = {2017},
+  url          = {https://doi.org/10.1109/SP.2017.12},
+  doi          = {10.1109/SP.2017.12}
+}
+
+% dblp: journals/popets/WaghGC19
+@article{securenn2019,
+  author       = {Sameer Wagh and
+                  Divya Gupta and
+                  Nishanth Chandran},
+  title        = {SecureNN: 3-Party Secure Computation for Neural Network Training},
+  journal      = {Proc. Priv. Enhancing Technol.},
+  volume       = {2019},
+  number       = {3},
+  pages        = {26--49},
+  year         = {2019},
+  url          = {https://doi.org/10.2478/popets-2019-0035},
+  doi          = {10.2478/POPETS-2019-0035}
+}
+
+% dblp: conf/focs/ChorGKS95
+@inproceedings{chor1995,
+  author       = {Benny Chor and
+                  Oded Goldreich and
+                  Eyal Kushilevitz and
+                  Madhu Sudan},
+  title        = {Private Information Retrieval},
+  booktitle    = {36th Annual Symposium on Foundations of Computer Science, {FOCS} 1995,
+                  Milwaukee, Wisconsin, USA, 23-25 October 1995},
+  pages        = {41--50},
+  publisher    = {{IEEE} Computer Society},
+  year         = {1995},
+  url          = {https://doi.org/10.1109/SFCS.1995.492461},
+  doi          = {10.1109/SFCS.1995.492461}
+}
+
+% dblp: conf/focs/KushilevitzO97
+@inproceedings{kushilevitz1997,
+  author       = {Eyal Kushilevitz and
+                  Rafail Ostrovsky},
+  title        = {Replication is {NOT} Needed: {SINGLE} Database, Computationally-Private
+                  Information Retrieval},
+  booktitle    = {38th Annual Symposium on Foundations of Computer Science, {FOCS} 1997,
+                  Miami Beach, Florida, USA, October 19-22, 1997},
+  pages        = {364--373},
+  publisher    = {{IEEE} Computer Society},
+  year         = {1997},
+  url          = {https://doi.org/10.1109/SFCS.1997.646125},
+  doi          = {10.1109/SFCS.1997.646125}
+}
+
+% dblp: journals/popets/HafizH19
+@article{hafiz2019,
+  author       = {Syed Mahbub Hafiz and
+                  Ryan Henry},
+  title        = {A Bit More Than a Bit Is More Than a Bit Better: Faster (essentially)
+                  optimal-rate many-server {PIR}},
+  journal      = {Proc. Priv. Enhancing Technol.},
+  volume       = {2019},
+  number       = {4},
+  pages        = {112--131},
+  year         = {2019},
+  url          = {https://doi.org/10.2478/popets-2019-0061},
+  doi          = {10.2478/POPETS-2019-0061}
+}
+
+% dblp: conf/uss/HenzingerHCMV23
+@inproceedings{simplepir2023,
+  author       = {Alexandra Henzinger and
+                  Matthew M. Hong and
+                  Henry Corrigan{-}Gibbs and
+                  Sarah Meiklejohn and
+                  Vinod Vaikuntanathan},
+  editor       = {Joseph A. Calandrino and
+                  Carmela Troncoso},
+  title        = {One Server for the Price of Two: Simple and Fast Single-Server Private
+                  Information Retrieval},
+  booktitle    = {32nd {USENIX} Security Symposium, {USENIX} Security 2023, Anaheim,
+                  CA, USA, August 9-11, 2023},
+  pages        = {3889--3905},
+  publisher    = {{USENIX} Association},
+  year         = {2023},
+  url          = {https://www.usenix.org/conference/usenixsecurity23/presentation/henzinger}
+}
+
+% dblp: conf/sp/MenonW22
+@inproceedings{spiral2022,
+  author       = {Samir Jordan Menon and
+                  David J. Wu},
+  title        = {{SPIRAL:} Fast, High-Rate Single-Server {PIR} via {FHE} Composition},
+  booktitle    = {43rd {IEEE} Symposium on Security and Privacy, {SP} 2022, San Francisco,
+                  CA, USA, May 22-26, 2022},
+  pages        = {930--947},
+  publisher    = {{IEEE}},
   year         = {2022},
-  eprint       = {2204.08146},
-  archivePrefix= {arXiv}
+  url          = {https://doi.org/10.1109/SP46214.2022.9833700},
+  doi          = {10.1109/SP46214.2022.9833700}
 }
 
-
-%% ==========================================================================
-%%  D. PRIVATE RETRIEVAL / PRIVATE NEAREST-NEIGHBOUR SEARCH
-%%     The line that has almost entirely appeared SINCE PIRSONA (2021).
-%% ==========================================================================
-
-%% [UNVERIFIED] The origin point for secure approximate k-NN.
-@inproceedings{sanns2020,
-  author    = {Chen, Hao and Chillotti, Ilaria and Dong, Yihe and
-               Poburinnaya, Oxana and Razenshteyn, Ilya and Riazi, M. Sadegh},
-  title     = {{SANNS}: Scaling Up Secure Approximate $k$-Nearest Neighbors Search},
-  booktitle = {29th {USENIX} Security Symposium},
-  year      = {2020}
+% dblp: conf/eurocrypt/Corrigan-GibbsK20
+@inproceedings{cgk2020,
+  author       = {Henry Corrigan{-}Gibbs and
+                  Dmitry Kogan},
+  editor       = {Anne Canteaut and
+                  Yuval Ishai},
+  title        = {Private Information Retrieval with Sublinear Online Time},
+  booktitle    = {Advances in Cryptology - {EUROCRYPT} 2020 - 39th Annual International
+                  Conference on the Theory and Applications of Cryptographic Techniques,
+                  Zagreb, Croatia, May 10-14, 2020, Proceedings, Part {I}},
+  series       = {Lecture Notes in Computer Science},
+  volume       = {12105},
+  pages        = {44--75},
+  publisher    = {Springer},
+  year         = {2020},
+  url          = {https://doi.org/10.1007/978-3-030-45721-1\_3},
+  doi          = {10.1007/978-3-030-45721-1\_3}
 }
 
-%% [UNVERIFIED] Same first author as Nudge. The linear-scan barrier.
-@inproceedings{tiptoe2023,
-  author    = {Henzinger, Alexandra and Dauterman, Emma and
-               Corrigan-Gibbs, Henry and Zeldovich, Nickolai},
-  title     = {Private Web Search with {Tiptoe}},
-  booktitle = {Proceedings of the 29th {ACM} Symposium on Operating Systems
-               Principles ({SOSP})},
-  year      = {2023}
+% dblp: conf/sp/AngelCLS18
+@inproceedings{sealpir2018,
+  author       = {Sebastian Angel and
+                  Hao Chen and
+                  Kim Laine and
+                  Srinath T. V. Setty},
+  title        = {{PIR} with Compressed Queries and Amortized Query Processing},
+  booktitle    = {2018 {IEEE} Symposium on Security and Privacy, {SP} 2018, Proceedings,
+                  21-23 May 2018, San Francisco, California, {USA}},
+  pages        = {962--979},
+  publisher    = {{IEEE} Computer Society},
+  year         = {2018},
+  url          = {https://doi.org/10.1109/SP.2018.00062},
+  doi          = {10.1109/SP.2018.00062}
 }
 
-%% [LISTING] Cryptology ePrint 2024/1600; also ICLR. Sublinear, but heavy client storage.
-@misc{pacmann2024,
-  author = {Zhou, Mingxun and Shi, Elaine and Fanti, Giulia},
-  title  = {{Pacmann}: Efficient Private Approximate Nearest Neighbor Search},
-  year   = {2024},
-  note   = {Cryptology ePrint Archive, Report 2024/1600}
+% dblp: journals/jacm/GoldreichO96
+@article{goldreich1996,
+  author       = {Oded Goldreich and
+                  Rafail Ostrovsky},
+  title        = {Software Protection and Simulation on Oblivious RAMs},
+  journal      = {J. {ACM}},
+  volume       = {43},
+  number       = {3},
+  pages        = {431--473},
+  year         = {1996},
+  url          = {https://doi.org/10.1145/233551.233553},
+  doi          = {10.1145/233551.233553}
 }
 
-%% [UNVERIFIED] ORAM over HNSW.
-@inproceedings{compass2024,
-  author    = {Zhu, Jinhao and Patel, Anna and Zaharia, Matei and Popa, Raluca Ada},
-  title     = {Compass: Encrypted Semantic Search with High Accuracy},
-  booktitle = {{USENIX} Symposium on Networked Systems Design and
-               Implementation ({NSDI})},
-  year      = {2024}
-}
-
-%% [LISTING] arXiv 2406.06761. Uses DP + batching to break the linear barrier.
-@misc{wally2024,
-  title        = {Scalable Private Search with {Wally}},
-  year         = {2024},
-  eprint       = {2406.06761},
-  archivePrefix= {arXiv}
-}
-
-%% [UNVERIFIED] CCS 2025. Single-server private ANN.
-@inproceedings{panther2025,
-  title     = {{Panther}: Private Approximate Nearest Neighbor Search in the
-               Single Server Setting},
-  booktitle = {Proceedings of the 2025 {ACM} {SIGSAC} Conference on Computer
-               and Communications Security ({CCS})},
-  year      = {2025}
-}
-
-%% [LISTING] arXiv 2607.28999, July 2026. Newest in this line.
-@misc{mess2026,
-  title        = {{MESS}: Fast and Private Semantic Search on Multi-Graph {HNSW}},
-  year         = {2026},
-  eprint       = {2607.28999},
-  archivePrefix= {arXiv}
-}
-
-%% [LISTING] arXiv 2509.21325
-@misc{pirrag2025,
-  title        = {{PIR-RAG}: A System for Private Information Retrieval in
-                  Retrieval-Augmented Generation},
-  year         = {2025},
-  eprint       = {2509.21325},
-  archivePrefix= {arXiv}
-}
-
-%% [LISTING] arXiv 2603.14778. Private top-k -- the exact operation our serving needs.
-@misc{p2rag2026,
-  title        = {{P$^2$RAG}: Efficient Privacy-Preserving {RAG} Service
-                  Supporting Arbitrary Top-$k$ Retrieval},
-  year         = {2026},
-  eprint       = {2603.14778},
-  archivePrefix= {arXiv}
-}
-
-
-%% ==========================================================================
-%%  E. OBLIVIOUS MEMORY
-%% ==========================================================================
-
-%% [UNVERIFIED]
+% dblp: conf/ccs/StefanovDSFRYD13
 @inproceedings{pathoram2013,
-  author    = {Stefanov, Emil and van Dijk, Marten and Shi, Elaine and
-               Fletcher, Christopher and Ren, Ling and Yu, Xiangyao and
-               Devadas, Srinivas},
-  title     = {Path {ORAM}: An Extremely Simple Oblivious {RAM} Protocol},
-  booktitle = {Proceedings of the 2013 {ACM} {SIGSAC} Conference on Computer
-               and Communications Security ({CCS})},
-  year      = {2013}
+  author       = {Emil Stefanov and
+                  Marten van Dijk and
+                  Elaine Shi and
+                  Christopher W. Fletcher and
+                  Ling Ren and
+                  Xiangyao Yu and
+                  Srinivas Devadas},
+  editor       = {Ahmad{-}Reza Sadeghi and
+                  Virgil D. Gligor and
+                  Moti Yung},
+  title        = {Path {ORAM:} an extremely simple oblivious {RAM} protocol},
+  booktitle    = {2013 {ACM} {SIGSAC} Conference on Computer and Communications Security,
+                  CCS'13, Berlin, Germany, November 4-8, 2013},
+  pages        = {299--310},
+  publisher    = {{ACM}},
+  year         = {2013},
+  url          = {https://doi.org/10.1145/2508859.2516660},
+  doi          = {10.1145/2508859.2516660}
 }
 
-%% [UNVERIFIED]
+% dblp: conf/tcc/LuO13
+@inproceedings{lu2013,
+  author       = {Steve Lu and
+                  Rafail Ostrovsky},
+  editor       = {Amit Sahai},
+  title        = {Distributed Oblivious {RAM} for Secure Two-Party Computation},
+  booktitle    = {Theory of Cryptography - 10th Theory of Cryptography Conference, {TCC}
+                  2013, Tokyo, Japan, March 3-6, 2013. Proceedings},
+  series       = {Lecture Notes in Computer Science},
+  volume       = {7785},
+  pages        = {377--396},
+  publisher    = {Springer},
+  year         = {2013},
+  url          = {https://doi.org/10.1007/978-3-642-36594-2\_22},
+  doi          = {10.1007/978-3-642-36594-2\_22}
+}
+
+% dblp: conf/ccs/DoernerS17
 @inproceedings{floram2017,
-  author    = {Doerner, Jack and Shelat, Abhi},
-  title     = {Scaling {ORAM} for Secure Computation},
-  booktitle = {Proceedings of the 2017 {ACM} {SIGSAC} Conference on Computer
-               and Communications Security ({CCS})},
-  year      = {2017}
+  author       = {Jack Doerner and
+                  Abhi Shelat},
+  editor       = {Bhavani Thuraisingham and
+                  David Evans and
+                  Tal Malkin and
+                  Dongyan Xu},
+  title        = {Scaling {ORAM} for Secure Computation},
+  booktitle    = {Proceedings of the 2017 {ACM} {SIGSAC} Conference on Computer and
+                  Communications Security, {CCS} 2017, Dallas, TX, USA, October 30 -
+                  November 03, 2017},
+  pages        = {523--535},
+  publisher    = {{ACM}},
+  year         = {2017},
+  url          = {https://doi.org/10.1145/3133956.3133967},
+  doi          = {10.1145/3133956.3133967}
 }
 
-%% [UNVERIFIED] Instructor's.
+% dblp: conf/uss/VadapalliHG23
 @inproceedings{duoram2023,
-  author    = {Vadapalli, Adithya and Henry, Ryan and Goldberg, Ian},
-  title     = {Duoram: A Bandwidth-Efficient Distributed {ORAM} for
-               2- and 3-Party Computation},
-  booktitle = {32nd {USENIX} Security Symposium},
-  year      = {2023}
+  author       = {Adithya Vadapalli and
+                  Ryan Henry and
+                  Ian Goldberg},
+  editor       = {Joseph A. Calandrino and
+                  Carmela Troncoso},
+  title        = {Duoram: {A} Bandwidth-Efficient Distributed {ORAM} for 2- and 3-Party
+                  Computation},
+  booktitle    = {32nd {USENIX} Security Symposium, {USENIX} Security 2023, Anaheim,
+                  CA, USA, August 9-11, 2023},
+  pages        = {3907--3924},
+  publisher    = {{USENIX} Association},
+  year         = {2023},
+  url          = {https://www.usenix.org/conference/usenixsecurity23/presentation/vadapalli}
 }
 
-%% [UNVERIFIED] Instructor's.
+% dblp: journals/popets/SasyVG24
 @article{prac2024,
-  author  = {Sasy, Sajin and Vadapalli, Adithya and Goldberg, Ian},
-  title   = {{PRAC}: Round-Efficient 3-Party {MPC} for Dynamic Data Structures},
-  journal = {Proceedings on Privacy Enhancing Technologies},
-  year    = {2024}
+  author       = {Sajin Sasy and
+                  Adithya Vadapalli and
+                  Ian Goldberg},
+  title        = {{PRAC:} Round-Efficient 3-Party {MPC} for Dynamic Data Structures},
+  journal      = {Proc. Priv. Enhancing Technol.},
+  volume       = {2024},
+  number       = {3},
+  pages        = {692--714},
+  year         = {2024},
+  url          = {https://doi.org/10.56553/popets-2024-0100},
+  doi          = {10.56553/POPETS-2024-0100}
 }
 
+% dblp: conf/ccs/WangNLCSSH14
+@inproceedings{wang2014,
+  author       = {Xiao Shaun Wang and
+                  Kartik Nayak and
+                  Chang Liu and
+                  T.{-}H. Hubert Chan and
+                  Elaine Shi and
+                  Emil Stefanov and
+                  Yan Huang},
+  editor       = {Gail{-}Joon Ahn and
+                  Moti Yung and
+                  Ninghui Li},
+  title        = {Oblivious Data Structures},
+  booktitle    = {Proceedings of the 2014 {ACM} {SIGSAC} Conference on Computer and
+                  Communications Security, Scottsdale, AZ, USA, November 3-7, 2014},
+  pages        = {215--226},
+  publisher    = {{ACM}},
+  year         = {2014},
+  url          = {https://doi.org/10.1145/2660267.2660314},
+  doi          = {10.1145/2660267.2660314}
+}
 
-%% ==========================================================================
-%%  F. LEAKAGE, ATTACKS, AND WHAT PRIVACY DOES NOT BUY
-%% ==========================================================================
+% dblp: conf/scn/BunnKKO20
+@inproceedings{bunn2020,
+  author       = {Paul Bunn and
+                  Jonathan Katz and
+                  Eyal Kushilevitz and
+                  Rafail Ostrovsky},
+  editor       = {Clemente Galdi and
+                  Vladimir Kolesnikov},
+  title        = {Efficient 3-Party Distributed {ORAM}},
+  booktitle    = {Security and Cryptography for Networks - 12th International Conference,
+                  {SCN} 2020, Amalfi, Italy, September 14-16, 2020, Proceedings},
+  series       = {Lecture Notes in Computer Science},
+  volume       = {12238},
+  pages        = {215--232},
+  publisher    = {Springer},
+  year         = {2020},
+  url          = {https://doi.org/10.1007/978-3-030-57990-6\_11},
+  doi          = {10.1007/978-3-030-57990-6\_11}
+}
 
-%% [UNVERIFIED] "This attack works even against an ideal functionality."
+% dblp: conf/acns/JareckiW18
+@inproceedings{jarecki2018,
+  author       = {Stanislaw Jarecki and
+                  Boyang Wei},
+  editor       = {Bart Preneel and
+                  Frederik Vercauteren},
+  title        = {3PC {ORAM} with Low Latency, Low Bandwidth, and Fast Batch Retrieval},
+  booktitle    = {Applied Cryptography and Network Security - 16th International Conference,
+                  {ACNS} 2018, Leuven, Belgium, July 2-4, 2018, Proceedings},
+  series       = {Lecture Notes in Computer Science},
+  volume       = {10892},
+  pages        = {360--378},
+  publisher    = {Springer},
+  year         = {2018},
+  url          = {https://doi.org/10.1007/978-3-319-93387-0\_19},
+  doi          = {10.1007/978-3-319-93387-0\_19}
+}
+
+% dblp: conf/pkc/HamlinV21
+@inproceedings{hamlin2021,
+  author       = {Ariel Hamlin and
+                  Mayank Varia},
+  editor       = {Juan A. Garay},
+  title        = {Two-Server Distributed {ORAM} with Sublinear Computation and Constant
+                  Rounds},
+  booktitle    = {Public-Key Cryptography - {PKC} 2021 - 24th {IACR} International Conference
+                  on Practice and Theory of Public Key Cryptography, Virtual Event,
+                  May 10-13, 2021, Proceedings, Part {II}},
+  series       = {Lecture Notes in Computer Science},
+  volume       = {12711},
+  pages        = {499--527},
+  publisher    = {Springer},
+  year         = {2021},
+  url          = {https://doi.org/10.1007/978-3-030-75248-4\_18},
+  doi          = {10.1007/978-3-030-75248-4\_18}
+}
+
+% dblp: conf/ccs/StorrierVLH23
+@inproceedings{grotto2023,
+  author       = {Kyle Storrier and
+                  Adithya Vadapalli and
+                  Allan Lyons and
+                  Ryan Henry},
+  editor       = {Weizhi Meng and
+                  Christian Damsgaard Jensen and
+                  Cas Cremers and
+                  Engin Kirda},
+  title        = {Grotto: Screaming fast {(2+1)-PC} or {\(\mathbb{Z}\)}2n via (2, 2)-DPFs},
+  booktitle    = {Proceedings of the 2023 {ACM} {SIGSAC} Conference on Computer and
+                  Communications Security, {CCS} 2023, Copenhagen, Denmark, November
+                  26-30, 2023},
+  pages        = {2143--2157},
+  publisher    = {{ACM}},
+  year         = {2023},
+  url          = {https://doi.org/10.1145/3576915.3623147},
+  doi          = {10.1145/3576915.3623147}
+}
+
+% dblp: conf/sp/VadapalliSH22
+@inproceedings{sabre2022,
+  author       = {Adithya Vadapalli and
+                  Kyle Storrier and
+                  Ryan Henry},
+  title        = {Sabre: Sender-Anonymous Messaging with Fast Audits},
+  booktitle    = {43rd {IEEE} Symposium on Security and Privacy, {SP} 2022, San Francisco,
+                  CA, USA, May 22-26, 2022},
+  pages        = {1953--1970},
+  publisher    = {{IEEE}},
+  year         = {2022},
+  url          = {https://doi.org/10.1109/SP46214.2022.9833601},
+  doi          = {10.1109/SP46214.2022.9833601}
+}
+
+% dblp: journals/popets/GuptaKCG22
+@article{llama2022,
+  author       = {Kanav Gupta and
+                  Deepak Kumaraswamy and
+                  Nishanth Chandran and
+                  Divya Gupta},
+  title        = {{LLAMA:} {A} Low Latency Math Library for Secure Inference},
+  journal      = {Proc. Priv. Enhancing Technol.},
+  volume       = {2022},
+  number       = {4},
+  pages        = {274--294},
+  year         = {2022},
+  url          = {https://doi.org/10.56553/popets-2022-0109},
+  doi          = {10.56553/POPETS-2022-0109}
+}
+
+% dblp: journals/popets/Wagh22
+@article{pika2022,
+  author       = {Sameer Wagh},
+  title        = {Pika: Secure Computation using Function Secret Sharing over Rings},
+  journal      = {Proc. Priv. Enhancing Technol.},
+  volume       = {2022},
+  number       = {4},
+  pages        = {351--377},
+  year         = {2022},
+  url          = {https://doi.org/10.56553/popets-2022-0113},
+  doi          = {10.56553/POPETS-2022-0113}
+}
+
+% dblp: conf/uss/0030CDPRR20
+@inproceedings{sanns2020,
+  author       = {Hao Chen and
+                  Ilaria Chillotti and
+                  Yihe Dong and
+                  Oxana Poburinnaya and
+                  Ilya P. Razenshteyn and
+                  M. Sadegh Riazi},
+  editor       = {Srdjan Capkun and
+                  Franziska Roesner},
+  title        = {{SANNS:} Scaling Up Secure Approximate k-Nearest Neighbors Search},
+  booktitle    = {29th {USENIX} Security Symposium, {USENIX} Security 2020, August 12-14,
+                  2020},
+  pages        = {2111--2128},
+  publisher    = {{USENIX} Association},
+  year         = {2020},
+  url          = {https://www.usenix.org/conference/usenixsecurity20/presentation/chen-hao}
+}
+
+% dblp: conf/sosp/HenzingerDCZ23
+@inproceedings{tiptoe2023,
+  author       = {Alexandra Henzinger and
+                  Emma Dauterman and
+                  Henry Corrigan{-}Gibbs and
+                  Nickolai Zeldovich},
+  editor       = {Jason Flinn and
+                  Margo I. Seltzer and
+                  Peter Druschel and
+                  Antoine Kaufmann and
+                  Jonathan Mace},
+  title        = {Private Web Search with Tiptoe},
+  booktitle    = {Proceedings of the 29th Symposium on Operating Systems Principles,
+                  {SOSP} 2023, Koblenz, Germany, October 23-26, 2023},
+  pages        = {396--416},
+  publisher    = {{ACM}},
+  year         = {2023},
+  url          = {https://doi.org/10.1145/3600006.3613134},
+  doi          = {10.1145/3600006.3613134}
+}
+
+% dblp: conf/sp/Servan-Schreiber22
+@inproceedings{servanschreiber2022,
+  author       = {Sacha Servan{-}Schreiber and
+                  Simon Langowski and
+                  Srinivas Devadas},
+  title        = {Private Approximate Nearest Neighbor Search with Sublinear Communication},
+  booktitle    = {43rd {IEEE} Symposium on Security and Privacy, {SP} 2022, San Francisco,
+                  CA, USA, May 22-26, 2022},
+  pages        = {911--929},
+  publisher    = {{IEEE}},
+  year         = {2022},
+  url          = {https://doi.org/10.1109/SP46214.2022.9833702},
+  doi          = {10.1109/SP46214.2022.9833702}
+}
+
+% dblp: conf/osdi/ZhuPZP25
+@inproceedings{compass2025,
+  author       = {Jinhao Zhu and
+                  Liana Patel and
+                  Matei Zaharia and
+                  Raluca Ada Popa},
+  editor       = {Lidong Zhou and
+                  Yuanyuan Zhou},
+  title        = {Compass: Encrypted Semantic Search with High Accuracy},
+  booktitle    = {19th {USENIX} Symposium on Operating Systems Design and Implementation,
+                  {OSDI} 2025, Boston, MA, USA, July 7-9, 2025},
+  pages        = {915--938},
+  publisher    = {{USENIX} Association},
+  year         = {2025},
+  url          = {https://www.usenix.org/conference/osdi25/presentation/zhu-jinhao}
+}
+
+% dblp: conf/iclr/ZhouSF25
+@inproceedings{pacmann2025,
+  author       = {Mingxun Zhou and
+                  Elaine Shi and
+                  Giulia Fanti},
+  title        = {Pacmann: Efficient Private Approximate Nearest Neighbor Search},
+  booktitle    = {The Thirteenth International Conference on Learning Representations,
+                  {ICLR} 2025, Singapore, April 24-28, 2025},
+  publisher    = {OpenReview.net},
+  year         = {2025},
+  url          = {https://openreview.net/forum?id=yQcFniousM}
+}
+
+% dblp: conf/ccs/LiHZ0L0C25
+@inproceedings{panther2025,
+  author       = {Jingyu Li and
+                  Zhicong Huang and
+                  Min Zhang and
+                  Cheng Hong and
+                  Jian Liu and
+                  Tao Wei and
+                  Wenguang Chen},
+  editor       = {Chun{-}Ying Huang and
+                  Jyh{-}Cheng Chen and
+                  Shiuh{-}Pyng Shieh and
+                  David Lie and
+                  V{\'{e}}ronique Cortier},
+  title        = {Panther: Private Approximate Nearest Neighbor Search in the Single
+                  Server Setting},
+  booktitle    = {Proceedings of the 2025 {ACM} {SIGSAC} Conference on Computer and
+                  Communications Security, {CCS} 2025, Taipei, Taiwan, October 13-17,
+                  2025},
+  pages        = {365--379},
+  publisher    = {{ACM}},
+  year         = {2025},
+  url          = {https://doi.org/10.1145/3719027.3765190},
+  doi          = {10.1145/3719027.3765190}
+}
+
+% dblp: journals/corr/abs-2406-06761
+@article{wally2024,
+  author       = {Hilal Asi and
+                  Fabian Boemer and
+                  Nicholas Genise and
+                  Muhammad Haris Mughees and
+                  Tabitha Ogilvie and
+                  Rehan Rishi and
+                  Guy N. Rothblum and
+                  Kunal Talwar and
+                  Karl Tarbe and
+                  Ruiyu Zhu and
+                  Marco Zuliani},
+  title        = {Scalable Private Search with Wally},
+  journal      = {CoRR},
+  volume       = {abs/2406.06761},
+  year         = {2024},
+  url          = {https://doi.org/10.48550/arXiv.2406.06761},
+  doi          = {10.48550/ARXIV.2406.06761},
+  eprinttype   = {arXiv},
+  eprint       = {2406.06761}
+}
+
+% dblp: journals/popets/AsharovHLR18
 @article{asharov2018,
-  author  = {Asharov, Gilad and Halevi, Shai and Lindell, Yehuda and
-             Rabin, Tal},
-  title   = {Privacy-Preserving Search of Similar Patients in Genomic Data},
-  journal = {Proceedings on Privacy Enhancing Technologies},
-  volume  = {2018},
-  number  = {4},
-  year    = {2018}
-}
-
-%% [UNVERIFIED] Malicious server supplying inconsistent inputs across executions.
-@misc{pics2025,
-  title = {{PICS}: Private Intersection over Committed (and Reusable) Sets},
-  year  = {2025},
-  note  = {Cryptology ePrint Archive, Report 2025/1071}
-}
-
-%% [UNVERIFIED]
-@book{dworkroth2014,
-  author    = {Dwork, Cynthia and Roth, Aaron},
-  title     = {The Algorithmic Foundations of Differential Privacy},
-  publisher = {Now Publishers},
-  year      = {2014}
-}
-
-
-%% ==========================================================================
-%%  G. DATA
-%% ==========================================================================
-
-%% [UNVERIFIED]
-@article{movielens2015,
-  author  = {Harper, F. Maxwell and Konstan, Joseph A.},
-  title   = {The {MovieLens} Datasets: History and Context},
-  journal = {ACM Transactions on Interactive Intelligent Systems ({TiiS})},
-  volume  = {5},
-  number  = {4},
-  year    = {2015}
+  author       = {Gilad Asharov and
+                  Shai Halevi and
+                  Yehuda Lindell and
+                  Tal Rabin},
+  title        = {Privacy-Preserving Search of Similar Patients in Genomic Data},
+  journal      = {Proc. Priv. Enhancing Technol.},
+  volume       = {2018},
+  number       = {4},
+  pages        = {104--124},
+  year         = {2018},
+  url          = {https://doi.org/10.1515/popets-2018-0034},
+  doi          = {10.1515/POPETS-2018-0034}
 }

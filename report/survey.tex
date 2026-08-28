@@ -1,18 +1,28 @@
 %% ==========================================================================
-%%  MILESTONE 1 --- LITERATURE SURVEY.  Due 31 August 2026.  Worth 10%.
+%%  CS670 LITERATURE SURVEY.  Due 31 August 2026.
 %%
-%%  Handout: "a literature survey report; and a 30-minute recorded
-%%  presentation (approximately 7-8 minutes per member)... uploaded to
-%%  YouTube as an unlisted video."
+%%  A survey of the FIELD of privacy-preserving recommendation, not a pitch
+%%  for our own project.  Structure:
 %%
-%%  THIS FILE IS THE OUTLINE.  Every section that the survey will contain has
-%%  its \input line below, in order.  A section that is not yet written is
-%%  present but commented, so the structure of the argument is always visible
-%%  from this one file.  Do not reorder without saying so at the sync --- the
-%%  order IS the argument (see report/README.md, "The narrative arc").
+%%    1-2  the problem, the scope, and how the pipeline leaks
+%%    3    the TAXONOMY -- the spine of the survey; every system is placed here
+%%    4    the cryptographic building blocks
+%%    5    private training, family by family, and where each family stops
+%%    6    private serving and retrieval, and where each approach stops
+%%    7    systems that span more than one pipeline stage
+%%    8    how this literature evaluates itself, and why cross-paper
+%%         comparison is unsound
+%%    9    open problems
+%%
+%%  DEPTH POLICY (stated to the reader in section 1.2): every family is
+%%  CLASSIFIED in section 3 so the taxonomy is complete; only the cryptographic
+%%  line receives mechanism-level treatment in sections 4-7.
+%%
+%%  EVIDENCE DISCIPLINE: every claim about a paper traces to a line in
+%%  notes/evidence.md, which records the reading tier (A/B/C) and the source of
+%%  the claim.  Nothing is written from memory.  See references.bib header.
 %%
 %%  Build:   latexmk -pdf survey.tex
-%%  Clean:   set \draftfalse in preamble.tex to suppress \todo/\verify notes
 %% ==========================================================================
 \documentclass[11pt]{article}
 \input{preamble}
@@ -21,8 +31,8 @@
 
 % --------------------------------------------------------------------------
 \title{\bfseries Privacy-Preserving Recommendation Systems:\\
-       From Private Training to Private Delivery\\[0.4em]
-       \large A Literature Survey}
+       A Survey of Cryptographic Approaches\\[0.4em]
+       \large Literature Survey, CS670}
 
 \author{Mainak Sarkar \and Shrasti Dwivedi \and Anushka Gupta \and Aditya Anand}
 
@@ -39,41 +49,27 @@
 \newpage
 
 % --------------------------------------------------------------------------
-%  THE ARGUMENT, IN ORDER.
-%
-%  1-2  frame the problem and establish that "private" is not one thing
-%  3    the primitive that makes both halves tractable
-%  4    how far private TRAINING has come            -> ends at Nudge
-%  5    how far private RETRIEVAL has come           -> a parallel literature
-%  6    who has tried to do both                     -> essentially only PIRSONA
-%  7    how this field measures itself               -> what we will be held to
-%  8    THE GAP, and what we propose to build
-% --------------------------------------------------------------------------
-
-\input{sections/introduction}            % 1  Introduction
-\input{sections/threat_models}           % 2  What "Private" Means
-\input{sections/primitives}              % 3  Cryptographic Building Blocks
-\input{sections/private_training}        % 4  Private Training
-\input{sections/private_retrieval}       % 5  Private Retrieval
-\input{sections/systems_both}            % 6  Systems That Attempt Both
-\input{sections/evaluation_methodology}  % 7  How This Literature Is Evaluated
-\input{sections/gap_and_direction}       % 8  The Gap and Our Direction
-\input{sections/conclusion}              % 9  Conclusion
+\input{sections/introduction}            % 1   Introduction
+\input{sections/background}              % 2   Background: the pipeline
+\input{sections/taxonomy}                % 3   A taxonomy of the field
+\input{sections/primitives}              % 4   Cryptographic building blocks
+\input{sections/private_training}        % 5   Private training
+\input{sections/private_retrieval}       % 6   Private serving and retrieval
+\input{sections/systems_both}            % 7   Systems spanning stages
+\input{sections/evaluation_methodology}  % 8   Evaluation methodology
+\input{sections/open_problems}           % 9   Open problems
+\input{sections/conclusion}              % 10  Conclusion
 
 % --------------------------------------------------------------------------
-%  DRAFTING AID --- \nocite{*} renders every seeded reference even though the
-%  sections do not cite them yet, so the reading list is visible in the built
-%  PDF and every bib entry is checked for syntax on each build.
-%  *** DELETE THIS LINE BEFORE SUBMITTING *** --- the bibliography must list
-%  what the survey actually cites, not everything we looked at.
-\nocite{*}
+%  SUPERSEDED, kept per RULES.md A3 (comment out, do not delete):
+%    threat_models.tex     -- absorbed into sections/taxonomy.tex
+%    gap_and_direction.tex -- reframed as sections/open_problems.tex
+%  Both files remain in sections/ for reference.
+% \input{sections/threat_models}
+% \input{sections/gap_and_direction}
 
+% --------------------------------------------------------------------------
 \bibliographystyle{alpha}
 \bibliography{references}
-
-% --------------------------------------------------------------------------
-\appendix
-% Comparison tables too large for the body go here.
-% \input{sections/appendix_comparison}    %  A  Full system comparison table
 
 \end{document}

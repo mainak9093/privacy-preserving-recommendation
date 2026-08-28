@@ -1,0 +1,80 @@
+%% ==========================================================================
+%%  SECTION 2 --- BACKGROUND: RECOMMENDATION AND ITS PIPELINE
+%%
+%%  Job: give the reader the vocabulary the taxonomy (section 3) depends on,
+%%  and establish the PIPELINE framing that organises the whole survey --
+%%  collection, training, serving, delivery -- because the field's approaches
+%%  divide most cleanly by which stage they protect.
+%%
+%%  EVIDENCE: every claim here traces to notes/evidence.md.
+%% ==========================================================================
+\section{Background}
+\label{sec:background}
+
+\todo{Half a page of framing: recommendation is a data-mining problem whose input
+      is, by construction, a record of what people consume. State that the
+      survey organises the field by PIPELINE STAGE and that this section
+      establishes that framing.}
+
+\subsection{Collaborative filtering and matrix factorisation}
+\label{sec:background:cf}
+
+\todo{Neighbourhood methods versus latent-factor models. Matrix factorisation as
+      the dominant latent-factor approach: given a partially observed
+      user--item matrix $\ratings \in \R^{\users \times \items}$, find
+      $\userembed \in \R^{\users \times \dime}$ and
+      $\itemembed \in \R^{\dime \times \items}$ with
+      $\ratings \approx \userembed \cdot \itemembed$.
+      Cite koren2009 for the technique, hu2008 for implicit feedback.
+      Note liang2018 (neural CF) and dacrema2019 (the reproducibility critique
+      showing well-tuned MF remains competitive) --- the latter matters because
+      it justifies why the cryptographic literature targets MF rather than
+      deep models.}
+
+\subsection{The recommendation pipeline}
+\label{sec:background:pipeline}
+
+\todo{THE ORGANISING DEVICE OF THIS SURVEY. Four stages:
+      (1) COLLECTION -- ratings leave the user;
+      (2) TRAINING -- a model is fitted to the collected data;
+      (3) SERVING -- scores are computed for a user and a ranking produced;
+      (4) DELIVERY -- the user actually fetches the recommended item.
+      Emphasise that these are separable, that different papers protect
+      different subsets, and that a system is only as private as its weakest
+      stage.}
+
+\begin{figure}[t]
+\centering
+\todo{FIGURE (TikZ): the four-stage pipeline as a horizontal flow, with what an
+      adversary observes annotated beneath each stage. This figure carries the
+      survey's organising idea and is referenced from sections 3, 5, 6 and 7.
+      Keep it schematic --- boxes, arrows, and leakage labels.}
+\caption{The recommendation pipeline and what is exposed at each stage.}
+\label{fig:pipeline}
+\end{figure}
+
+\subsection{What the adversary sees}
+\label{sec:background:adversary}
+
+\todo{Stage by stage, and this is where the motivation is earned rather than
+      asserted:
+      COLLECTION -- raw ratings.
+      TRAINING -- the data set, and intermediate model state.
+      SERVING -- which user asked, and what was scored highly.
+      DELIVERY -- which item was fetched.
+      Then the empirical evidence that this is not hypothetical:
+      narayanan2008 de-anonymised the Netflix Prize data set against IMDb;
+      calandrino2011 showed that the PUBLICLY VISIBLE OUTPUTS of a recommender
+      --- the ``customers who bought this also bought'' lists --- leak
+      individual transactions. calandrino2011 is the strongest single
+      motivation in this survey: it attacks the system's intended output, not
+      a leak or a breach.}
+
+\subsection{Utility, and why it constrains the cryptography}
+\label{sec:background:utility}
+
+\todo{Brief. Recommendation quality is measured by ranking metrics (nDCG@$k$,
+      Recall@$k$); a private recommender that recommends badly has solved
+      nothing. This constrains protocol design --- e.g. fixed-point arithmetic
+      must not degrade the ranking --- and it is why section 8 insists that
+      quality be reported alongside cost.}

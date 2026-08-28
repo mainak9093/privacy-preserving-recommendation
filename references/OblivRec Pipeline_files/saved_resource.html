@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<!-- saved from url=(0253)https://d1b84ab7-bb0d-479e-83a9-e956e52fa3a3.frame.claudeusercontent.com/_f/1787373822-fe65/?__frame_t=zYx-1f49jdq0bWWGcCTXNng8.fecba592-a097-4ccc-accc-a6ac5257c015.b2ca4f43-cbc4-46d4-8195-d92b40501446.1787377426&__frame_v=manifest.799c2584c556b8f8.json -->
+<html data-theme="dark" style="color-scheme: dark;"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><!-- frame-runtime --><!--<base href="/_f/1787373822-fe65/">--><base href="."><script>window.__FRAME_PREAMBLE={"capabilities":{"artifact":"artifact.CPjnkS1k.js","assets":"assets.BkxVItX2.js","comments":"comments.GLuHR3zP.js","db":"db.CRhVHzSt.js","downloads":"downloads.C3GSvEDP.js","embed":"embed.CZsbekoQ.js","mcp":"mcp.D3B2EyQu.js","permissions":"permissions.BNySkLV5.js","room":"room.BgXZkiYR.js","sample":"sample.C7z_6W62.js","self":"artifact.CPjnkS1k.js","user":"user.BpKav-Rf.js"},"transforms":"_transforms.h3_8GSUa.js","comments":"_comments.BOgkE6qU.js","translate":"_translate.5HCW4BJh.js"}</script><script>(function(){"use strict";var Y=["light","dark","system"],X=/^[A-Za-z0-9_-]{1,64}$/,x=/^[a-zA-Z_:][a-zA-Z0-9_:.-]{0,127}$/,G=new Set(["class","hidden","value","checked"]);function V(e){const t=e.toLowerCase();return t.startsWith("data-")||t.startsWith("aria-")||G.has(t)}var Z="http://www.w3.org/1999/xhtml",J="http://www.w3.org/2000/svg",Q=new Set(["script","style","iframe","noscript","noframes","noembed","xmp","plaintext","template","title","textarea","object","embed"]),ee=new Set(["script","style"]);function te(e){const t=e.localName.toLowerCase();return e.namespaceURI===Z?!Q.has(t):e.namespaceURI===J?!ee.has(t):!1}function re(e){if(e===null||typeof e!="object")return!1;const t=e.__frame_patch;if(t===null||typeof t!="object")return!1;const{seq:n,elements:a}=t;if(typeof n!="number"||!Number.isSafeInteger(n)||!Array.isArray(a)||a.length===0||a.length>64)return!1;for(const l of a){if(l===null||typeof l!="object")return!1;const s=l;if(typeof s.target!="string"||!X.test(s.target)||s.text!==void 0&&typeof s.text!="string")return!1;if(s.attrsSet!==void 0){if(s.attrsSet===null||typeof s.attrsSet!="object")return!1;for(const[c,u]of Object.entries(s.attrsSet))if(!x.test(c)||typeof u!="string")return!1}if(s.attrsRemoved!==void 0){if(!Array.isArray(s.attrsRemoved))return!1;for(const c of s.attrsRemoved)if(typeof c!="string"||!x.test(c))return!1}}return!0}function ne(e){if(e===null||typeof e!="object")return!1;const t=e.__frame_init;return t!==null&&typeof t=="object"}function se(e){return e!==null&&typeof e=="object"&&e.__frame_size_poke===!0}function ae(e){if(e===null||typeof e!="object")return!1;const t=e.__frame_theme;if(t===null||typeof t!="object")return!1;const n=t.theme;return typeof n=="string"&&Y.includes(n)}var j="__frame_scroll",oe=150,ie=310,le=160,ce=3e4;function ue(){let e=0,t=!1,n=!1,a=!1,l=0,s=null;const c=i=>{try{sessionStorage.setItem(j,JSON.stringify({y:i}))}catch{}},u=()=>{if(clearTimeout(e),s===null)return;const i=s;s=null,c(i)},S=()=>{if(t){t=!1;return}n=!0,s=scrollY,clearTimeout(e),e=setTimeout(u,oe)};try{addEventListener("scroll",S,{passive:!0}),addEventListener("pagehide",u)}catch{}const v=()=>{let i;try{i=sessionStorage.getItem(j)}catch{return null}if(i===null)return null;let d;try{d=JSON.parse(i)}catch{d=null}const f=d?.y;if(!(typeof f=="number"&&Number.isFinite(f)&&f>=0)){try{sessionStorage.removeItem(j)}catch{}return null}return f};let w=!1;const m=i=>{try{const d=scrollY;scrollTo({top:i,left:0,behavior:"instant"}),l=i,a=!0,clearTimeout(e),s=null,c(i);const f=scrollY;f!==d&&(t=!0),f!==i&&!w&&(w=!0,addEventListener("load",()=>{try{if(scrollY===f){const _=v();m(_!==null?_:l)}}catch{}},{once:!0}))}catch{}},y=()=>{try{return!!location.hash}catch{return!0}};let g=!1;const E=()=>{try{if(g||innerWidth>ie||innerHeight>le)return;g=!0;const i=Date.now(),d=()=>{try{removeEventListener("resize",d)}catch{}if(Date.now()-i>ce||n||y())return;const f=v();m(f!==null?f:l)};addEventListener("resize",d)}catch{}};let r=!1,p=!1;return{restore(){if(r||(r=!0,y()))return;const i=v();i!==null&&(m(i),E())},promoted(){if(p||(p=!0,y()))return;const i=v();i!==null?(m(i),E()):a&&m(l)}}}var ye="modulepreload",ge=function(e){return"/"+e},be={},fe=function(t,n,a){let l=Promise.resolve();function s(c){const u=new Event("vite:preloadError",{cancelable:!0});if(u.payload=c,window.dispatchEvent(u),!u.defaultPrevented)throw c}return l.then(c=>{for(const u of c||[])u.status==="rejected"&&s(u.reason);return t().catch(s)})};(function(){const e=Object.defineProperty,t=globalThis,n=["RTCPeerConnection","webkitRTCPeerConnection","RTCDataChannel","RTCIceCandidate","RTCSessionDescription","RTCRtpSender","RTCRtpReceiver"];let a=0;for(let l=0;l<n.length;l++){const s=n[l];try{e(t,s,{value:void 0,writable:!1,configurable:!1})}catch{try{delete t[s]}catch{}try{e(t,s,{value:void 0,writable:!1,configurable:!0})}catch{}}typeof t[s]=="function"&&a++}if(a&&window!==top)try{parent.postMessage({__frame_rtc_lockdown_failed:a},"*")}catch{}})();var pe=1e4,de=Object.freeze([...window.__FRAME_PREAMBLE?.origins??["https://claude.ai","https://preview.claude.ai"]]);function D(e){for(const t of de)if(t.endsWith(":*"))try{const n=new URL(e);if(`${n.protocol}//${n.hostname}:*`===t)return!0}catch{}else if(e===t)return!0;return!1}var M=Object.freeze({...window.__FRAME_PREAMBLE?.capabilities}),O=window.__FRAME_PREAMBLE?.transforms,N=window.__FRAME_PREAMBLE?.comments,B=window.__FRAME_PREAMBLE?.translate,L=/^[\w.-]+\.js$/;function T(e){return fe(()=>import("/_runtime/"+e),void 0)}function z(e,t){return{contract:e.contract,changes:new Set(e.changes??[]),flags:new Set(e.flags??[]),capabilities:e.capabilities??{},capBudgets:e.capBudgets??{},transforms:new Map,shellOrigin:t,mount:W,pipe:()=>({wrap:(n,a)=>(...l)=>{try{return a(...l)}catch(s){return Promise.reject(s)}}})}}var P=null,b=null;function q(e,t,n){try{Object.defineProperty(e,t,{value:n,writable:!1,configurable:!1,enumerable:!0})}catch{try{Object.defineProperty(e,t,{value:n,writable:!1,configurable:!0,enumerable:!0})}catch{}}}var I=!1;function me(e,t){const n=[];for(const a of e.elements){const l=document.querySelector(`[data-id="${a.target}"]`);if(!l){parent.postMessage({__frame_patch_miss:{seq:e.seq}},t);return}if([...Object.keys(a.attrsSet??{}),...a.attrsRemoved??[]].some(s=>!V(s))){parent.postMessage({__frame_patch_miss:{seq:e.seq}},t);return}if(a.text!==void 0&&!te(l)){parent.postMessage({__frame_patch_miss:{seq:e.seq}},t);return}for(const[s,c]of Object.entries(a.attrsSet??{}))if(!$(l,s)){try{l.setAttribute(s,c)}catch{}H(l,s,c)}for(const s of a.attrsRemoved??[])$(l,s)||(l.removeAttribute(s),H(l,s,null));typeof a.text=="string"&&(l.textContent=a.text),n.push(a.target)}try{document.dispatchEvent(new CustomEvent("claude:edit",{detail:{seq:e.seq,targets:n}}))}catch{}}function H(e,t,n){if(!(e instanceof HTMLInputElement))return;const a=t.toLowerCase();a==="checked"?e.checked=n!==null:a==="value"&&e.type!=="file"&&(e.value=n??"")}function $(e,t){const n=t.toLowerCase(),a=e;return n==="data-id"||(n==="value"||n==="checked")&&(a.__artifactSecret===!0||/^(password|hidden|file)$/.test(a.type??"")||/(^|\s)(cc-|one-time-code|current-password|new-password)/i.test(`${e.getAttribute("autocomplete")??""} ${a.autocomplete??""}`))}function K(e){const t=document.documentElement;e==="light"||e==="dark"?(t.dataset.theme=e,t.style.colorScheme=e,I=!0):I&&(delete t.dataset.theme,t.style.colorScheme="",I=!1)}var R=new Map;function _e(){let e;const t={u:new Promise(n=>{e=n}),r:n=>{t.done=!0,e(n)},done:!1,nulled:!1};return t}var he=Object.freeze(Object.assign(Object.create(null),{call:Function.prototype.call,apply:Function.prototype.apply,bind:Function.prototype.bind})),W=(e,t)=>{const n=R.get(e);if(!n||n.done){n?.nulled&&b&&parent.postMessage({__frame_cap_telemetry:{kind:"cap-load-error",cap:e}},b);return}const a=typeof t=="function"?Object.setPrototypeOf(t,he):Object.assign(Object.create(null),t);typeof a.then=="function"&&delete a.then,n.r(Object.freeze(a))},U=Object.getOwnPropertyDescriptor(window,"claude");if(window!==top&&!(U&&U.writable===!1)){const e=O&&L.test(O)?T(O).catch(()=>{}):Promise.resolve(void 0),t=r=>{if(r.type==="auxclick"&&r.button!==1)return;const p=r.target,i=p&&p.closest?p.closest("a[href],area[href]"):null;if(!i)return;const d=i.getAttribute("href");if(!d)return;let f,_;try{f=new URL(d,document.baseURI),_=new URL(document.baseURI).origin}catch{return}if((f.protocol==="http:"||f.protocol==="https:")&&f.origin!==_){r.preventDefault();const h=(i.getAttribute("target")??"").toLowerCase(),C=r.type==="auxclick"||r.metaKey||r.ctrlKey||r.shiftKey||r.altKey||!["","_self","_top","_parent"].includes(h);parent.postMessage({__frame_nav:!0,url:f.href,newTab:C},"*")}};addEventListener("click",t,!0),addEventListener("auxclick",t,!0);const n={},a=r=>{r.isTrusted&&(n.pointer=!0)},l=r=>{r.isTrusted&&(n.click=!0)};addEventListener("pointermove",a,{capture:!0,passive:!0}),addEventListener("click",l,{capture:!0,passive:!0}),e.then(r=>{r?.wireNav&&(r.wireNav(),removeEventListener("click",t,!0),removeEventListener("auxclick",t,!0),removeEventListener("pointermove",a,!0),removeEventListener("click",l,!0),r.wireEngagement?.(n))});let s=null;try{s=ue()}catch{}const c=U?.value??{};q(window,"claude",c);for(const r of Object.keys(M)){if(c[r]!==void 0){q(c,r,c[r]);continue}R.set(r,_e())}if(c.use===void 0){const r=p=>{if(typeof p!="string"||!Object.hasOwn(M,p))return Promise.resolve(null);const i=R.get(p);return i?i.u:Promise.resolve(c[p]??null)};try{Object.defineProperty(c,"use",{value:r,writable:!0,configurable:!0,enumerable:!1})}catch{}}let u=null,S=null,v=0;const w=r=>{r.source!==parent||!D(r.origin)||ne(r.data)&&(u=r.data.__frame_init,b=r.origin,removeEventListener("message",w),clearTimeout(v),S?.())};addEventListener("message",w),parent.postMessage({__frame_connect:!0},"*");const m=new Promise(r=>{S=r,v=setTimeout(()=>{removeEventListener("message",w),r()},pe)}),y=document.readyState==="loading"?new Promise(r=>document.addEventListener("DOMContentLoaded",()=>r(),{once:!0})):Promise.resolve();y.then(()=>{try{s?.restore()}catch{}});const g={cb:null},E=r=>{if(!(r.source!==parent||!D(r.origin))&&se(r.data)){try{s?.promoted()}catch{}g.cb?.()}};addEventListener("message",E),m.then(async()=>{if(!u||!b){for(const o of R.values())o.nulled=!0,o.r(null);return}K(u.theme);const r=b;let p=!1,i=!1;addEventListener("message",o=>{if(o.source!==parent||o.origin!==r)return;ae(o.data)&&K(o.data.__frame_theme.theme),re(o.data)&&me(o.data.__frame_patch,r);const k=o.data?.__fc_mode;k&&typeof k=="object"&&!p&&N&&L.test(N)&&(p=!0,T(N).then(F=>F.install?.(r,k.on===!0)).catch(()=>{}));const A=o.data?.__ft_cmd;A&&typeof A=="object"&&!i&&B&&L.test(B)&&(i=!0,T(B).then(F=>F.install?.(r,A)).catch(()=>{}))});const d=Object.keys(u.capabilities??{}).filter(o=>Object.hasOwn(M,o)).map(o=>[o,M[o]]).filter(o=>typeof o[1]=="string"&&L.test(o[1])),f=await Promise.allSettled(d.map(([,o])=>T(o))),_=await e,h=b;if(_?.buildBoot||parent.postMessage({__frame_cap_telemetry:{kind:"cap-load-error",cap:"_transforms"}},h),_?.buildBoot)try{P=_.buildBoot(u,_.TRANSFORMS??{},{shellOrigin:h,mount:W},o=>parent.postMessage({__frame_cap_telemetry:o},h))}catch{parent.postMessage({__frame_cap_telemetry:{kind:"cap-load-error",cap:"_transforms"}},h),P=z(u,h)}else P=z(u,h);const C=o=>parent.postMessage({__frame_cap_telemetry:{kind:"cap-load-error",cap:o}},h),ve=P;f.forEach((o,k)=>{const A=d[k][0];if(o.status!=="fulfilled"){C(A);return}try{o.value?.install?.(ve)}catch{C(A)}});for(const o of R.values())o.done||(o.nulled=!0,o.r(null));await y,parent.postMessage({__frame_ready:!0},b),e.then(o=>o?.installSizeReporter?.(h,g))})}})();</script><!-- /frame-runtime --><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>OblivRec Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+<link rel="stylesheet" href="./css2">
+<style>
+  :root {
+    --bg: #f1f3ee;
+    --surface: #f8f9f5;
+    --ink: #1d2420;
+    --ink-soft: #4a534c;
+    --line: #b9c0b3;
+    --accent: #1c6f5b;
+    --accent-soft: #e3ede8;
+    --vendor: #83887d;
+    --vendor-soft: #eceee8;
+    --flag: #a1442e;
+    --flag-soft: #f3e6e1;
+    --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141713;
+      --surface: #191d18;
+      --ink: #e7ebe2;
+      --ink-soft: #a3aa9d;
+      --line: #3b423a;
+      --accent: #52b89b;
+      --accent-soft: #1c2d27;
+      --vendor: #8b9086;
+      --vendor-soft: #23261f;
+      --flag: #e0806a;
+      --flag-soft: #2e211d;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141713;
+    --surface: #191d18;
+    --ink: #e7ebe2;
+    --ink-soft: #a3aa9d;
+    --line: #3b423a;
+    --accent: #52b89b;
+    --accent-soft: #1c2d27;
+    --vendor: #8b9086;
+    --vendor-soft: #23261f;
+    --flag: #e0806a;
+    --flag-soft: #2e211d;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    margin: 0;
+    padding: 48px 24px 72px;
+    display: flex;
+    justify-content: center;
+  }
+
+  main {
+    width: 100%;
+    max-width: 920px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  h1 {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: clamp(28px, 4vw, 38px);
+    line-height: 1.1;
+    margin: 6px 0 0;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+
+  .lede {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 4px 0 0;
+  }
+
+  .lede b { color: var(--ink); font-weight: 600; }
+
+  figure {
+    margin: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 20px 8px;
+  }
+
+  .diagram-scroll {
+    overflow-x: auto;
+  }
+
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-width: 640px;
+    font-family: var(--font-sans);
+  }
+
+  figcaption {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    padding: 16px 4px 14px;
+    border-top: 1px solid var(--line);
+    margin-top: 14px;
+  }
+
+  figcaption b { color: var(--ink); font-weight: 600; }
+
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 12px 20px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--ink-soft);
+  }
+
+  .swatch {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 14px;
+    margin-top: 2px;
+    border-radius: 3px;
+  }
+
+  .swatch.vendored { background: var(--vendor-soft); border: 2px solid var(--vendor); }
+  .swatch.ours { background: var(--accent-soft); border: 2px solid var(--accent); }
+  .swatch.reference { background: transparent; border: 2px dashed var(--ink-soft); }
+  .swatch.open { background: var(--flag-soft); border: 2px dashed var(--flag); }
+
+  .legend-item strong { color: var(--ink); font-weight: 600; }
+
+  footer {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    figure { transition: border-color 0.2s ease; }
+  }
+</style>
+
+<main>
+  <div>
+    <div class="eyebrow">Project architecture — draft, 2026-08-22</div>
+    <h1>OblivRec Pipeline</h1>
+    <p class="lede">
+      When Nudge finishes training it hands back two things: item embeddings <b>B</b>, released
+      in the clear, and user embeddings <b>⟦A⟧</b>, still secret-shared. Everything below traces
+      where those two values go, which paper's ideas drive each stage, and the one place the
+      project still has a real decision to make.
+    </p>
+  </div>
+
+  <figure>
+    <div class="diagram-scroll">
+      <svg viewBox="0 0 940 1000" role="img" aria-label="Pipeline diagram: users&#39; ratings enter Nudge&#39;s training stage (vendored, unmodified), which outputs shared user embeddings A and cleartext item embeddings B into a selection stage we build ourselves, forking into a safe oblivious-tournament path and a stretch DORAM-indexed path built on Duoram and PRAC, both merging into a delivery stage that fetches content via DPF-based PIR, referencing PIRSONA&#39;s mechanism, with a harvest loop feeding delivery queries back into the next training round.">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-soft)"></path>
+          </marker>
+          <marker id="arrowAccent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"></path>
+          </marker>
+        </defs>
+
+        <!-- ============ INPUT ============ -->
+        <rect x="310" y="24" width="200" height="40" rx="20" fill="var(--bg)" stroke="var(--line)" stroke-width="1.5"></rect>
+        <text x="410" y="49" text-anchor="middle" font-family="var(--font-mono)" font-size="12" font-weight="600" letter-spacing="0.04em" fill="var(--ink)">USERS' RATINGS</text>
+
+        <line x1="410" y1="64" x2="410" y2="106" stroke="var(--ink-soft)" stroke-width="1.5" marker-end="url(#arrow)"></line>
+        <text x="428" y="90" font-size="11" fill="var(--ink-soft)">shared via DPF, per rating</text>
+
+        <!-- ============ TRAINING ============ -->
+        <rect x="110" y="110" width="600" height="150" rx="10" fill="var(--vendor-soft)" stroke="var(--vendor)" stroke-width="2"></rect>
+        <rect x="126" y="124" width="13" height="13" fill="var(--vendor)"></rect>
+        <text x="150" y="135" font-size="16" font-weight="700" fill="var(--vendor)">TRAINING</text>
+
+        <rect x="126" y="148" width="220" height="23" rx="4" fill="var(--surface)" stroke="var(--vendor)" stroke-width="1.5"></rect>
+        <text x="136" y="164" font-family="var(--font-mono)" font-size="11" fill="var(--vendor)">NUDGE · USENIX Sec '26</text>
+
+        <text x="126" y="200" font-size="13" fill="var(--ink)">Power iteration over ⟦replicated shares⟧</text>
+        <text x="126" y="219" font-size="12.5" fill="var(--ink-soft)">3 servers, semi-honest, ≤1 compromised</text>
+
+        <text x="700" y="241" text-anchor="end" font-family="var(--font-mono)" font-size="10.5" font-weight="600" letter-spacing="0.03em" fill="var(--vendor)">VENDORED — GO BINARY, UNMODIFIED</text>
+
+        <!-- two outputs -->
+        <line x1="290" y1="260" x2="290" y2="304" stroke="var(--ink-soft)" stroke-width="1.5" marker-end="url(#arrow)"></line>
+        <text x="278" y="286" text-anchor="end" font-family="var(--font-mono)" font-size="11.5" fill="var(--ink)">⟦A⟧ shared</text>
+
+        <line x1="530" y1="260" x2="530" y2="304" stroke="var(--ink-soft)" stroke-width="1.5" marker-end="url(#arrow)"></line>
+        <text x="542" y="286" font-family="var(--font-mono)" font-size="11.5" fill="var(--ink)">B clear</text>
+
+        <!-- ============ SELECTION ============ -->
+        <rect x="100" y="306" width="620" height="300" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"></rect>
+        <rect x="114" y="320" width="13" height="13" fill="var(--accent)"></rect>
+        <text x="138" y="331" font-size="16" font-weight="700" fill="var(--accent)">SELECTION — TOP-K</text>
+        <line x1="110" y1="346" x2="710" y2="346" stroke="var(--line)" stroke-width="1"></line>
+
+        <!-- lane A: safe -->
+        <text x="136" y="374" font-size="12.5" font-weight="600" letter-spacing="0.03em" fill="var(--ink)">SAFE — SHIPS FIRST</text>
+        <text x="136" y="398" font-size="12.5" fill="var(--ink)">Oblivious tournament / sort</text>
+        <text x="136" y="416" font-size="12.5" fill="var(--ink)">over the full ⟦score⟧ vector</text>
+        <text x="136" y="442" font-family="var(--font-mono)" font-size="11" fill="var(--ink-soft)">O(n) local · no DORAM</text>
+        <rect x="136" y="458" width="200" height="21" rx="4" fill="none" stroke="var(--ink-soft)" stroke-width="1.3" stroke-dasharray="4 3"></rect>
+        <text x="146" y="472.5" font-family="var(--font-mono)" font-size="10.5" fill="var(--ink-soft)">GROTTO · CCS '23 (compare)</text>
+
+        <!-- divider -->
+        <line x1="410" y1="356" x2="410" y2="546" stroke="var(--line)" stroke-width="1.3" stroke-dasharray="4 4"></line>
+        <circle cx="410" cy="452" r="15" fill="var(--surface)" stroke="var(--line)" stroke-width="1.3"></circle>
+        <text x="410" y="456" text-anchor="middle" font-size="11" fill="var(--ink-soft)">or</text>
+
+        <!-- lane B: stretch, flagged open -->
+        <rect x="424" y="358" width="272" height="188" rx="8" fill="none" stroke="var(--flag)" stroke-width="1.5" stroke-dasharray="5 4"></rect>
+        <text x="436" y="374" font-size="12.5" font-weight="600" letter-spacing="0.03em" fill="var(--ink)">STRETCH — RESEARCH</text>
+        <text x="436" y="398" font-size="12.5" fill="var(--ink)">DORAM-indexed selection</text>
+        <text x="436" y="416" font-size="12.5" fill="var(--ink)">over clustered items</text>
+        <text x="436" y="442" font-family="var(--font-mono)" font-size="11" fill="var(--ink-soft)">O(lg n) per access, amortized</text>
+        <rect x="436" y="458" width="210" height="21" rx="4" fill="none" stroke="var(--ink-soft)" stroke-width="1.3" stroke-dasharray="4 3"></rect>
+        <text x="446" y="472.5" font-family="var(--font-mono)" font-size="10.5" fill="var(--ink-soft)">DUORAM · USENIX Sec '23</text>
+        <rect x="436" y="483" width="160" height="21" rx="4" fill="none" stroke="var(--ink-soft)" stroke-width="1.3" stroke-dasharray="4 3"></rect>
+        <text x="446" y="497.5" font-family="var(--font-mono)" font-size="10.5" fill="var(--ink-soft)">PRAC · PoPETs '24</text>
+        <text x="436" y="522" font-size="11" font-weight="600" fill="var(--flag)">open — P2's role vs Nudge's</text>
+        <text x="436" y="536" font-size="11" font-weight="600" fill="var(--flag)">3 input-holding servers?</text>
+
+        <!-- merge -->
+        <line x1="270" y1="546" x2="410" y2="580" stroke="var(--ink-soft)" stroke-width="1.5"></line>
+        <line x1="550" y1="546" x2="410" y2="580" stroke="var(--ink-soft)" stroke-width="1.5"></line>
+        <line x1="410" y1="580" x2="410" y2="606" stroke="var(--ink-soft)" stroke-width="1.5"></line>
+
+        <line x1="410" y1="606" x2="410" y2="654" stroke="var(--accent)" stroke-width="1.8" marker-end="url(#arrowAccent)"></line>
+        <text x="428" y="628" font-family="var(--font-mono)" font-size="12" font-weight="600" fill="var(--accent)">⟦top-k⟧ → O(k·b), not O(n·b)</text>
+
+        <!-- ============ DELIVERY ============ -->
+        <rect x="110" y="656" width="600" height="140" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"></rect>
+        <rect x="126" y="670" width="13" height="13" fill="var(--accent)"></rect>
+        <text x="150" y="681" font-size="16" font-weight="700" fill="var(--accent)">DELIVERY</text>
+
+        <rect x="126" y="694" width="250" height="23" rx="4" fill="none" stroke="var(--ink-soft)" stroke-width="1.3" stroke-dasharray="4 3"></rect>
+        <text x="136" y="710" font-family="var(--font-mono)" font-size="10.5" fill="var(--ink-soft)">cf. PIRSONA · PoPETs '21 (PIR mechanism)</text>
+
+        <text x="126" y="742" font-size="13" fill="var(--ink)">DPF-based private fetch of k content records</text>
+        <text x="126" y="761" font-size="12" fill="var(--ink-soft)">fixed-width records — size must not leak</text>
+
+        <text x="700" y="787" text-anchor="end" font-family="var(--font-mono)" font-size="10.5" font-weight="600" fill="var(--accent)">OURS — NEW C++</text>
+
+        <!-- to user -->
+        <line x1="410" y1="796" x2="410" y2="838" stroke="var(--ink-soft)" stroke-width="1.5" marker-end="url(#arrow)"></line>
+        <text x="428" y="822" font-family="var(--font-mono)" font-size="11" fill="var(--ink)">k records</text>
+
+        <rect x="330" y="838" width="160" height="40" rx="20" fill="var(--bg)" stroke="var(--line)" stroke-width="1.5"></rect>
+        <text x="410" y="863" text-anchor="middle" font-family="var(--font-mono)" font-size="12" font-weight="600" letter-spacing="0.04em" fill="var(--ink)">USER</text>
+
+        <!-- ============ HARVEST LOOP ============ -->
+        <circle cx="710" cy="726" r="3.5" fill="var(--ink-soft)"></circle>
+        <path d="M 710,726 C 850,726 850,185 710,185" fill="none" stroke="var(--ink-soft)" stroke-width="1.5" marker-end="url(#arrow)"></path>
+
+        <rect x="720" y="404" width="204" height="98" rx="8" fill="var(--surface)" stroke="var(--line)" stroke-width="1.3"></rect>
+        <text x="734" y="425" font-size="12.5" font-weight="700" fill="var(--accent)">HARVEST — OURS</text>
+        <text x="734" y="445" font-size="11.5" fill="var(--ink)">delivery queries feed next</text>
+        <text x="734" y="461" font-size="11.5" fill="var(--ink)">round's ⟦ratings⟧ into training</text>
+        <rect x="734" y="470" width="176" height="21" rx="4" fill="none" stroke="var(--ink-soft)" stroke-width="1.3" stroke-dasharray="4 3"></rect>
+        <text x="744" y="484.5" font-family="var(--font-mono)" font-size="10.5" fill="var(--ink-soft)">PIRSONA · PoPETs '21</text>
+      </svg>
+    </div>
+
+    <figcaption>
+      <b>What this shows:</b> Nudge runs unmodified as the training black box. Every stage after
+      it — selection, delivery, and the harvest loop closing back into training — is new work.
+      The safe selection path needs no DORAM at all; the stretch path draws directly on the
+      instructor's own Duoram/PRAC line, and is where the one open architectural question sits.
+    </figcaption>
+  </figure>
+
+  <div class="legend">
+    <div class="legend-item">
+      <span class="swatch vendored"></span>
+      <span><strong>Vendored</strong> — runs unmodified as a black box, never edited</span>
+    </div>
+    <div class="legend-item">
+      <span class="swatch ours"></span>
+      <span><strong>Built by us</strong> — new C++ for this project</span>
+    </div>
+    <div class="legend-item">
+      <span class="swatch reference"></span>
+      <span><strong>Reference only</strong> — paper we implement our own version of</span>
+    </div>
+    <div class="legend-item">
+      <span class="swatch open"></span>
+      <span><strong>Open question</strong> — needs the instructor's answer before scoping</span>
+    </div>
+  </div>
+
+  <footer>
+    privacy-preserving-recommendation · draft 2026-08-22 · source: report/notes/{nudge,pirsona,doram}.md
+  </footer>
+</main>
+
+</body></html>

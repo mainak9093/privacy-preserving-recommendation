@@ -30,6 +30,8 @@ bench/figures/
 # The two instructor-recommended papers are open access and shared with the team,
 # so everyone reads the same version.
 !references/*.pdf
+# The built survey PDF ships alongside its sources.
+!report/survey.pdf
 
 # ─────────────────────────────────────────────────────────────
 #  Build
