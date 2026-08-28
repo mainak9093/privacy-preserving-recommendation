@@ -1,81 +1,95 @@
 %% ==========================================================================
-%%  SECTION 6 --- SYSTEMS THAT ATTEMPT BOTH HALVES              [Track T4]
-%%
-%%  Job: the payoff of \S4 and \S5. Show that the intersection is nearly
-%%  EMPTY, and that its one real occupant predates the whole of \S5.
-%%  ~1.5 pages. Short, and the most important section in the survey.
+%%  SECTION 7 --- SYSTEMS SPANNING MULTIPLE PIPELINE STAGES
+%%  Every claim traces to report/notes/evidence.md.
 %% ==========================================================================
-\section{Systems That Attempt Both Halves}
+\section{Systems Spanning Multiple Stages}
 \label{sec:both}
 
-\todo{Open by restating \Cref{sec:intro:two-halves}: a recommender that
-      protects its users must do BOTH. \S4 surveyed one half, \S5 the other.
-      This section asks who has done both --- and the answer is very nearly
-      nobody.}
+Sections~\ref{sec:training} and~\ref{sec:retrieval} surveyed two bodies of work that solve
+adjacent halves of the same problem. This section asks which systems attempt more than one stage
+of the pipeline at once, and what is learned from the attempt.
 
-\subsection{\pirsonaplain{} as an end-to-end system}
+\subsection{\pirsonaplain{}: collection, training and delivery together}
 \label{sec:both:pirsona}
 
-\todo{Now cover \pirsonaplain{}'s DELIVERY half, deferred from
-      \Cref{sec:training:pirsona}. Three things:
-      (1) Hafiz--Henry multiserver PIR for the fetch, in its computationally
-          1-private DPF-compressed variant;
-      (2) THE HARVEST LOOP --- the servers extract secret-shared consumption
-          histories DIRECTLY from the incoming PIR queries, so training data
-          arrives as a by-product of delivery with no separate upload. No
-          other system in either \S4 or \S5 does this. Give it its own
-          paragraph; it is the most reusable idea in the paper.
-      (3) users hold no local state and never actively participate in
-          training --- contrast with federated learning explicitly.}
+\pirsona{} is the system in this survey that spans the most stages. Its stated goal is the
+construction of ``practically efficient e-commerce and digital media delivery systems that can
+provide personalized content recommendations based on their users' historical consumption patterns
+while simultaneously keeping said consumption patterns private''~\cite{pirsona2021}.
 
-\begin{figure}[t]
-\centering
-\todo{Figure: the \pirsonaplain{} cycle --- fetch $\to$ harvest $\to$ factorise
-      $\to$ recommend $\to$ fetch. One loop, drawn once. TikZ.
-      This figure and \Cref{fig:prim:ggm} are the two the video needs.}
-\caption{The \pirsonaplain{} delivery--training cycle.}
-\label{fig:both:pirsona-loop}
-\end{figure}
+The authors frame the difficulty as one of apparently incompatible goals: private information
+retrieval and collaborative filtering are ``seemingly antithetical primitives''. PIR exists to
+hide which item a user fetches; collaborative filtering works by relating users to one another
+through exactly what they fetched.
 
-\subsection{Partial attempts}
-\label{sec:both:partial}
+The resolution has three parts. Delivery uses the computationally $1$-private multiserver PIR of
+Hafiz and Henry~\cite{hafiz2019}. Collection is folded into delivery: because a PIR query already
+encodes the requested item in shared form, the servers extract secret-shared consumption histories
+from the query traffic itself, so no separate ratings upload is required. Training then runs a
+``carefully optimized 4PC Boolean matrix factorization'' over those shared histories.
 
-\todo{Honest accounting of near-misses, so the gap claim is not overstated:
-      PrivateRec (arXiv 2204.08146) names both training and serving, but is
-      differentially private and federated rather than MPC + PIR --- a
-      different point in the \Cref{tab:threat:families} taxonomy.
-      Trusted-hardware deployments do both, by assuming the problem away.
-      Anonymity networks (Tor, private relay) are what \nudgeplain{} actually
-      suggests, and provide traffic-analysis-vulnerable anonymity rather than
-      cryptographic privacy. Say why that is a weaker guarantee.}
+Two aspects are worth carrying forward. First, the collection-from-delivery mechanism is, as far
+as this survey found, unique to \pirsonaplain{}: it makes the pipeline a cycle rather than a
+sequence. Second, the authors are explicit that the design ``opted for the most performant
+primitives available (at the expense of rather strong non-collusion assumptions)'' --- a
+$s{+}1$-server, pairwise non-colluding model.
 
-\subsection{The intersection is nearly empty}
-\label{sec:both:empty}
+\subsection{\nudgeplain{}: collection, training and scoring}
+\label{sec:both:nudge}
 
-\verify{Before this claim ships, run a forward-citation sweep of \nudgeplain{},
-        Tiptoe and Pacmann. If someone has already composed a modern private-ANN
-        backend with a private-MF recommender, we must find it NOW, not in
-        October. This is the single most falsifiable claim in the survey.}
+\nudge{} spans collection, training and serving. Users secret-share ratings; three servers train
+by power iteration; the servers then compute each user's recommendation scores in shared form and
+forward them, so the servers never learn the ranking.
 
-\todo{State the finding plainly and without overclaiming:
-      (1) \pirsonaplain{} (2021) is essentially the only system spanning both
-          halves cryptographically;
-      (2) its training core has since been superseded --- \nudgeplain{} reports
-          beating the bespoke four-party protocol with 8$\times$ less
-          communication and ONE FEWER non-colluding party;
-      (3) its retrieval core predates the entire \S5 literature, all of which
-          is 2023 or later;
-      (4) \nudgeplain{} improves half the problem and explicitly declines the
-          other half.
-      Therefore nobody has built a system with a modern training core AND a
-      modern retrieval layer. That sentence is the survey's finding.}
+What it does not do is stated by its authors as a non-goal: \nudgeplain{} ``relies on other means
+(e.g., Apple's private relay, Tor, or cryptographic private information retrieval) to let users
+fetch data items in a private way''~\cite{nudge2026}. The pipeline is protected up to the point
+where the user acts on the recommendation.
 
-\begin{table}[t]
-\centering
-\todo{Table: the two-by-two. Rows = private training yes/no, columns =
-      private delivery yes/no, cells = the systems. The point of the table is
-      the sparse cell. Make it visually obvious --- this is the slide that
-      ends the video.}
-\caption{Coverage of the two halves across the surveyed systems.}
-\label{tab:both:matrix}
-\end{table}
+\subsection{The composition problem}
+\label{sec:both:composition}
+
+Putting the two halves together is not simply a matter of running one after the other, for three
+reasons that this survey can identify from the sources read.
+
+\textbf{Trust models must agree.} A composed system inherits the union of its components'
+assumptions. Here the two lines happen to be compatible --- \nudgeplain{} assumes three servers
+with at most one compromised~\cite{nudge2026}, \duoramplain{} tolerates ``a single passive
+corruption'' in a two- or three-party setting~\cite{duoram2023}, and \pracplain{} assumes ``none
+of the three parties \dots\ collude''~\cite{prac2024} --- but that is a fact to be checked, not
+assumed. Where a retrieval system is single-server (\tiptoeplain{}, \panther{}) and a training
+system requires non-collusion, the composition is governed by the weaker assumption.
+
+\textbf{Party roles need not match.} The three-party systems in this survey assign different roles
+to their third party. In \nudgeplain{} all three servers hold shares of the input. In
+\pracplain{}, $\party{0}$ and $\party{1}$ hold the data while $\party{2}$ holds no input,
+supplying correlated randomness and participating in the memory protocols. In the
+$(2{+}1)$-party model used by \grottoplain{}, the third party is an offline dealer that supplies
+correlated randomness and does not participate online. Composing systems that assume different
+roles for a third party is not a matter of running them side by side.
+
+\textbf{The interface between stages carries information.} \nudgeplain{} reveals the item
+embeddings $\itemembed$ in the clear as a deliberate design choice, and forwards score vectors to
+users. Whatever the delivery mechanism, it operates on outputs that are themselves informative ---
+a point Section~\ref{sec:open:functionality} develops.
+
+\subsection{What the field has and has not built}
+\label{sec:both:gap}
+
+Reading Table~\ref{tab:taxonomy} by column rather than by row: the training stage is well served,
+the serving stage is well served, and \emph{delivery} is addressed almost entirely by the PIR
+literature in isolation from any recommender.
+
+The private-retrieval systems of Section~\ref{sec:retrieval} are, with the exception of
+\pirsonaplain{}, not connected to privately trained models --- they take a corpus and embeddings
+as given. The private-training systems of Section~\ref{sec:training} produce models and scores and
+stop. \pirsonaplain{} spans both, but predates the private-nearest-neighbour line almost in its
+entirety: \sannsplain{} appeared in 2020, \tiptoeplain{} in 2023, and
+\pacmannplain{}, \compassplain{}, \pantherplain{} and \wallyplain{} in 2024--2025, against
+\pirsonaplain{}'s publication in 2021.
+
+This survey does not claim that composing these lines is straightforward, nor that no unpublished
+work has done so. It observes that the systems surveyed here occupy the two halves separately,
+that the one system spanning both uses a training core the field has since moved past, and that
+the current state of the art in training explicitly delegates the remaining stage. That
+observation is the substance of Section~\ref{sec:open:delivery}.

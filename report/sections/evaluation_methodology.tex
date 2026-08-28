@@ -1,67 +1,92 @@
 %% ==========================================================================
-%%  SECTION 7 --- HOW THIS LITERATURE IS EVALUATED               [Track T4]
-%%
-%%  Job: two purposes at once. (a) Give the reader the tools to judge the
-%%  numbers in \S4 and \S5. (b) Commit US, in writing, to the same standard --
-%%  so the final report is measured against a bar we set ourselves.
-%%  ~1 page. Short, concrete, and unusually valuable: most surveys skip it.
+%%  SECTION 8 --- EVALUATION METHODOLOGY
+%%  Every claim traces to report/notes/evidence.md.
 %% ==========================================================================
-\section{How This Literature Is Evaluated}
+\section{How This Literature Evaluates Itself}
 \label{sec:eval}
 
-\todo{Open by justifying the section's existence: the numbers in \S4 and \S5
-      are not comparable unless the reader knows what was held fixed. This
-      section makes the comparison rules explicit --- and commits us to them.}
+The numbers quoted in Sections~\ref{sec:training} and~\ref{sec:retrieval} are not directly
+comparable, and this section explains why. It is included because a reader who takes those figures
+at face value will draw wrong conclusions, and because the norms described here are what any new
+work in the area will be measured against.
 
-\subsection{Metrics that matter}
-\label{sec:eval:metrics}
+\subsection{Datasets}
+\label{sec:eval:data}
 
-\todo{Four families, each with an example from the surveyed work:
-      (a) wall-clock --- but always paired with hardware. \nudgeplain{}'s
-          50 minutes is on THREE 192-CORE MACHINES; the number is meaningless
-          without that.
-      (b) communication --- server-to-server bytes (40\,GB for \nudgeplain{} on
-          Netflix) and per-client bytes (298\,KB serving).
-      (c) client-side cost --- storage and bandwidth. This is what separates
-          Pacmann (614\,MB client storage) from Tiptoe.
-      (d) QUALITY --- nDCG@$\topk$, Recall@$\topk$. A private recommender that
-          recommends badly has solved nothing. \nudgeplain{} scores 0.29 nDCG@20
-          against 0.31 for non-private neural models; that gap IS the result.}
+The recommendation systems in this survey evaluate on public rating datasets, principally
+MovieLens~\cite{movielens2016} and the Netflix Prize data. \nudge{} reports at Netflix scale
+(``half a million users and ten thousand items''), while the systems it compares against report on
+subsets of MovieLens-100K. Scale differences of this magnitude are not a detail: a protocol whose
+cost grows with the product of users and items behaves qualitatively differently at the two ends
+of that range.
 
-\subsection{Network models}
-\label{sec:eval:network}
+The private-retrieval systems evaluate on document and vector corpora instead --- \tiptoe{} on
+360 million web pages with MS MARCO for quality, \panther{} on ``10 million points'',
+\pacmann{} on datasets ``up to 100 million vectors''. There is no shared benchmark spanning the
+two halves of the pipeline, which is a direct consequence of the split described in
+Section~\ref{sec:both}.
 
-\todo{Make the point sharply, because it is where course projects fail:
-      results in this literature FLIP under network constraints, because
-      round complexity starts to dominate bandwidth. A localhost number tells
-      you almost nothing about a deployment.
-      Standard practice is \texttt{tc netem} with LAN and WAN profiles ---
-      e.g.\ 30\,ms/100\,Mbps and 100\,ms/10\,Mbps. Note which surveyed papers
-      report WAN numbers and which report LAN only. \nudgeplain{}'s headline is
-      LAN. \verify{check each paper's setup section before asserting this}}
+\subsection{Quality metrics}
+\label{sec:eval:quality}
 
-\subsection{Baselines}
+Ranking quality is reported with nDCG@$\topk$ and recall@$\topk$
+(Section~\ref{sec:background:utility}). The important methodological point is that quality must be
+reported \emph{at all}: a private recommender that degrades recommendations has moved cost from
+one column to another rather than eliminating it.
+
+Two systems in this survey report quality against a non-private baseline in a way worth
+emulating. \nudgeplain{} states nDCG@20 of ``0.29 out of 1.0 \dots\ on par with non-private matrix
+factorization and just shy of non-private neural recommenders, which score 0.31''~\cite{nudge2026}.
+\tiptoeplain{} states its average rank of 7.7 is ``worse than a state-of-the-art, non-private
+neural search algorithm (average rank: 2.3), but is close to the classical tf-idf algorithm
+(average rank: 6.7)''~\cite{tiptoe2023}. In both cases the unflattering comparison is given
+alongside the favourable one.
+
+\subsection{Cost metrics and the network model}
+\label{sec:eval:cost}
+
+Three quantities matter, and they trade against each other: local computation, bandwidth, and
+round complexity.
+
+Which of them dominates depends entirely on the deployment. \floram{}'s authors accept ``$O(n)$
+efficient local memory operations'' in exchange for less secure computation~\cite{floram2017}, a
+trade that is favourable on a fast machine and unfavourable on a slow link.
+\duoramplain{} moves work into ``a data-independent preprocessing phase, leaving just $O(m)$ words
+of online communication''~\cite{duoram2023} --- an offline/online split that is invisible in a
+single end-to-end number.
+
+Because of this, network conditions are part of the result rather than a detail of the setup.
+\nudgeplain{}'s headline figure is a local-area network measurement~\cite{nudge2026};
+ABY2.0 benchmarks ``over LAN and WAN networks''~\cite{aby22021}; \compassplain{} reports being
+``orders of magnitude faster than baselines under various network conditions''~\cite{compass2025}.
+A figure quoted without its network model, hardware and dataset is not a result, and this survey
+has tried to quote none.
+
+\subsection{Baselines and artifacts}
 \label{sec:eval:baselines}
 
-\todo{The three baselines this literature expects, and why each is needed:
-      (a) the plaintext system --- gives the honest slowdown factor;
-      (b) a generic-MPC-framework implementation (MP-SPDZ) --- the ``why not
-          just use a framework'' answer;
-      (c) at least one published secure system --- the credibility test.
-      Observe that the strongest papers report the UNFLATTERING comparison
-      too. A slowdown stated plainly reads as confidence; a slowdown omitted
-      reads as evasion.}
+General-purpose MPC frameworks serve as the common reference point. MP-SPDZ implements ``34 MPC
+protocol variants \dots\ with the same high-level programming interface'', explicitly so that it
+``considerably simplifies comparing the cost of different protocols and security
+models''~\cite{mpspdz2020}. ABY~\cite{aby2015} and ABY2.0~\cite{aby22021} play a similar role for
+mixed-protocol two-party computation.
 
-\subsection{The standard we hold ourselves to}
-\label{sec:eval:ourstandard}
+The strongest papers in this survey also compare against the honest, unflattering baseline. Both
+of the quality comparisons quoted in Section~\ref{sec:eval:quality} are of that kind, and
+\wallyplain{}'s characterisation of its predecessors --- reporting \tiptoeplain{} at ``909 QPS''
+and \pacmannplain{} at ``614 MB of client storage''~\cite{wally2024} --- is a further example of a
+paper stating precisely what it improves on.
 
-\todo{Write this as a commitment, in the first person, and keep it to five
-      bullets. It is quoted back at us in the final report:
-      (1) a written threat model and an explicit leakage profile;
-      (2) baselines including the unflattering ones;
-      (3) WAN numbers, not just localhost;
-      (4) a microbenchmark breakdown --- where do the milliseconds go;
-      (5) reproducibility: one command per figure, a README a stranger can
-          follow.
-      None of these requires cryptographic novelty, and most groups will do
-      none of them.}
+\subsection{Why cross-paper comparison is unsound}
+\label{sec:eval:comparison}
+
+Collecting the above: systems in this survey differ in dataset and scale, in hardware, in network
+model, in whether preprocessing is counted, in whether an adversary is semi-honest or malicious,
+in how many non-colluding parties are assumed, and in which pipeline stage is measured at all.
+Any two numbers drawn from different papers differ along several of these axes simultaneously.
+
+This is not a criticism of the individual papers, which are generally careful about their own
+setup. It is a statement about what a \emph{survey} can responsibly do: report each system's
+claims in the terms its authors stated them, and decline to construct a league table. That is the
+approach taken throughout Sections~\ref{sec:training} and~\ref{sec:retrieval}, and the absence of
+a shared benchmark is recorded as an open problem in Section~\ref{sec:open:evaluation}.

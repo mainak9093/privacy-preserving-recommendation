@@ -1,100 +1,195 @@
 %% ==========================================================================
-%%  SECTION 3 --- CRYPTOGRAPHIC BUILDING BLOCKS                 [Track T1]
-%%
-%%  Job: give the reader exactly the primitives needed to follow \S4 and \S5,
-%%  and land ONE argument -- that function secret sharing is what makes both
-%%  halves of the problem tractable, with the SAME construction serving as a
-%%  comparison gate in training and as a read layer in retrieval.
-%%  ~2 pages. Resist the urge to write a crypto textbook.
+%%  SECTION 4 --- CRYPTOGRAPHIC BUILDING BLOCKS
+%%  Every claim traces to report/notes/evidence.md.
 %% ==========================================================================
 \section{Cryptographic Building Blocks}
 \label{sec:prim}
 
-\todo{Frame the section by its punchline, stated up front: one primitive
-      (FSS) turns out to be load-bearing on both sides of the problem. Every
-      subsection below is evidence for that claim.}
+This section introduces the primitives the systems in Sections~\ref{sec:training}
+and~\ref{sec:retrieval} are assembled from. The treatment is deliberately shallow on
+constructions and deliberate about \emph{costs}, because it is the cost profile of each primitive
+--- and in particular whether it costs communication, computation, or rounds --- that determines
+which systems are built from which pieces.
 
 \subsection{Secret sharing}
 \label{sec:prim:sharing}
 
-\todo{Additive sharing over a ring; then 2-out-of-3 REPLICATED sharing
-      (Araki et al., CCS'16), which is what \nudgeplain{} uses: $x = x_0+x_1+x_2$
-      with $\party{i}$ holding $(x_i, x_{i+1})$. Introduce $\shr{x}$ notation
-      (macro in preamble.tex).
-      Then the ``3PC with PRF'' model --- each PAIR of parties shares a PRF
-      key, so correlated randomness costs no communication.}
+Secret sharing splits a value among parties so that authorised subsets can reconstruct it and
+unauthorised subsets learn nothing~\cite{shamir1979}. Two variants recur throughout this survey.
 
-\begin{observation}
-\label{obs:prim:matvec-free}
-\todo{THE key fact of the whole survey, stated as a numbered observation so
-      later sections can point at it. Under replicated sharing, a degree-two
-      function costs one round and $3\dime\bits$ bits, and consequently a
-      shared-matrix $\times$ shared-vector product communicates in proportion
-      to the largest intermediate VECTOR, not to the size of the input
-      MATRIX. \nudgeplain{} Thm 4.2. \verify{quote the exact bound}}
-\end{observation}
+In \emph{additive} sharing over a ring $\ring = \Ztwo{\bits}$, a value $x$ is split as
+$x = x_0 + x_1 \bmod 2^{\bits}$, with one summand given to each of two parties. Addition of shared
+values, and multiplication by a public scalar, are then local operations requiring no
+communication. Multiplication of two shared values is not, and is classically handled with
+precomputed correlated randomness in the form of multiplication triples~\cite{beaver1991}.
+
+In \emph{replicated} $2$-out-of-$3$ sharing, $x = x_0 + x_1 + x_2$ and party $i$ holds the pair
+$(x_i, x_{i+1})$. Any two parties can reconstruct; a single party learns nothing. This is the
+sharing used by the three-party systems in Section~\ref{sec:training:mpc}, and its attraction is
+that a party holding two of the three summands can compute a share of a product locally, so that
+degree-two functions become very cheap~\cite{araki2016}.
+
+Several systems additionally assume the \emph{PRF model}, in which each pair of parties holds a
+shared pseudorandom-function key and can therefore generate correlated randomness --- notably
+shares of zero --- without communicating at all.
+
+\subsection{Garbled circuits}
+\label{sec:prim:gc}
+
+Garbled circuits~\cite{yao1986} allow two parties to evaluate a Boolean circuit on private inputs
+in a constant number of rounds. The cost is borne in bandwidth: the garbled circuit must be
+transmitted, so communication scales with circuit size. For data-oblivious algorithms whose
+circuit size grows with the whole input --- as is the case for gradient descent over a rating
+matrix --- this is the binding constraint, and it is the reason the systems in
+Section~\ref{sec:training:gc} are superseded by later secret-sharing approaches.
+
+\subsection{Homomorphic encryption}
+\label{sec:prim:he}
+
+Homomorphic encryption permits computation directly on ciphertexts. Partially homomorphic schemes
+support one operation --- additively homomorphic schemes such as Paillier's~\cite{paillier1999}
+are used in several of the systems below --- while fully homomorphic encryption supports
+arbitrary circuits. Gentry~\cite{gentry2009} established the latter is possible via
+\emph{bootstrapping}: it suffices to construct a scheme that can homomorphically evaluate a
+slightly augmented version of its own decryption circuit.
+
+The relevance of homomorphic encryption to this survey is structural rather than technical. It is
+the primitive that permits \emph{single-server} constructions, and therefore the one that removes
+the non-collusion assumption discussed in Section~\ref{sec:taxonomy:trust} --- at a computational
+cost that Sections~\ref{sec:prim:pir} and~\ref{sec:retrieval} quantify.
 
 \subsection{Function secret sharing and distributed point functions}
 \label{sec:prim:fss}
 
-\todo{Boyle--Gilboa--Ishai (EUROCRYPT'15, CCS'16). Define a $(2,2)$-DPF:
-      $\Gen(\alpha,\beta) \to (k_0,k_1)$ with
-      $\Eval(k_0,x)-\Eval(k_1,x) = \beta$ iff $x=\alpha$, else $0$, and
-      each key alone pseudorandom.
-      The GGM-tree construction in a paragraph plus one figure. Key size
-      $\dime(\seclen+2)+\bits$ bits --- for $\items=4096$ that is $\approx$260
-      bytes against 32\,KB for a one-hot vector. THAT RATIO IS THE POINT; give
-      it as a concrete number, not asymptotically.
-      Cite the July 2026 DPF/FSS survey (arXiv 2607.27696) as the entry point,
-      and mention the current frontier: shorter information-theoretic keys
-      (2604.24385), multi-party DDH constructions (2603.17453), GPU FSS
-      (FuseFSS 2606.09551).}
+Function secret sharing (FSS) shares a \emph{function} rather than a value. Following Boyle et
+al.~\cite{bgi2016}, an $m$-party FSS scheme splits a function $f\colon \{0,1\}^n \to G$, for an
+abelian group $G$, into keys $k_1, \dots, k_m$ such that $f = f_1 + \dots + f_m$ and every strict
+subset of the keys hides $f$. A \emph{distributed point function} (DPF) is the special case in
+which $f$ is a point function: non-zero at a single input and zero everywhere
+else~\cite{gilboa2014}.
 
-\begin{figure}[t]
-\centering
-\todo{Figure: the GGM tree, showing the two parties' paths diverging only on
-      the path to $\alpha$. TikZ. This is the one figure a viewer of the video
-      will remember --- make it good.}
-\caption{The GGM-tree construction of a $(2,2)$-distributed point function.}
-\label{fig:prim:ggm}
-\end{figure}
+The applications are named directly by the authors: FSS schemes are useful for ``privately reading
+from or writing to distributed databases while minimizing the amount of communication'',
+including ``different flavors of private information retrieval (PIR), as well as a recent
+application of DPF for large-scale anonymous messaging''~\cite{bgi2016}. The same work reports
+reducing the key size of the earlier PRG-based DPF construction ``roughly by a factor of
+4''~\cite{bgi2016}.
 
-\subsection{FSS as a comparison gate}
-\label{sec:prim:fss-compare}
+The property that matters for everything downstream is \emph{compression}. A DPF key is
+logarithmic in the domain size, so a party can hold a short key and expand it into a long
+pseudorandom vector that differs from its counterpart at exactly one secret position. This is
+what makes the read layer of Section~\ref{sec:prim:pir} and the DORAM of
+Section~\ref{sec:prim:oram} practical.
 
-\todo{Distributed comparison functions and zero-tests evaluated on shared
-      inputs in a SINGLE round (\nudgeplain{} Table 3). Grotto (CCS'23) for
-      fast comparison over $\Ztwo{n}$. This is what \S4 needs.}
+FSS also generalises beyond point functions into a technique for secure computation. Boyle et
+al.~\cite{boyle2021} evaluate a gate $g$ using an FSS scheme for the offset family
+$g_r(x) = g(x + r)$, giving schemes for ``zero test, integer comparison, ReLU, and spline
+functions'' and reporting ``significant savings in online communication and round complexity
+compared to alternative techniques based on garbled circuits or secret sharing'', along with
+``roughly $4\times$ reduction in key size'' for the distributed comparison function. Subsequent
+work builds function libraries on this foundation: LLAMA~\cite{llama2022} operates in the trusted
+dealer model, ``where a dealer provides input independent correlated randomness to both
+parties'', yielding ``a very lightweight online phase'', while noting that prior FSS-based
+two-party work lacked ``support for math functions (e.g., sigmoid, and reciprocal square root)''
+and restricted all values to a single bitwidth. Pika~\cite{pika2022} reports protocols for
+division, exponentiation, logarithm and tanh with ``constant round complexity (3 for semi-honest,
+4 for malicious)'' and communication ``54--121$\times$ lower than prior art'', and --- unusually
+for this survey --- extends them to malicious security in the honest-majority setting.
+\grotto{} contributes a structural observation about the DPF tree that lets ``a single DPF'' do
+what state-of-the-art approaches ``require many DCFs to do''.
 
 \subsection{Private information retrieval}
 \label{sec:prim:pir}
 
-\todo{Multi-server (information-theoretic, needs non-collusion) versus
-      single-server (computational, needs LWE and a lot of compute).
-      Hafiz--Henry (PoPETs'19.4) is the scheme \pirsonaplain{} builds on, and its
-      computationally 1-private variant is DPF-compressed --- so this is the
-      SAME primitive as \Cref{sec:prim:fss}, in a different role. Say so
-      explicitly; it is the section's thesis.
-      Then SimplePIR/DoublePIR (USENIX Sec'23) and Spiral (S\&P'22) for the
-      single-server line, and Corrigan-Gibbs--Kogan (EUROCRYPT'20) for the
-      preprocessing paradigm that \S5 depends on.}
+Private information retrieval (PIR) lets a client fetch record $j$ from a server-held database
+without the server learning $j$. The literature divides on the trust assumption.
 
-\subsection{Oblivious RAM}
+\emph{Multi-server} PIR distributes the database across servers assumed not to
+collude~\cite{chor1995}. Hafiz and Henry~\cite{hafiz2019} study this setting --- ``several
+untrusted servers work to obliviously service remote clients' requests for data and yet no pair of
+servers colludes'' --- and report efficiency ``with respect to every cost metric --- download,
+upload, computation, and round complexity''. Their family of protocols recovers, as special
+cases, the two-server instances of the seminal scheme of Chor et al.\ and the DPF-based
+construction of Boyle et al.~\cite{hafiz2019}. This is the scheme \pirsona{} builds on.
+
+\emph{Single-server} PIR removes the non-collusion assumption at a computational
+price~\cite{kushilevitz1997}. SimplePIR~\cite{simplepir2023} is presented as ``the fastest
+single-server private information retrieval scheme known to date'', with security under
+learning-with-errors, reporting ``10 GB/s/core server throughput'' that ``approaches \dots\ the
+performance of the fastest two-server private-information-retrieval schemes (which require
+non-colluding servers)''. The authors state the cost plainly: ``relatively large communication
+costs: to make queries to a 1 GB database, the client must download a 121 MB `hint' about the
+database contents'', after which each query needs 242~KB; a variant, DoublePIR, shrinks the hint
+to 16~MB at 345~KB per query and 7.4~GB/s/core~\cite{simplepir2023}. Spiral~\cite{spiral2022}
+composes two lattice-based encryption schemes and reports ``at least a $4.5\times$ reduction in
+query size, $1.5\times$ reduction in response size, and $2\times$ increase in server throughput
+compared to previous systems''.
+
+Two further directions matter later. Corrigan-Gibbs and Kogan~\cite{cgk2020} construct
+single-server schemes with ``sublinear amortized server time'' by having the client ``first fetch
+a small `hint' about the database contents'', paying a linear cost once and answering subsequent
+queries in sublinear time; this preprocessing paradigm is what Pacmann (Section~\ref{sec:retrieval:sublinear})
+depends on. Angel et al.~\cite{sealpir2018} reduce query size ``up to $274\times$'' and introduce
+probabilistic batch codes giving ``up to $40\times$ speedup over processing queries one at a
+time'', which matters for any recommender serving many users concurrently.
+
+\subsection{Oblivious RAM and distributed ORAM}
 \label{sec:prim:oram}
 
-\todo{Keep this SHORT --- it matters only for the indexed approaches in \S5.
-      Path ORAM (CCS'13), then Floram (CCS'17), Duoram (USENIX Sec'23) and
-      PRAC (PoPETs'24). One sentence on why an index and obliviousness are in
-      tension: an index is useful precisely because traversal is
-      data-dependent, and data-dependent traversal is what obliviousness
-      forbids.}
+Oblivious RAM hides \emph{access patterns}, not merely contents~\cite{goldreich1996}. Path
+ORAM~\cite{pathoram2013} is the canonical tree-based construction, ``an extremely simple Oblivious
+RAM protocol with a small amount of client storage'' achieving $O(\log N)$ bandwidth for blocks of
+size $\Omega(\log^2 N)$ bits.
 
-\subsection{Fixed-point arithmetic over rings}
+Classical ORAM assumes a client with plaintext visibility talking to an untrusted server. In
+secure computation there is no such split: the computing parties are both client and server, and
+no party may learn the access pattern. This is \emph{distributed} ORAM, introduced for two-party
+computation by Lu and Ostrovsky~\cite{lu2013} as an alternative to unrolling a RAM program into a
+circuit.
+
+Floram~\cite{floram2017} made DORAM practical by building it from FSS. The authors report
+improving prior constructions' ``access time by a factor of up to ten, their memory overhead by a
+factor of one hundred or more, and their initialization time by a factor of thousands'', and
+instantiating ORAMs holding $2^{34}$ bytes. They are explicit about the trade they make: deriving
+the construction from FSS ``significantly reduces the amount of secure computation required to
+implement an ORAM access, albeit at the cost of $O(n)$ efficient local memory
+operations''~\cite{floram2017}. That trade --- accept linear local computation to buy sublinear
+communication --- recurs throughout Section~\ref{sec:retrieval}.
+
+\duoram{} follows Floram's DPF-based approach and reports reducing communication further: for
+memories with $n$ addressable locations it performs ``a sequence of $m$ arbitrarily interleaved
+reads and writes'' using $O(m \lg n)$ words against Floram's $O(m\sqrt{n})$, with most of the work
+moved into ``a data-independent preprocessing phase, leaving just $O(m)$ words of online
+communication cost for the sequence --- i.e., a constant online communication cost per memory
+access''. Other points in the design space include two-server constructions achieving ``sublinear
+server computation and constant rounds''~\cite{hamlin2021}, and three-party protocols matching
+client-server Path ORAM in round complexity~\cite{jarecki2018,bunn2020}.
+
+Oblivious \emph{data structures} build on this: Wang et al.~\cite{wang2014} apply pointer-based
+and locality-based techniques to ``maps, sets, priority-queues, stacks, deques'', and \prac{}
+contributes binary search, heap and AVL-tree protocols over \duoramplain{}.
+
+\subsection{Fixed-point arithmetic, and why it dominates the cost}
 \label{sec:prim:fixedpoint}
 
-\todo{Why this deserves its own subsection rather than a footnote: it is
-      where the real engineering cost sits. Represent $v \in \R$ as
-      $\lfloor v \cdot 2^{\fracbits} \rfloor \in \ring$; addition is free,
-      multiplication needs a TRUNCATION afterwards, and repeated multiplication
-      needs NORMALIZATION to stop values growing. Those two operations are the
-      entire interactive cost of \S4. Forward-reference it.}
+The primitives above compute over rings and finite fields; recommendation computes over the reals.
+Bridging that gap with fixed-point arithmetic is where much of the practical cost of these systems
+is incurred, which is why it deserves its own subsection rather than a footnote.
+
+A real value $v$ is represented as $\lfloor v \cdot 2^{\fracbits} \rfloor \in \ring$. Addition is
+then free, but the product of two $\fracbits$-scaled values is $2\fracbits$-scaled and must be
+\emph{truncated} back; and repeated multiplication requires \emph{normalisation} to stop values
+growing without bound. Both are non-linear operations, and both are expensive under secret
+sharing.
+
+Consequently a recurring theme in Section~\ref{sec:training} is that the linear algebra is cheap
+and the non-linear steps are not. SecureML~\cite{secureml2017} contributes ``new techniques to
+support secure arithmetic operations on shared decimal numbers'' and ``MPC-friendly alternatives
+to non-linear functions such as sigmoid and softmax''. Escudero et al.~\cite{escudero2020}
+introduce \emph{extended doubly-authenticated bits}, ``shared integers in the arithmetic domain
+whose bit decomposition is shared in the binary domain'', used to ``considerably increase the
+efficiency of non-linear operations such as truncation, secure comparison and bit-decomposition''.
+General-purpose frameworks make the same division visible: ABY~\cite{aby2015} and its
+successor~\cite{aby22021} are \emph{mixed-protocol} systems precisely because different operations
+are cheapest under different sharings, and MP-SPDZ~\cite{mpspdz2020} implements ``34 MPC protocol
+variants'' behind one interface to make such comparisons possible.

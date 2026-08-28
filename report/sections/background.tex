@@ -1,80 +1,139 @@
 %% ==========================================================================
-%%  SECTION 2 --- BACKGROUND: RECOMMENDATION AND ITS PIPELINE
-%%
-%%  Job: give the reader the vocabulary the taxonomy (section 3) depends on,
-%%  and establish the PIPELINE framing that organises the whole survey --
-%%  collection, training, serving, delivery -- because the field's approaches
-%%  divide most cleanly by which stage they protect.
-%%
-%%  EVIDENCE: every claim here traces to notes/evidence.md.
+%%  SECTION 2 --- BACKGROUND
+%%  Every claim traces to report/notes/evidence.md.
 %% ==========================================================================
 \section{Background}
 \label{sec:background}
 
-\todo{Half a page of framing: recommendation is a data-mining problem whose input
-      is, by construction, a record of what people consume. State that the
-      survey organises the field by PIPELINE STAGE and that this section
-      establishes that framing.}
+A recommender system is a data-mining pipeline whose input is, by construction, a record of what
+people consume. This section fixes the vocabulary the rest of the survey uses, and introduces the
+device around which it is organised: the recommendation \emph{pipeline}, and the observation that
+different bodies of work protect different stages of it.
 
 \subsection{Collaborative filtering and matrix factorisation}
 \label{sec:background:cf}
 
-\todo{Neighbourhood methods versus latent-factor models. Matrix factorisation as
-      the dominant latent-factor approach: given a partially observed
-      user--item matrix $\ratings \in \R^{\users \times \items}$, find
-      $\userembed \in \R^{\users \times \dime}$ and
-      $\itemembed \in \R^{\dime \times \items}$ with
-      $\ratings \approx \userembed \cdot \itemembed$.
-      Cite koren2009 for the technique, hu2008 for implicit feedback.
-      Note liang2018 (neural CF) and dacrema2019 (the reproducibility critique
-      showing well-tuned MF remains competitive) --- the latter matters because
-      it justifies why the cryptographic literature targets MF rather than
-      deep models.}
+Collaborative filtering predicts a user's preferences from the preferences of other users.
+Approaches divide broadly into neighbourhood methods, which score an item by its similarity to
+items the user already liked, and latent-factor models, which embed users and items in a shared
+low-dimensional space. Matrix factorisation is the dominant latent-factor
+technique~\cite{koren2009,hu2008}. Given a partially observed user--item matrix
+$\ratings \in \R^{\users \times \items}$, it seeks
+%
+\[
+  \ratings \;\approx\; \userembed \cdot \itemembed,
+  \qquad
+  \userembed \in \R^{\users \times \dime},
+  \quad
+  \itemembed \in \R^{\dime \times \items},
+  \quad
+  \dime \ll \min(\users, \items),
+\]
+%
+so that each user and each item is described by a $\dime$-dimensional embedding, and the predicted
+affinity of user $i$ for item $j$ is the inner product of their embeddings.
+
+Neural approaches to collaborative filtering exist and report improvements: Liang et
+al.~\cite{liang2018} extend variational autoencoders to implicit feedback, describing a
+``non-linear probabilistic model'' that goes ``beyond the limited modeling capacity of linear
+factor models which still largely dominate collaborative filtering research'', and report
+outperforming several baselines including two neural ones. That claim should be read alongside
+Ferrari Dacrema et al.~\cite{dacrema2019}, whose systematic analysis of neural recommendation
+proposals was motivated by ``problems in today's research practice \dots\ in terms of the
+reproducibility of the results or the choice of the baselines''.
+
+This tension matters for the present survey in a specific way. The cryptographic literature
+surveyed in Section~\ref{sec:training} targets matrix factorisation almost exclusively, and does
+not attempt to run deep recommenders under secure computation. Given that matrix factorisation
+remains a competitive baseline, and that every additional non-linearity is expensive to evaluate
+securely (Section~\ref{sec:prim:fixedpoint}), that focus is a reasonable engineering choice rather
+than a gap.
 
 \subsection{The recommendation pipeline}
 \label{sec:background:pipeline}
 
-\todo{THE ORGANISING DEVICE OF THIS SURVEY. Four stages:
-      (1) COLLECTION -- ratings leave the user;
-      (2) TRAINING -- a model is fitted to the collected data;
-      (3) SERVING -- scores are computed for a user and a ranking produced;
-      (4) DELIVERY -- the user actually fetches the recommended item.
-      Emphasise that these are separable, that different papers protect
-      different subsets, and that a system is only as private as its weakest
-      stage.}
+It is useful to separate a deployed recommender into four stages:
+
+\begin{enumerate}
+  \item \textbf{Collection.} Ratings, clicks or views leave the user and reach the service.
+  \item \textbf{Training.} A model --- here, the factorisation
+        $\ratings \approx \userembed \cdot \itemembed$ --- is fitted to the collected data.
+  \item \textbf{Serving.} For a given user, scores are computed over the catalogue and a ranking
+        is produced.
+  \item \textbf{Delivery.} The user fetches the recommended item itself: the film, the article,
+        the product page.
+\end{enumerate}
+
+These stages are separable, and different lines of work protect different subsets of them. That
+observation organises this survey, and Section~\ref{sec:taxonomy} makes it one of the four axes of
+the taxonomy. It also carries an immediate consequence: \emph{a pipeline is only as private as its
+weakest stage}. Training a model under secure computation achieves little if the subsequent fetch
+of the recommended item is performed in the clear, because the fetch reveals the recommendation
+that the training protocol was protecting.
 
 \begin{figure}[t]
 \centering
-\todo{FIGURE (TikZ): the four-stage pipeline as a horizontal flow, with what an
-      adversary observes annotated beneath each stage. This figure carries the
-      survey's organising idea and is referenced from sections 3, 5, 6 and 7.
-      Keep it schematic --- boxes, arrows, and leakage labels.}
-\caption{The recommendation pipeline and what is exposed at each stage.}
+\begin{tikzpicture}[
+    font=\small,
+    stage/.style={draw, rounded corners=2pt, minimum width=21mm, minimum height=8mm,
+                  align=center, inner sep=3pt},
+    leak/.style={font=\scriptsize\itshape, align=center, text width=25mm},
+    >={Stealth[length=5pt]}
+  ]
+  \node[stage] (c) at (0,0)    {Collection};
+  \node[stage] (t) at (3.1,0)  {Training};
+  \node[stage] (s) at (6.2,0)  {Serving};
+  \node[stage] (d) at (9.3,0)  {Delivery};
+
+  \draw[->] (c) -- (t);
+  \draw[->] (t) -- (s);
+  \draw[->] (s) -- (d);
+
+  \node[leak, below=5mm of c] {ratings, and\\ who submitted them};
+  \node[leak, below=5mm of t] {the training set;\\ intermediate model state};
+  \node[leak, below=5mm of s] {which user asked;\\ what scored highly};
+  \node[leak, below=5mm of d] {which item was\\ actually fetched};
+
+  \draw[decorate, decoration={brace, mirror, amplitude=4pt}]
+        ($(c.south west)+(-0.1,-1.55)$) -- ($(d.south east)+(0.1,-1.55)$)
+        node[midway, below=5pt, font=\scriptsize] {what an adversary observes at each stage};
+\end{tikzpicture}
+\caption{The recommendation pipeline. Approaches surveyed here protect different subsets of these
+         four stages; a pipeline is only as private as its weakest stage.}
 \label{fig:pipeline}
 \end{figure}
 
-\subsection{What the adversary sees}
+\subsection{What the adversary observes}
 \label{sec:background:adversary}
 
-\todo{Stage by stage, and this is where the motivation is earned rather than
-      asserted:
-      COLLECTION -- raw ratings.
-      TRAINING -- the data set, and intermediate model state.
-      SERVING -- which user asked, and what was scored highly.
-      DELIVERY -- which item was fetched.
-      Then the empirical evidence that this is not hypothetical:
-      narayanan2008 de-anonymised the Netflix Prize data set against IMDb;
-      calandrino2011 showed that the PUBLICLY VISIBLE OUTPUTS of a recommender
-      --- the ``customers who bought this also bought'' lists --- leak
-      individual transactions. calandrino2011 is the strongest single
-      motivation in this survey: it attacks the system's intended output, not
-      a leak or a breach.}
+Figure~\ref{fig:pipeline} annotates each stage with what is exposed to a service that runs it
+without protection. Two results establish that this exposure is a demonstrated risk rather than a
+hypothetical one.
+
+Narayanan and Shmatikov~\cite{narayanan2008} present ``a new class of statistical
+de-anonymization attacks against high-dimensional micro-data, such as individual preferences,
+recommendations, transaction records''. Applying it to the Netflix Prize dataset --- ``anonymous
+movie ratings of 500,000 subscribers'' --- with the Internet Movie Database as background
+knowledge, they report having ``successfully identified the Netflix records of known users,
+uncovering their apparent political preferences and other potentially sensitive information''.
+They further note that the attack is ``robust to perturbation in the data'' and tolerates ``some
+mistakes in the adversary's background knowledge''. Ratings data, in other words, is identifying
+and not merely sensitive, and releasing it in a nominally anonymised form is not sufficient.
+
+Calandrino et al.~\cite{calandrino2011} go further and consider the privacy risks of collaborative
+filtering itself.\footnote{We were unable to obtain this paper: it is paywalled and no open
+version was found. We therefore cite it only for the claim its title makes, and do not
+characterise its method or results.} The distinction is important for
+Section~\ref{sec:open:functionality}: an attack on the \emph{released dataset} is addressed by
+protecting the pipeline, whereas an attack on the recommender's \emph{intended output} is not.
 
 \subsection{Utility, and why it constrains the cryptography}
 \label{sec:background:utility}
 
-\todo{Brief. Recommendation quality is measured by ranking metrics (nDCG@$k$,
-      Recall@$k$); a private recommender that recommends badly has solved
-      nothing. This constrains protocol design --- e.g. fixed-point arithmetic
-      must not degrade the ranking --- and it is why section 8 insists that
-      quality be reported alongside cost.}
+Recommendation quality is measured by ranking metrics computed over a held-out set, most commonly
+normalised discounted cumulative gain (nDCG@$\topk$) and recall at $\topk$. This matters here
+because a private recommender that recommends badly has solved nothing, and because the
+constraint propagates into protocol design: fixed-point arithmetic, approximation of non-linear
+functions, and reduced-precision representations must not perturb the ranking. Reporting quality
+alongside cost is accordingly the norm in this literature, and
+Section~\ref{sec:eval} returns to it.

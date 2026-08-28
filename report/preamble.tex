@@ -12,7 +12,7 @@
 %% ==========================================================================
 
 % ---------- page geometry & fonts -----------------------------------------
-\usepackage[letterpaper,margin=1.15in]{geometry}
+\usepackage[letterpaper,margin=1in]{geometry}
 % Palatino text + matching math.  newpx is built on TeX Gyre Pagella, so it
 % needs no URW base-35 fonts -- which a minimal TinyTeX install does not ship.
 % If newpx is unavailable, `mathpazo' is the drop-in substitute wherever the
@@ -39,7 +39,7 @@
 \usepackage[noend]{algpseudocode}
 \floatname{algorithm}{Algorithm}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,fit,backgrounds,calc}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds,calc,decorations.pathreplacing}
 
 % ---------- colour & links ------------------------------------------------
 \usepackage{xcolor}
@@ -161,6 +161,26 @@
 \newcommand{\pirsona}{\textsc{Pirsona}\,\cite{pirsona2021}}
 \newcommand{\nudge}{\textsc{Nudge}\,\cite{nudge2026}}
 \newcommand{\pirsonaplain}{\textsc{Pirsona}}
+\newcommand{\grotto}{\textsc{Grotto}\,\cite{grotto2023}}
+\newcommand{\grottoplain}{\textsc{Grotto}}
+\newcommand{\duoram}{\textsc{Duoram}\,\cite{duoram2023}}
+\newcommand{\duoramplain}{\textsc{Duoram}}
+\newcommand{\prac}{\textsc{Prac}\,\cite{prac2024}}
+\newcommand{\pracplain}{\textsc{Prac}}
+\newcommand{\floram}{\textsc{Floram}\,\cite{floram2017}}
+\newcommand{\tiptoe}{\textsc{Tiptoe}\,\cite{tiptoe2023}}
+\newcommand{\pacmann}{\textsc{Pacmann}\,\cite{pacmann2025}}
+\newcommand{\compass}{\textsc{Compass}\,\cite{compass2025}}
+\newcommand{\panther}{\textsc{Panther}\,\cite{panther2025}}
+\newcommand{\wally}{\textsc{Wally}\,\cite{wally2024}}
+\newcommand{\sanns}{\textsc{Sanns}\,\cite{sanns2020}}
+\newcommand{\tiptoeplain}{\textsc{Tiptoe}}
+\newcommand{\pacmannplain}{\textsc{Pacmann}}
+\newcommand{\compassplain}{\textsc{Compass}}
+\newcommand{\pantherplain}{\textsc{Panther}}
+\newcommand{\wallyplain}{\textsc{Wally}}
+\newcommand{\sannsplain}{\textsc{Sanns}}
+\newcommand{\floramplain}{\textsc{Floram}}
 \newcommand{\nudgeplain}{\textsc{Nudge}}
 \newcommand{\sys}{\textsc{OblivRec}}           % our system, working name
 

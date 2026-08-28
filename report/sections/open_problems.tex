@@ -1,81 +1,102 @@
 %% ==========================================================================
 %%  SECTION 9 --- OPEN PROBLEMS
-%%
-%%  Reframed from the superseded sections/gap_and_direction.tex, which was
-%%  written as a pitch for our own project. This is a SURVEY section: it
-%%  reports the field's open problems, of which our interest is one item,
-%%  named briefly at the end and not dwelt on.
-%%
-%%  EVIDENCE: an "open problem" is only listed here if a surveyed paper says
-%%  it is open, or if the absence is visible in Table~\ref{tab:taxonomy}.
-%%  Do not invent open problems.
+%%  Only problems the surveyed authors state, or gaps visible in Table 1.
 %% ==========================================================================
 \section{Open Problems}
 \label{sec:open}
 
-\todo{One framing paragraph: these are drawn from limitations the surveyed
-      authors state themselves, and from gaps visible in
-      Table~\ref{tab:taxonomy}. Say so --- it is what separates a survey's
-      open-problems section from speculation.}
+The problems below are drawn from two sources: limitations the surveyed authors state about their
+own work, and structural gaps visible in Table~\ref{tab:taxonomy}. They are not a wish list.
 
 \subsection{Malicious security at scale}
 \label{sec:open:malicious}
 
-\todo{Nearly every system evaluated at realistic scale is semi-honest.
-      nudge2026 lists malicious security as its first open question;
-      grotto2023 notes that pika2022 generalised its predecessor technique to
-      the malicious setting at a cost. Report what the papers say the barrier
-      is, without asserting a solution.}
+Every recommendation system in Table~\ref{tab:taxonomy} is semi-honest, and so is nearly every
+system evaluated at realistic scale. \nudge{} lists providing malicious security as the first of
+its three explicitly stated open questions.
+
+The exceptions show the cost. Hafiz and Henry achieve computational $1$-privacy against a
+malicious server, but in the multi-server PIR setting rather than for
+training~\cite{hafiz2019}. Pika extends FSS-based function evaluation to ``malicious adversaries in
+the honest majority setting'', reporting round complexity rising from 3 to 4~\cite{pika2022}.
+\compass{} claims privacy ``even if the server is compromised''. Each of these is narrower than
+end-to-end malicious security for a full recommendation pipeline, which no surveyed system
+provides.
 
 \subsection{Reducing the non-collusion assumption}
 \label{sec:open:collusion}
 
-\todo{The recurring trade: the fastest protocols assume two or three
-      non-colluding servers. nudge2026 explicitly poses serving private
-      recommendations with only two non-colluding parties as open. Contrast
-      with the single-server line (simplepir2023, spiral2022), which removes
-      the assumption at a computational cost. Present as a trade-off the field
-      has not resolved, not as a defect.}
+The fastest protocols in every family assume non-colluding parties, and the assumption is about
+organisations rather than mathematics. \nudgeplain{} states the goal directly among its open
+questions: serving private recommendations with only \emph{two} non-colluding parties.
+
+The single-server line shows the trade rather than resolving it. SimplePIR removes the assumption
+entirely and reports throughput approaching that of two-server schemes, at the cost of a 121~MB
+client hint per gigabyte of database~\cite{simplepir2023}; \tiptoeplain{} likewise requires
+``no hardware enclaves or non-colluding servers'' and pays for it in server
+compute~\cite{tiptoe2023}. Whether a recommendation pipeline can be built in the single-server
+model at competitive cost is open.
 
 \subsection{The delivery stage}
 \label{sec:open:delivery}
 
-\todo{The sparse column in Table~\ref{tab:taxonomy}. nudge2026 states in its
-      non-goals that it relies on ``other means'' --- private relays, Tor, or
-      cryptographic PIR --- for users to fetch items privately. pirsona2021 is
-      one of the few systems to address collection, training and delivery
-      together. Meanwhile a substantial private-retrieval literature has
-      developed largely separately (section 6).
-      Report this as an observation about the literature; it is the gap our
-      own project engages with, but this section is not the place to argue
-      for that.}
+This is the gap most visible in Table~\ref{tab:taxonomy}. Delivery is addressed almost entirely by
+the PIR literature, in isolation from any recommender; \pirsonaplain{}~\cite{pirsona2021} is the
+one surveyed system connecting delivery to training, and it predates the private-nearest-neighbour
+work of Section~\ref{sec:retrieval} almost entirely.
+
+The current state of the art in training states the gap in its own non-goals: \nudgeplain{}
+``relies on other means (e.g., Apple's private relay, Tor, or cryptographic private information
+retrieval) to let users fetch data items in a private way''~\cite{nudge2026}. Meanwhile the
+retrieval systems of Section~\ref{sec:retrieval} take their corpora and embeddings as given.
+
+Two questions follow, neither of which this survey found answered. What does it cost to compose a
+modern private-retrieval backend with a privately trained recommender, given the composition
+obstacles of Section~\ref{sec:both:composition}? And does \pirsonaplain{}'s
+collection-from-delivery mechanism --- harvesting shared consumption histories from PIR query
+traffic --- transfer to a modern training substrate?
 
 \subsection{Leakage through the recommendation itself}
 \label{sec:open:functionality}
 
-\todo{The deepest open problem, and worth stating carefully because it is not
-      a protocol failure. calandrino2011 attacks the recommender's INTENDED
-      OUTPUT: no protocol flaw is involved. A system can be
-      cryptographically perfect and still leak, because the functionality
-      itself is revealing. asharov2018 make a structurally similar point for
-      genomic similarity search.
-      Cryptography bounds who sees the computation; it does not bound what the
-      output implies. DP addresses this (mcsherry2009, and the DP extension in
-      nudge2026) at a utility cost. Note that composing cryptographic and
-      differential privacy in recommendation remains only partly explored.}
+This is the deepest problem in the section, and it is not a protocol failure.
+
+Cryptographic privacy, as defined in Section~\ref{sec:taxonomy:notion}, guarantees that nothing
+leaks \emph{beyond the agreed output}. It says nothing about what the output itself reveals. A
+recommender's output is a statement about the user, delivered to a system that observes whether
+the user acts on it. Calandrino et al.~\cite{calandrino2011} address precisely the privacy risks of
+collaborative filtering in this sense.\footnote{As noted in
+Section~\ref{sec:background:adversary}, we could not obtain this paper and cite it only for the
+claim its title makes.} Asharov et al.~\cite{asharov2018} encounter a structurally identical
+situation in genomic similar-patient search, where the answer to a legitimate query is itself
+disclosive.
+
+\nudgeplain{}'s design makes the point concrete: it reveals the item embeddings $\itemembed$ in
+the clear, and reveals recommendation scores to the user, both by design~\cite{nudge2026}. Neither
+is a flaw --- both are what the system is for --- but both are information that no amount of
+additional cryptography inside the protocol would remove.
+
+Differential privacy addresses exactly this class of leak, at a utility
+cost~\cite{dwork2014,mcsherry2009}. Composing cryptographic and differentially private guarantees
+in a recommendation pipeline --- protecting the computation with one and the output with the other
+--- appears only partially explored. \wally{} is the system in this survey that most clearly
+combines the two notions, and it does so for retrieval rather than for recommendation.
 
 \subsection{Evaluation and comparability}
 \label{sec:open:evaluation}
 
-\todo{Forward from section 8: the field lacks a shared benchmark. Papers use
-      different data sets, hardware, network models and quality metrics, so
-      published numbers are frequently not comparable. This is a tractable,
-      unglamorous open problem and worth naming as one.}
+Section~\ref{sec:eval} argued that published numbers in this field are not comparable across
+papers, because they differ simultaneously in dataset, scale, hardware, network model, adversary
+model, trust assumption and pipeline stage. There is no shared benchmark, and in particular none
+spanning both halves of the pipeline.
 
-\subsection{Scope of our own follow-on work}
+This is an unglamorous problem, but it is tractable, and its absence has a measurable cost: every
+paper must re-implement its predecessors to make a comparison, which is precisely what
+\nudgeplain{} reports doing for its baselines~\cite{nudge2026}.
+
+\subsection{The direction we intend to pursue}
 \label{sec:open:ours}
 
-\todo{THREE OR FOUR SENTENCES, NO MORE. The course project that follows this
-      survey engages with Section~\ref{sec:open:delivery}. Do not pitch, do
-      not claim novelty, do not promise results --- state the interest and
-      stop. Overselling here would undercut the survey's credibility.}
+The course project following this survey engages with Section~\ref{sec:open:delivery}: the
+composition of a privately trained recommender with a private delivery mechanism. We make no claim
+here about the difficulty or the outcome of that work.

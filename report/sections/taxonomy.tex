@@ -1,97 +1,181 @@
 %% ==========================================================================
-%%  SECTION 3 --- A TAXONOMY OF PRIVACY-PRESERVING RECOMMENDATION
-%%
-%%  THE SPINE OF THE SURVEY.  Absorbs the superseded sections/threat_models.tex.
-%%
-%%  Job: give the reader axes along which to place any system in the field,
-%%  then place every surveyed system on them.  This is what makes the document
-%%  a survey rather than an annotated bibliography, and it is where the
-%%  full-field coverage lives -- federated, DP and TEE approaches are
-%%  CLASSIFIED here even though only the cryptographic line is treated at
-%%  mechanism level later.
-%%
-%%  EVIDENCE: placement of a Tier C paper in Table~\ref{tab:taxonomy} is
-%%  permitted; prose claims about Tier C papers are not.
+%%  SECTION 3 --- A TAXONOMY OF APPROACHES  (the spine of the survey)
+%%  Every claim traces to report/notes/evidence.md.
 %% ==========================================================================
 \section{A Taxonomy of Approaches}
 \label{sec:taxonomy}
 
-\todo{Open by stating the problem this section solves: papers in this field are
-      routinely compared as though they were alternatives when they in fact
-      protect different stages under different trust assumptions with
-      incomparable guarantees. The four axes below are what make the
-      comparison honest.}
+Work in this area is routinely compared as though the systems were alternatives to one another.
+They frequently are not: they protect different stages of the pipeline, under different trust
+assumptions, offering guarantees that are not of the same kind. A system requiring two
+non-colluding servers is not simply ``weaker'' than one requiring none, and a differentially
+private recommender is not a slower or faster version of a cryptographic one.
+
+This section proposes four axes along which any system in the field can be placed, and then places
+the surveyed systems on them. The axes are what make the comparisons in
+Sections~\ref{sec:training} and~\ref{sec:retrieval} honest.
 
 \subsection{Axis 1: the trust model}
 \label{sec:taxonomy:trust}
 
-\todo{Who must be trusted not to collude?
-      - SINGLE SERVER (no non-collusion assumption; needs HE or single-server
-        PIR --- computationally expensive)
-      - TWO OR MORE NON-COLLUDING SERVERS (cheap information-theoretic or
-        FSS-based protocols, at the price of an assumption about the world)
-      - USER-SIDE / FEDERATED (no server holds raw data, but intermediate
-        updates leak)
-      - TRUSTED HARDWARE (assumes the enclave; side channels out of scope here)
-      State plainly that these are not orderable by strength --- they are
-      different assumptions, not more or less of one.}
+\emph{Who must be trusted, and not to do what?}
+
+\begin{description}
+  \item[Single server.] No non-collusion assumption. Achieved with homomorphic encryption or
+        single-server PIR, and paid for in server computation. SimplePIR~\cite{simplepir2023},
+        Spiral~\cite{spiral2022} and \panther{} sit here, as does
+        \tiptoe{}, whose authors state that its ``privacy guarantee is based on cryptography
+        alone; it does not require hardware enclaves or non-colluding servers''.
+  \item[Two or more non-colluding servers.] The database or the secret state is replicated or
+        shared across parties assumed not to collude. This buys dramatically cheaper protocols:
+        multi-server PIR~\cite{chor1995,hafiz2019}, two-server machine
+        learning~\cite{secureml2017}, three-party computation~\cite{securenn2019,araki2016}, and
+        the systems of Section~\ref{sec:training:mpc}. The assumption is about the world, not
+        about mathematics, and it is the single most consequential choice in this taxonomy.
+  \item[Federated / user-side.] No server holds raw data; users compute locally and upload
+        updates~\cite{ammadudin2019}. The guarantee is weaker than it first appears --- see
+        Section~\ref{sec:training:fed}.
+  \item[Trusted hardware.] Computation runs inside an enclave. Out of scope here
+        (Section~\ref{sec:intro:scope}), and listed only for completeness.
+\end{description}
+
+These are not orderable by strength. They are different assumptions, and the right question is
+which is plausible for a given deployment.
 
 \subsection{Axis 2: the privacy notion}
 \label{sec:taxonomy:notion}
 
-\todo{What does ``private'' formally mean in each case?
-      - CRYPTOGRAPHIC (simulation-based; the real/ideal paradigm --- cite
-        lindell2017, evans2018). Hides everything but the agreed output.
-      - DIFFERENTIAL PRIVACY (cite dwork2014; mcsherry2009 applied it to
-        recommendation). Bounds an individual's influence on the output;
-        says nothing about who sees the computation.
-      - ANONYMITY / MIXING (cite ishai2006 for the formal connection between
-        anonymity and cryptographic strength).
-      These compose but do not substitute. A system can be cryptographically
-      private and still leak through its output --- which is exactly
-      calandrino2011's attack, and the point section 9 returns to.}
+\emph{What does ``private'' formally mean?}
+
+\begin{description}
+  \item[Cryptographic.] Security is defined by the real/ideal simulation
+        paradigm~\cite{lindell2017,evans2018}: a protocol is secure if whatever an adversary
+        learns from its execution could be simulated from the agreed output alone. Nothing beyond
+        the output leaks --- but the output itself is not protected.
+  \item[Differential privacy.] An individual's influence on a released quantity is
+        bounded~\cite{dwork2014}, first applied to recommendation by McSherry and
+        Mironov~\cite{mcsherry2009}. This constrains what the \emph{output} reveals, and says
+        nothing about who observes the computation. \wally{} occupies an interesting middle
+        position, using differential privacy ``to break the linear computation barrier of
+        fully-oblivious schemes''.
+  \item[Anonymity.] Identity rather than content is hidden, typically by mixing or relaying.
+        Weaker against traffic analysis, but cheap and deployed.
+\end{description}
+
+The critical point, and the one Section~\ref{sec:open:functionality} returns to, is that these
+compose but do not substitute. Cryptographic privacy bounds \emph{who sees the computation};
+differential privacy bounds \emph{what the result implies}. A system can be cryptographically
+perfect and still leak, if its intended output is itself revealing.
 
 \subsection{Axis 3: which pipeline stage is protected}
 \label{sec:taxonomy:stage}
 
-\todo{Map onto Figure~\ref{fig:pipeline}: collection / training / serving /
-      delivery. THIS IS THE AXIS THE FIELD IS LEAST EXPLICIT ABOUT, and the
-      one that makes the survey's contribution. Most work protects training;
-      considerably less protects delivery; very little protects both.}
+Mapping onto Figure~\ref{fig:pipeline}: collection, training, serving, delivery. This is the axis
+the literature is least explicit about, and the one that most often makes two systems
+incomparable. It is also where Table~\ref{tab:taxonomy} is most informative, because the columns
+are conspicuously uneven.
 
 \subsection{Axis 4: the adversary}
 \label{sec:taxonomy:adversary}
 
-\todo{Semi-honest versus malicious; static versus adaptive corruption;
-      the collusion threshold. Note that almost all deployed-scale systems in
-      this survey are semi-honest, and that this is a substantive limitation
-      rather than a technicality.}
+Semi-honest adversaries follow the protocol and try to learn from what they see; malicious
+adversaries may deviate arbitrarily. Orthogonally, a scheme specifies how many parties may be
+corrupted, and whether corruption is fixed in advance. Almost every system evaluated at realistic
+scale in this survey is semi-honest --- \duoram{} tolerates ``a single passive corruption'',
+\prac{} assumes ``none of the three parties \dots\ collude'', \nudge{} protects against ``an
+adversary that compromises the entire secret state of one server'' --- and that is a substantive
+limitation rather than a technicality, discussed in Section~\ref{sec:open:malicious}.
 
-\begin{table}[t]
+\subsection{Placing the systems}
+\label{sec:taxonomy:table}
+
+Table~\ref{tab:taxonomy} places the surveyed \emph{systems} on these axes. General-purpose
+primitives (secret sharing, garbled circuits, homomorphic encryption) are not systems in this
+sense and are treated in Section~\ref{sec:prim} instead.
+
+\begin{table}[p]
 \centering
-\todo{THE MASTER CLASSIFICATION TABLE --- the single most valuable object in
-      this survey. Rows: every surveyed system. Columns: trust model
-      (axis 1) | privacy notion (axis 2) | pipeline stage(s) covered
-      (axis 3) | adversary (axis 4) | evaluated scale.
-      Tier C papers may appear here, since placement follows from title and
-      abstract. Sort by pipeline stage so the sparsity of the delivery column
-      is visible at a glance --- that sparsity is a finding, and it should be
-      readable from the table without prose.
-      Use booktabs; this will need \small or a sideways float.}
-\caption{Classification of surveyed systems along the four axes of
-         Section~\ref{sec:taxonomy}.}
+\small
+\caption{Surveyed systems placed on the four axes of Section~\ref{sec:taxonomy}. Pipeline stages:
+  \textsf{C}ollection, \textsf{T}raining, \textsf{S}erving, \textsf{D}elivery. Entries marked
+  $\dagger$ are placed from title, venue and the description given by a source we read; see
+  \texttt{notes/evidence.md}.}
 \label{tab:taxonomy}
+\begin{tabular}{@{}llllc@{}}
+\toprule
+\textbf{System} & \textbf{Trust model} & \textbf{Notion} & \textbf{Stage} & \textbf{Adversary} \\
+\midrule
+\multicolumn{5}{@{}l}{\emph{Recommendation systems}}\\
+Nikolaenko et al.~\cite{nikolaenko2013}$^\dagger$ & 2 non-colluding    & crypto & T    & semi-honest \\
+\pirsonaplain~\cite{pirsona2021}                  & $s{+}1$ pairwise n.c. & crypto & C,T,D & semi-honest \\
+\nudgeplain~\cite{nudge2026}                      & 3, $\leq 1$ corrupt & crypto & C,T,S & semi-honest \\
+Shmueli--Tassa~\cite{shmueli2017}$^\dagger$       & multi-party        & crypto & T    & semi-honest \\
+FedMF~\cite{chai2021}                             & federated $+$ HE   & crypto & C,T  & semi-honest \\
+FedCF~\cite{ammadudin2019}                        & federated          & none$^*$ & C,T  & --- \\
+McSherry--Mironov~\cite{mcsherry2009}$^\dagger$   & single server      & DP     & T    & --- \\
+\midrule
+\multicolumn{5}{@{}l}{\emph{Secure machine learning (recommendation-adjacent)}}\\
+SecureML~\cite{secureml2017}                      & 2 non-colluding    & crypto & T    & semi-honest \\
+SecureNN~\cite{securenn2019}                      & 3-party            & crypto & T    & semi-honest \\
+\midrule
+\multicolumn{5}{@{}l}{\emph{Private retrieval and nearest-neighbour search}}\\
+\sanns~\cite{sanns2020}                           & client--server     & crypto & S    & semi-honest \\
+\tiptoe~\cite{tiptoe2023}                         & single server      & crypto & S    & semi-honest \\
+\pacmann~\cite{pacmann2025}                       & single server      & crypto & S    & semi-honest \\
+\compass~\cite{compass2025}                       & single server      & crypto & S    & compromised svr. \\
+\panther~\cite{panther2025}                       & single server      & crypto & S    & semi-honest \\
+Servan-Schreiber et al.~\cite{servanschreiber2022}$^\dagger$ & 2 non-colluding & crypto & S & semi-honest \\
+\wally~\cite{wally2024}                           & server-side        & DP     & S    & semi-honest \\
+Asharov et al.~\cite{asharov2018}                 & 2-party            & crypto & S    & semi-honest \\
+\midrule
+\multicolumn{5}{@{}l}{\emph{Private information retrieval}}\\
+Chor et al.~\cite{chor1995}$^\dagger$             & multi-server n.c.  & crypto & D    & semi-honest \\
+Kushilevitz--Ostrovsky~\cite{kushilevitz1997}$^\dagger$ & single server & crypto & D    & semi-honest \\
+Hafiz--Henry~\cite{hafiz2019}                     & multi-server, no pair & crypto & D & 1 malicious \\
+SealPIR~\cite{sealpir2018}                        & single server      & crypto & D    & semi-honest \\
+Corrigan-Gibbs--Kogan~\cite{cgk2020}              & single server      & crypto & D    & semi-honest \\
+SimplePIR~\cite{simplepir2023}                    & single server      & crypto & D    & semi-honest \\
+Spiral~\cite{spiral2022}                          & single server      & crypto & D    & semi-honest \\
+\midrule
+\multicolumn{5}{@{}l}{\emph{Oblivious memory}}\\
+Path ORAM~\cite{pathoram2013}$^\dagger$           & client--server     & crypto & ---  & semi-honest \\
+Lu--Ostrovsky~\cite{lu2013}                       & 2-party            & crypto & ---  & semi-honest \\
+\floram~\cite{floram2017}                         & 2-party            & crypto & ---  & semi-honest \\
+Jarecki--Wei~\cite{jarecki2018}                   & 3-party, 1 fault   & crypto & ---  & semi-honest \\
+Hamlin--Varia~\cite{hamlin2021}                   & 2-server           & crypto & ---  & semi-honest \\
+Bunn et al.~\cite{bunn2020}$^\dagger$             & 3-party            & crypto & ---  & semi-honest \\
+\duoramplain~\cite{duoram2023}                    & 2 or 3, 1 passive  & crypto & ---  & semi-honest \\
+\pracplain~\cite{prac2024}                        & 3, none collude    & crypto & ---  & semi-honest \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+\footnotesize
+$^*$ FedCF~\cite{ammadudin2019} offers no formal privacy notion; it relies on raw data not
+leaving the client. See Section~\ref{sec:training:fed}.
 \end{table}
 
 \subsection{Reading the table}
 \label{sec:taxonomy:reading}
 
-\todo{Two or three paragraphs drawing out what the table shows --- and ONLY
-      what it shows. Expected observations, to be confirmed once the table is
-      populated rather than assumed now:
-      (i) the training column is dense and the delivery column sparse;
-      (ii) the cheapest protocols consistently buy their speed with a
-           non-collusion assumption;
-      (iii) systems at the largest evaluated scale are semi-honest.
-      \verify{Do not write these until the table is filled --- they are
-      predictions, and the table may not support them.}}
+Three observations follow from Table~\ref{tab:taxonomy}, and each is developed later.
+
+\textbf{The stage column is uneven.} Training and serving are well populated; \emph{delivery} is
+addressed almost exclusively by the PIR line, and only one recommendation system in the table ---
+\pirsonaplain{}~\cite{pirsona2021} --- spans collection, training and delivery together. The
+oblivious-memory row group has no stage at all, because those works are primitives that a system
+must be built \emph{from}. Section~\ref{sec:both} takes up what this unevenness means.
+
+\textbf{Cost is bought with assumptions, consistently.} The cheapest protocols in each row group
+are those assuming non-collusion. This is most visible in PIR, where the authors of
+SimplePIR~\cite{simplepir2023} position their single-server throughput as approaching ``the
+performance of the fastest two-server private-information-retrieval schemes (which require
+non-colluding servers)'' --- the comparison being worth making precisely because removing the
+assumption normally costs something.
+
+\textbf{Semi-honest is the norm at scale.} Every recommendation system in the table is
+semi-honest. The exceptions elsewhere are narrow: Hafiz and Henry's PIR is computationally
+$1$-private against a malicious server~\cite{hafiz2019}, \compass{} states its guarantee holds
+``even if the server is compromised'', and Pika~\cite{pika2022} extends FSS-based function
+evaluation to malicious security in the honest-majority setting. Section~\ref{sec:open:malicious}
+returns to why this is difficult.

@@ -1,19 +1,35 @@
 %% ==========================================================================
-%%  SECTION 9 --- CONCLUSION
-%%
-%%  Half a page. Do not introduce anything new. Do not repeat the abstract.
+%%  SECTION 10 --- CONCLUSION
 %% ==========================================================================
 \section{Conclusion}
 \label{sec:conclusion}
 
-\todo{Three short paragraphs and stop.
-      (1) What the survey found: private training is essentially solved at
-          real scale, private retrieval has moved enormously since 2021, and
-          the two have not been connected.
-      (2) The two questions that fall out of that observation
-          (\Cref{sec:gap:n1}, \Cref{sec:gap:n2}), and why both are answerable
-          within this project rather than aspirational.
-      (3) What we will do next, in two sentences.
-      Resist a grand closing claim. The survey's value is the map and the
-      gap; overselling it here undoes the credibility \Cref{sec:gap:threats}
-      just bought.}
+Privacy-preserving recommendation is not one problem but four, corresponding to the stages of the
+pipeline in Figure~\ref{fig:pipeline}. Reading the literature through that lens is what this
+survey has tried to make possible, and it explains why systems that appear to be alternatives
+frequently are not.
+
+Two of those stages are in good shape. Private training has advanced to the point where
+cryptographic privacy costs compute and communication rather than recommendation quality:
+\nudgeplain{} reports nDCG@20 on par with non-private matrix factorisation~\cite{nudge2026}.
+Private retrieval has developed rapidly and independently, from secure $k$-nearest-neighbour
+search through web-scale private search to index-based sublinear schemes. The delivery stage is
+served by a mature private-information-retrieval literature that is, with one exception, not
+connected to any recommender.
+
+That exception, \pirsonaplain{}~\cite{pirsona2021}, is also the reason the gap is worth naming:
+it demonstrates that collection, training and delivery can be addressed together, and its
+training core has since been superseded while the retrieval literature it would now draw on did
+not yet exist. The current state of the art in training, meanwhile, states the remaining stage as
+a non-goal~\cite{nudge2026}.
+
+Two caveats bound what this survey establishes. It reports each system in the terms its authors
+used and declines to rank them, because Section~\ref{sec:eval} argues that cross-paper comparison
+in this field is unsound. And its claims about individual works are bounded by what we read: for
+papers we could not obtain, we have said so at the point of use rather than paraphrasing them.
+
+The problems collected in Section~\ref{sec:open} --- malicious security at scale, weakening the
+non-collusion assumption, connecting delivery to training, and the leakage that survives any
+protocol because it is carried by the recommendation itself --- are the ones the surveyed authors
+themselves identify. The last of these is the most fundamental, since no improvement in protocol
+design addresses it.

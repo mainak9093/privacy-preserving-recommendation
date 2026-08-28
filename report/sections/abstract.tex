@@ -1,18 +1,28 @@
 %% ==========================================================================
-%%  ABSTRACT --- written LAST, once the survey knows what it argues.
+%%  ABSTRACT --- written last.
 %% ==========================================================================
 \begin{abstract}
-\todo{Write this last. Roughly 200 words, four moves:
-      (1) recommender systems leak consumption history, and the data is both
-      valuable and dangerous;
-      (2) two literatures have grown up separately --- private \emph{training}
-      of the model, and private \emph{retrieval} of the recommended item;
-      (3) \pirsonaplain{} is close to the only system spanning both and now
-      predates the whole modern private-retrieval line, while \nudgeplain{}
-      is the state of the art on training and explicitly delegates the fetch
-      to ``other means'';
-      (4) this survey maps both literatures, identifies the gap between them,
-      and states what we propose to build.
-      Do not oversell. Name the two base papers explicitly --- the reader is
-      the author of one of them.}
+\noindent
+Recommender systems are trained on records of what people consume, and that data has been shown to
+be identifying as well as sensitive. A large body of work asks whether such systems can be built
+without requiring their operator to see the underlying data, but the answers come from several
+communities --- secure multi-party computation, private information retrieval, oblivious memory,
+federated learning and differential privacy --- which assume different threat models and, crucially,
+protect different parts of the system.
+
+This survey organises that landscape around the recommendation \emph{pipeline}: collection,
+training, serving and delivery. We propose a taxonomy along four axes --- trust model, privacy
+notion, pipeline stage protected, and adversary model --- and place the surveyed systems on it. We
+then treat the cryptographic line in detail: the building blocks, the private-training literature
+from garbled circuits through to three-party power iteration, and the private-retrieval literature
+that has developed largely in parallel under the name private nearest-neighbour search.
+
+Three observations emerge. Approaches are consistently cheaper in proportion to the trust
+assumptions they make, and the fastest systems in every family assume non-colluding parties.
+Almost every system evaluated at realistic scale is semi-honest. And the delivery stage --- fetching
+the recommended item without revealing which it was --- is addressed almost entirely by the private
+information retrieval literature in isolation from any recommender, with the one system spanning
+both halves predating the modern private-retrieval line. We also argue that published costs in this
+field are not comparable across papers, and report each system's claims in the terms its authors
+stated them rather than constructing a ranking.
 \end{abstract}

@@ -1,61 +1,77 @@
 %% ==========================================================================
-%%  SECTION 1 --- INTRODUCTION
-%%
-%%  Job: make the reader want the rest of the survey. Establish the problem,
-%%  the two halves, and the shape of the argument. Roughly 1.5 pages.
+%%  SECTION 1 --- INTRODUCTION  (written after sections 2-9)
 %% ==========================================================================
 \section{Introduction}
 \label{sec:intro}
 
-\todo{Open with the concrete harm, not with a definition. \pirsonaplain{} \S1 does
-      this well --- consumption data is invaluable to ``unscrupulous marketers,
-      identity thieves\dots{} and hostile foreign agents''. Borrow the framing,
-      not the words.}
+Recommender systems are built from the most revealing data their users produce: what they watched,
+read, bought and clicked. That this data is sensitive is uncontroversial. That it is also
+\emph{identifying} was established by Narayanan and Shmatikov~\cite{narayanan2008}, who
+de-anonymised records in the Netflix Prize dataset using the Internet Movie Database as background
+knowledge, and thereby uncovered ``apparent political preferences and other potentially sensitive
+information''.
 
-\subsection{Two halves of one problem}
-\label{sec:intro:two-halves}
+A substantial body of work has since asked whether a recommender can be built that does not
+require its operator to see this data. The answers come from several communities --- secure
+multi-party computation, private information retrieval, oblivious memory, federated learning and
+differential privacy --- which use different vocabulary, assume different threat models, and
+frequently protect different parts of the system. This survey maps that landscape.
 
-\todo{The central framing device of the whole survey. A recommender that
-      protects its users must do two separate things:
-      (i) TRAIN a model on private ratings without learning them, and
-      (ii) DELIVER the recommended item without learning which item.
-      Doing only (i) is not enough --- the fetch betrays the recommendation.
-      Doing only (ii) is not enough --- the model was built from exposed data.
-      Establish this here and refer back to it in every later section.}
-
-\subsection{The apparent contradiction}
-\label{sec:intro:contradiction}
-
-\todo{Why this looked impossible: PIR hides WHICH item a user fetches, while
-      collaborative filtering works precisely by relating users to each other
-      through what they fetched. \pirsonaplain{} \S1 states this tension
-      explicitly --- quote it, then say it has been resolved twice over, in
-      two different ways, by two literatures that did not talk to each other.}
-
-\subsection{Scope of this survey}
+\subsection{Scope}
 \label{sec:intro:scope}
 
-\todo{State what is in and what is out.
-      IN:  MPC- and PIR-based approaches; matrix factorisation; private
-           nearest-neighbour retrieval; the leakage that survives.
-      OUT: pure differential privacy without a cryptographic layer; trusted
-           hardware (mentioned in \S2 for contrast only); neural recommenders.
-      Say why the cuts were made --- an unjustified scope cut reads as an
-      unread paper.}
+We survey approaches to privacy-preserving recommendation with an emphasis on
+\emph{cryptographic} techniques: secure multi-party computation, homomorphic encryption, private
+information retrieval, function secret sharing, and oblivious memory.
 
-\subsection{Contributions of this survey}
-\label{sec:intro:contributions}
+The taxonomy of Section~\ref{sec:taxonomy} covers the field as a whole, including federated,
+differentially private and trusted-hardware approaches, so that the classification is complete and
+so that a reader can see how the families relate. Mechanism-level treatment in
+Sections~\ref{sec:prim}--\ref{sec:both} is restricted to the cryptographic line. Federated and
+differentially private recommenders are discussed where they bear on the cryptographic story ---
+notably in Sections~\ref{sec:training:fed} and~\ref{sec:open:functionality} --- but are not
+surveyed exhaustively; existing surveys cover them well. Trusted execution environments are
+mentioned only for completeness, as their security rests on hardware assumptions and side-channel
+resistance rather than on the techniques studied here.
 
-\todo{Be honest: a survey's contribution is a map and a gap, not a result.
-      Claim exactly three things:
-      (1) the first side-by-side treatment of the private-training and
-          private-retrieval literatures for recommendation;
-      (2) identification of a concrete, author-acknowledged gap between them;
-      (3) two cheap, checkable research questions arising from it (N1, N2 ---
-          see \Cref{sec:gap}).}
+We also do not attempt to rank systems against one another. Section~\ref{sec:eval} explains why
+that would be unsound.
 
-\subsection{Roadmap}
-\label{sec:intro:roadmap}
+\subsection{Relation to existing surveys}
+\label{sec:intro:related}
 
-\todo{One short paragraph mapping \S2--\S9. Make the arc audible: primitives,
-      then training, then retrieval, then who tried both, then the gap.}
+The federated and differentially private branches of this field are already well surveyed, as is
+privacy-preserving machine learning generally. What those surveys largely do not cover is the
+\emph{cryptographic} line as it applies specifically to recommendation, and in particular the
+\emph{delivery} stage --- retrieving the recommended item without revealing which it was. That
+stage is where the recommendation literature and the private-information-retrieval literature meet,
+and organising the survey around the pipeline (Section~\ref{sec:background:pipeline}) is what makes
+the meeting point visible.
+
+\subsection{Method}
+\label{sec:intro:method}
+
+Papers were selected by following three threads: the two systems that address recommendation and
+retrieval jointly and their reference lists; the primitives those systems are built from; and the
+private-nearest-neighbour literature that has developed alongside them. Bibliographic metadata for
+every cited work was taken from the DBLP computer science bibliography rather than transcribed by
+hand.
+
+We distinguish explicitly between works we read in full, works for which we read the abstract, and
+works cited on metadata alone. Claims about the first two are made directly; for the third, we
+state what a source we did read reports about them, attributed. Where we could not obtain a paper,
+we say so at the point of use rather than paraphrasing it. Two such cases appear
+below~\cite{calandrino2011,nikolaenko2013}.
+
+\subsection{Organisation}
+\label{sec:intro:organisation}
+
+Section~\ref{sec:background} introduces collaborative filtering and the four-stage pipeline around
+which the survey is organised. Section~\ref{sec:taxonomy} presents the taxonomy: trust model,
+privacy notion, pipeline stage and adversary, and places the surveyed systems on those axes.
+Section~\ref{sec:prim} covers the cryptographic building blocks.
+Sections~\ref{sec:training} and~\ref{sec:retrieval} survey private training and private retrieval
+respectively, each ending with where its approaches stop. Section~\ref{sec:both} examines the
+systems that span more than one stage and the obstacles to composing the rest.
+Section~\ref{sec:eval} describes how the field evaluates itself and why cross-paper comparison is
+unsound, and Section~\ref{sec:open} collects the open problems.

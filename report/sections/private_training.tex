@@ -1,115 +1,140 @@
 %% ==========================================================================
-%%  SECTION 4 --- PRIVATE TRAINING                              [Track T2]
-%%
-%%  Job: trace the private matrix-factorisation line to its current state of
-%%  the art, and land ONE argument -- that the choice of ALGORITHM is a
-%%  CRYPTOGRAPHIC decision, not a machine-learning one. ~2.5 pages.
+%%  SECTION 5 --- PRIVATE TRAINING
+%%  Every claim traces to report/notes/evidence.md.
 %% ==========================================================================
 \section{Private Training}
 \label{sec:training}
 
-\todo{Frame: everyone in this line computes the same thing --- a low-rank
-      factorisation $\ratings \approx \userembed \cdot \itemembed$ --- and the
-      entire history is about which ALGORITHM for computing it survives being
-      run under cryptography. That is the section's thesis; state it first.}
+Every system in this section computes the same object: a low-rank factorisation
+$\ratings \approx \userembed \cdot \itemembed$ of a rating matrix nobody is allowed to see. They
+differ in the cryptographic family they use and, as this section argues, in the \emph{algorithm}
+they choose to run --- a choice that turns out to be driven by cryptographic rather than
+statistical considerations.
 
-\subsection{Matrix factorisation, in the clear}
-\label{sec:training:mf}
-
-\todo{Half a page, no more. $\ratings \in \R^{\users \times \items}$,
-      embedding dimension $\dime \ll \min(\users,\items)$, minimise
-      $\norm{\ratings - \userembed\cdot\itemembed}_F$. Note that when
-      $\itemembed$ is orthonormal, $\userembed = \ratings \cdot \itemembed^\top$,
-      so recommendations for user $i$ depend only on $\uvec{i}$ and
-      $\itemembed$. \verify{\nudgeplain{} \S2} That fact does a lot of work
-      later --- flag it here and return to it in \S8.}
-
-\subsection{Garbled circuits: Nikolaenko et al.}
+\subsection{The garbled-circuit era}
 \label{sec:training:gc}
 
-\todo{CCS'13. Gradient descent inside a garbled circuit. Establish it as the
-      baseline the field has been escaping ever since --- \nudgeplain{} reports
-      beating this family by FOUR ORDERS OF MAGNITUDE in communication and
-      compute. \verify{exact claim}. Say why: data-oblivious gradient descent
-      forces a circuit whose size scales with the whole rating matrix.}
+The first practical system was that of Nikolaenko et al.~\cite{nikolaenko2013}, which evaluates
+gradient descent inside a garbled circuit across two non-colluding
+servers.\footnote{We were unable to obtain this paper; the characterisation here follows
+\nudge{}'s description and measurements of it.} Its cost profile is what one expects from
+Section~\ref{sec:prim:gc}: because the computation must be data-oblivious, the circuit is sized by
+the whole rating matrix, and communication follows. \nudgeplain{} reports this family requiring
+over four orders of magnitude more communication and computation than secret-sharing
+approaches~\cite{nudge2026}.
 
-\subsection{\pirsonaplain{}: four-party Boolean factorisation}
-\label{sec:training:pirsona}
+The broader lesson is architectural rather than about any one paper. A circuit-based approach pays
+for every operation in circuit size, so an algorithm with many cheap linear steps is no cheaper
+than one with few expensive ones. Secret sharing inverts that relationship, and the systems below
+exploit the inversion.
 
-\todo{PoPETs'21. \pirsona{} --- the instructor's paper, so be thorough.
-      Cover: the 4PC Boolean matrix factorisation; the new primitives it
-      contributes (4PC fixed-selection MUX/DeMUX, fast 3PC vector
-      normalisation for shared fixed-point vectors, 4PC well-formedness tests
-      for $(2,2)$-DPFs, one-round 3PC integer comparison); and the pairwise
-      non-collusion assumption it pays for them.
-      Its DELIVERY half belongs in \S6, not here --- cross-reference, do not
-      duplicate.}
+\subsection{Homomorphic encryption}
+\label{sec:training:he}
 
-\subsection{\nudgeplain{}: power iteration as a matrix-vector program}
-\label{sec:training:nudge}
+Homomorphic approaches remove the non-collusion assumption by keeping the data encrypted at a
+single server (Section~\ref{sec:prim:he}). The trade is computational: fully homomorphic
+evaluation of a training loop is expensive, and the literature accordingly tends toward partially
+homomorphic schemes used for specific sub-operations rather than end-to-end training. FedMF's use
+of homomorphic encryption to protect gradient uploads~\cite{chai2021} is the pattern that recurs:
+homomorphic encryption applied surgically to the one channel that leaks, rather than to the whole
+computation.
 
-\todo{USENIX Sec'26. The current state of the art, and the section's
-      centrepiece. Build the argument in this order:
-      (1) recall \Cref{obs:prim:matvec-free} --- matrix-vector work is free;
-      (2) therefore prefer an algorithm that is mostly matrix-vector products
-          separated by cheap non-linear steps;
-      (3) power iteration has exactly that shape and gradient descent does
-          not. THIS IS THE POINT OF THE WHOLE SECTION.
-      Then the matrix-vector program abstraction (Def 4.1) and Thm 4.2.}
+\subsection{Secret-sharing MPC}
+\label{sec:training:mpc}
 
-\begin{algorithm}[t]
-\caption{$\ApproxFactor$: matrix factorisation by power iteration \cite{nudge2026}}
-\label{alg:training:approxfactor}
-\todo{Transcribe \nudgeplain{} Fig.\ 4 faithfully, with a citation. Mark clearly
-      which lines are FREE (the two $\mathrm{Mul}$ calls) and which are
-      INTERACTIVE ($\Normalize$). Annotate the line where each row of
-      $\itemembed$ is OPENED IN THE CLEAR --- that is the design's load-bearing
-      trick and the hinge of \S8.}
-\end{algorithm}
+This is the line along which the field has advanced furthest, and it is worth following the cost
+argument rather than just the chronology.
 
-\subsubsection{The two protocols that cost anything}
-\label{sec:training:nonlinear}
+SecureML~\cite{secureml2017} established the two-server pattern: data owners ``distribute their
+private data among two non-colluding servers who train various models on the joint data using
+secure two-party computation''. Its contributions are revealing of where the difficulty lies ---
+``new techniques to support secure arithmetic operations on shared decimal numbers'' and
+``MPC-friendly alternatives to non-linear functions such as sigmoid and softmax''. The linear
+algebra was not the problem; fixed-point arithmetic and non-linearities were.
 
-\todo{$\Trunc_{\fracbits}$: deterministic truncation with sign extension;
-      low-order carries fixed by an integer comparison, high-order carries
-      prevented by one bit of slack. 3 rounds,
-      $2\dime\fracbits(\seclen+4)+10\dime\bits$ bits. Emphasise WHY that is an
-      improvement: the leading term is $\seclen\fracbits$ rather than
-      $\seclen\bits$, giving $\approx\bits/\fracbits = 6\times$ at
-      $\bits=\seclen=128$, $\fracbits=20$.
-      $\ApproxNormalize$: shares of $1/\norm{v}$. $\norm{v}^2$ is degree-two
-      hence free; the inverse square root is seeded from the
-      most-significant-non-zero-bit via $\bits+1$ SIMULTANEOUS comparisons in
-      one round, then Newton--Raphson. Explain what this avoids --- the
-      $O(\bits)$-round route and the exponential-lookup-table route.
-      \verify{all constants against \nudgeplain{} \S4.3, Lemmas 4.3 and 4.4}}
+SecureNN~\cite{securenn2019} moved to three parties, giving protocols for ``matrix multiplication,
+convolutions, Rectified Linear Units, Maxpool, normalization and so on \dots\ such that no single
+party learns any information about the data'', and reports secure inference outperforming prior
+two- and three-server work by $6\times$--$113\times$. Again the enumerated contributions are the
+non-linear layers.
 
-\subsection{The non-cryptographic alternatives}
-\label{sec:training:alternatives}
+\pirsona{} applied this family to recommendation directly, combining collaborative filtering with
+private information retrieval. Its training component is a ``carefully optimized 4PC Boolean
+matrix factorization'', and the authors are candid about the price: they ``opted for the most
+performant primitives available (at the expense of rather strong non-collusion
+assumptions)''~\cite{pirsona2021}. Because its delivery mechanism is equally central, it is
+discussed in full in Section~\ref{sec:both}.
 
-\todo{Short --- one paragraph each, for contrast and completeness.
-      Federated MF (Chai et al.) and its leakage through gradients;
-      FHE-based MF (arXiv 2509.03024) and its cost;
-      Paillier/decentralised variants (PADER, 2601.10212);
-      recent secret-sharing recommenders (PRSI, 2411.18653).
-      The purpose here is to show we surveyed the field, and to justify why
-      \S8 targets the MPC line.}
+\nudge{} is the current state of the art, and its central move is to change the algorithm. Under
+$2$-out-of-$3$ replicated sharing a shared matrix--vector product can be computed with very little
+communication, so an algorithm consisting mostly of matrix--vector products separated by a few
+non-linear steps is far cheaper than one that is not. \nudgeplain{} therefore replaces gradient
+descent with \emph{power iteration}, leaving truncation and normalisation as the only operations
+that cost rounds. The user embeddings $\userembed$ remain secret-shared while the item embeddings
+$\itemembed$ are revealed in the clear --- a design decision with consequences taken up in
+Sections~\ref{sec:both} and~\ref{sec:open:functionality}.
 
-\begin{table}[t]
-\centering
-\todo{Table: system $\times$ \{parties, corruption model, algorithm, dataset,
-      scale reached, cost, quality metric\}. Include Nikolaenko,
-      \pirsonaplain{}, \nudgeplain{}, federated, FHE. Numbers must carry their
-      SETTING --- hardware and network --- or they are not numbers.}
-\caption{Private training systems compared.}
-\label{tab:training:compare}
-\end{table}
+The reported results give the field its current reference point: on Netflix, ``half a million
+users and ten thousand items'', running ``on three 192-core servers on a local-area network'',
+\nudgeplain{} ``privately learns a recommender model in 50 mins with 40 GB of server-to-server
+communication'', scoring ``0.29 out of 1.0'' on nDCG@20, ``on par with non-private matrix
+factorization and just shy of non-private neural recommenders, which score
+0.31''~\cite{nudge2026}. Privacy holds ``against an adversary that compromises the entire secret
+state of one server''.
 
-\subsection{Where training now stands}
-\label{sec:training:standing}
+That quality figure deserves emphasis. It is the strongest available evidence that cryptographic
+privacy in recommendation need not cost accuracy --- the cost is paid in compute and
+communication, not in the quality of what users are recommended.
 
-\todo{Close with: private training is essentially SOLVED at real scale ---
-      Netflix, 0.5M users, 50 minutes, quality on par with non-private MF.
-      Then the pivot that sets up \S5, quoting \nudgeplain{} \S3.1 verbatim:
-      it ``relies on other means\dots{} to let users fetch data items in a
-      private way.'' End the section on that quote.}
+\subsection{Federated approaches}
+\label{sec:training:fed}
+
+Federated learning keeps raw data on the client and uploads only model updates. Ammad-ud-din et
+al.~\cite{ammadudin2019} report ``the first federated implementation of a Collaborative Filter'',
+with updates ``based on a stochastic gradient approach'', and find that ``a collaborative filter
+can be federated without a loss of accuracy compared to a standard implementation''.
+
+The privacy of that arrangement is weaker than it appears, and the clearest evidence comes from
+inside the federated literature itself. Chai et al.~\cite{chai2021} design a user-level
+distributed matrix factorisation in which each user ``only uploads the gradient information
+(instead of the raw preference data) to the server'' --- and then explicitly ``prove that it could
+still leak users' raw data''. Their response is to add homomorphic encryption to the gradient
+channel.
+
+This is the cleanest illustration of the distinction drawn in
+Section~\ref{sec:taxonomy:notion}. Federated learning is an \emph{architecture}, not a privacy
+notion: it changes where computation happens without providing a guarantee about what the
+resulting messages reveal. Where a federated system does provide a guarantee, it is because a
+cryptographic or differentially private mechanism was added on top.
+
+\subsection{Differential privacy}
+\label{sec:training:dp}
+
+McSherry and Mironov~\cite{mcsherry2009} brought differential privacy to recommendation in the
+context of the Netflix Prize. The guarantee is orthogonal to everything above: it bounds what the
+\emph{released model} reveals about any individual, rather than protecting the computation. It is
+therefore complementary to the cryptographic approaches --- and, as
+Section~\ref{sec:open:functionality} argues, it addresses a leak that cryptography structurally
+cannot.
+
+\subsection{Where each family stops}
+\label{sec:training:stops}
+
+\begin{description}
+  \item[Garbled circuits] stop at scale. Circuit size grows with the data, and communication with
+        it.
+  \item[Homomorphic encryption] stops at cost. It buys the single-server trust model, and pays in
+        computation; in practice it is applied to specific channels rather than whole training
+        loops.
+  \item[Secret-sharing MPC] stops at the trust assumption. It is now fast enough for real
+        datasets, but every system in this family requires two or three non-colluding parties, and
+        all of them are semi-honest.
+  \item[Federated learning] stops at the guarantee. Without an added cryptographic or DP
+        mechanism, gradient uploads leak~\cite{chai2021}.
+  \item[Differential privacy] stops at utility, and at scope: it protects the output, not the
+        computation.
+\end{description}
+
+There is also a limit none of these families addresses, because it is not a training problem at
+all. Every system in this section ends with a model, or with scores. None of them delivers the
+recommended \emph{item} to the user. That is the subject of Section~\ref{sec:retrieval}.
