@@ -3,7 +3,7 @@
 **CS670 · Cryptographic Techniques for Privacy Preservation · 2026-27 Semester I · IIT Kanpur**
 Course project, topic (a): *Privacy-Preserving Recommendation Systems*
 
-**Mainak Sarkar · Shrasti Dwivedi · Anushka Gupta · Aditya Anand**
+**Mainak Sarkar · Shrasti Dwivedi · Aditya Anand · Shravan Agrawal**
 
 ---
 
@@ -99,7 +99,7 @@ Both are settled at the instructor meeting. Until then, we read.
 | **W1** | Mainak Sarkar | FSS core and private delivery: the DPF (AES-NI GGM tree), the FSS comparison gates, the DPF-PIR read layer. |
 | **W2** | Aditya Anand | 3PC substrate and non-linear protocols: replicated sharing, the PRF model, `Trunc_t`, `ApproxNormalize`. |
 | **W3** | Shrasti Dwivedi | Factorization and serving: power iteration, `SetOrthogonal`, score computation, oblivious top-*k*, model quality. |
-| **W4** | Anushka Gupta | Evaluation and security analysis: benchmark harness, WAN emulation, baselines, threat model, leakage analysis. |
+| **W4** | Shravan Agrawal | Evaluation and security analysis: benchmark harness, WAN emulation, baselines, threat model, leakage analysis. |
 
 Workstreams touch each other only through `include/oblivrec/`.
 `dpf.hpp` and `nonlinear.hpp` are frozen in week one — they are everyone's critical path.

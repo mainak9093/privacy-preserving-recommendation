@@ -116,8 +116,8 @@ Filled in just before each submission, from the tables above.
 |---|---|---|---|---|
 | Mainak Sarkar | | | | |
 | Shrasti Dwivedi | | | | |
-| Anushka Gupta | | | | |
 | Aditya Anand | | | | |
+| Shravan Agrawal | | | | |
 
 ### Milestone 2 — Mid-term report (12 Sep 2026)
 
@@ -125,8 +125,8 @@ Filled in just before each submission, from the tables above.
 |---|---|---|
 | Mainak Sarkar | | |
 | Shrasti Dwivedi | | |
-| Anushka Gupta | | |
 | Aditya Anand | | |
+| Shravan Agrawal | | |
 
 ### Milestone 3 — Final (6 Nov 2026)
 
@@ -134,5 +134,5 @@ Filled in just before each submission, from the tables above.
 |---|---|---|---|
 | Mainak Sarkar | | | |
 | Shrasti Dwivedi | | | |
-| Anushka Gupta | | | |
 | Aditya Anand | | | |
+| Shravan Agrawal | | | |
