@@ -32,8 +32,8 @@ bench/figures/
 !references/*.pdf
 # The built survey PDF ships alongside its sources.
 !report/survey.pdf
-# The presentation deck. NOTE: only the PDF is here -- the Beamer .tex source is
-# not in the repo, so the deck is currently NOT reproducible from source.
+# The presentation deck, built from report/slides/survey_slides.tex, which IS
+# tracked -- the deck is reproducible from source (needs the metropolis theme).
 !report/slides/survey_slides.pdf
 
 # ─────────────────────────────────────────────────────────────
@@ -76,6 +76,10 @@ venv/
 *.synctex.gz
 *.fls
 *.fdb_latexmk
+# Beamer navigation aux
+*.nav
+*.snm
+*.vrb
 
 # ─────────────────────────────────────────────────────────────
 #  Editors / OS
