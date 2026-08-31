@@ -32,6 +32,9 @@ bench/figures/
 !references/*.pdf
 # The built survey PDF ships alongside its sources.
 !report/survey.pdf
+# The presentation deck. NOTE: only the PDF is here -- the Beamer .tex source is
+# not in the repo, so the deck is currently NOT reproducible from source.
+!report/slides/survey_slides.pdf
 
 # ─────────────────────────────────────────────────────────────
 #  Build
