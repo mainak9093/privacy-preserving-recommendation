@@ -12,10 +12,10 @@ knowledge, and thereby uncovered ``apparent political preferences and other pote
 information''.
 
 A substantial body of work has since asked whether a recommender can be built that does not
-require its operator to see this data. The answers come from several communities --- secure
-multi-party computation, private information retrieval, oblivious memory, federated learning and
-differential privacy --- which use different vocabulary, assume different threat models, and
-frequently protect different parts of the system. This survey maps that landscape.
+require its operator to see this data. The answers come from several communities: secure
+multi-party computation, private information retrieval, oblivious memory, federated learning, and
+differential privacy. These communities use different vocabulary, assume different threat models,
+and frequently protect different parts of the system. This survey maps that landscape.
 
 \subsection{Scope}
 \label{sec:intro:scope}
@@ -28,9 +28,9 @@ The taxonomy of Section~\ref{sec:taxonomy} covers the field as a whole, includin
 differentially private and trusted-hardware approaches, so that the classification is complete and
 so that a reader can see how the families relate. Mechanism-level treatment in
 Sections~\ref{sec:prim}--\ref{sec:both} is restricted to the cryptographic line. Federated and
-differentially private recommenders are discussed where they bear on the cryptographic story ---
-notably in Sections~\ref{sec:training:fed} and~\ref{sec:open:functionality} --- but are not
-surveyed exhaustively; existing surveys cover them well. Trusted execution environments are
+differentially private recommenders are discussed where they bear on the cryptographic story,
+notably in Sections~\ref{sec:training:fed} and~\ref{sec:open:functionality}. They are not
+surveyed exhaustively, since existing surveys already cover them well. Trusted execution environments are
 mentioned only for completeness, as their security rests on hardware assumptions and side-channel
 resistance rather than on the techniques studied here.
 
@@ -43,7 +43,7 @@ that would be unsound.
 The federated and differentially private branches of this field are already well surveyed, as is
 privacy-preserving machine learning generally. What those surveys largely do not cover is the
 \emph{cryptographic} line as it applies specifically to recommendation, and in particular the
-\emph{delivery} stage --- retrieving the recommended item without revealing which it was. That
+\emph{delivery} stage: retrieving the recommended item without revealing which it was. That
 stage is where the recommendation literature and the private-information-retrieval literature meet,
 and organising the survey around the pipeline (Section~\ref{sec:background:pipeline}) is what makes
 the meeting point visible.
@@ -51,14 +51,15 @@ the meeting point visible.
 \subsection{Method}
 \label{sec:intro:method}
 
-Papers were selected by following three threads: the two systems that address recommendation and
-retrieval jointly and their reference lists; the primitives those systems are built from; and the
-private-nearest-neighbour literature that has developed alongside them. Bibliographic metadata for
+Papers were selected by following three threads. The first is the two systems that address
+recommendation and retrieval jointly, together with their reference lists. The second is the
+primitives those systems are built from. The third is the private-nearest-neighbour literature
+that has developed alongside them. Bibliographic metadata for
 every cited work was taken from the DBLP computer science bibliography rather than transcribed by
 hand.
 
 We distinguish explicitly between works we read in full, works for which we read the abstract, and
-works cited on metadata alone. Claims about the first two are made directly; for the third, we
+works cited on metadata alone. Claims about the first two are made directly. For the third, we
 state what a source we did read reports about them, attributed. Where we could not obtain a paper,
 we say so at the point of use rather than paraphrasing it. Two such cases appear
 below~\cite{calandrino2011,nikolaenko2013}.

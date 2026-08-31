@@ -32,9 +32,9 @@ Sections~\ref{sec:training} and~\ref{sec:retrieval} honest.
         learning~\cite{secureml2017}, three-party computation~\cite{securenn2019,araki2016}, and
         the systems of Section~\ref{sec:training:mpc}. The assumption is about the world, not
         about mathematics, and it is the single most consequential choice in this taxonomy.
-  \item[Federated / user-side.] No server holds raw data; users compute locally and upload
-        updates~\cite{ammadudin2019}. The guarantee is weaker than it first appears --- see
-        Section~\ref{sec:training:fed}.
+  \item[Federated / user-side.] No server holds raw data, and users compute locally and upload
+        updates~\cite{ammadudin2019}. The guarantee is weaker than it first appears, as
+        Section~\ref{sec:training:fed} explains.
   \item[Trusted hardware.] Computation runs inside an enclave. Out of scope here
         (Section~\ref{sec:intro:scope}), and listed only for completeness.
 \end{description}
@@ -51,7 +51,7 @@ which is plausible for a given deployment.
   \item[Cryptographic.] Security is defined by the real/ideal simulation
         paradigm~\cite{lindell2017,evans2018}: a protocol is secure if whatever an adversary
         learns from its execution could be simulated from the agreed output alone. Nothing beyond
-        the output leaks --- but the output itself is not protected.
+        the output leaks, but the output itself is not protected.
   \item[Differential privacy.] An individual's influence on a released quantity is
         bounded~\cite{dwork2014}, first applied to recommendation by McSherry and
         Mironov~\cite{mcsherry2009}. This constrains what the \emph{output} reveals, and says
@@ -63,7 +63,7 @@ which is plausible for a given deployment.
 \end{description}
 
 The critical point, and the one Section~\ref{sec:open:functionality} returns to, is that these
-compose but do not substitute. Cryptographic privacy bounds \emph{who sees the computation};
+compose but do not substitute. Cryptographic privacy bounds \emph{who sees the computation}, while
 differential privacy bounds \emph{what the result implies}. A system can be cryptographically
 perfect and still leak, if its intended output is itself revealing.
 
@@ -78,12 +78,12 @@ are conspicuously uneven.
 \subsection{Axis 4: the adversary}
 \label{sec:taxonomy:adversary}
 
-Semi-honest adversaries follow the protocol and try to learn from what they see; malicious
+Semi-honest adversaries follow the protocol and try to learn from what they see, while malicious
 adversaries may deviate arbitrarily. Orthogonally, a scheme specifies how many parties may be
 corrupted, and whether corruption is fixed in advance. Almost every system evaluated at realistic
-scale in this survey is semi-honest --- \duoram{} tolerates ``a single passive corruption'',
-\prac{} assumes ``none of the three parties \dots\ collude'', \nudge{} protects against ``an
-adversary that compromises the entire secret state of one server'' --- and that is a substantive
+scale in this survey is semi-honest: \duoram{} tolerates ``a single passive corruption'',
+\prac{} assumes ``none of the three parties \dots\ collude'', and \nudge{} protects against ``an
+adversary that compromises the entire secret state of one server''. That is a substantive
 limitation rather than a technicality, discussed in Section~\ref{sec:open:malicious}.
 
 \subsection{Placing the systems}
@@ -98,8 +98,8 @@ sense and are treated in Section~\ref{sec:prim} instead.
 \small
 \caption{Surveyed systems placed on the four axes of Section~\ref{sec:taxonomy}. Pipeline stages:
   \textsf{C}ollection, \textsf{T}raining, \textsf{S}erving, \textsf{D}elivery. Entries marked
-  $\dagger$ are placed from title, venue and the description given by a source we read; see
-  \texttt{notes/evidence.md}.}
+  $\dagger$ are placed from title, venue and the description given by a source we read, as
+  recorded in \texttt{notes/evidence.md}.}
 \label{tab:taxonomy}
 \begin{tabular}{@{}llllc@{}}
 \toprule
@@ -151,7 +151,7 @@ Bunn et al.~\cite{bunn2020}$^\dagger$             & 3-party            & crypto 
 
 \vspace{2pt}
 \footnotesize
-$^*$ FedCF~\cite{ammadudin2019} offers no formal privacy notion; it relies on raw data not
+$^*$ FedCF~\cite{ammadudin2019} offers no formal privacy notion. It relies instead on raw data not
 leaving the client. See Section~\ref{sec:training:fed}.
 \end{table}
 
@@ -160,9 +160,9 @@ leaving the client. See Section~\ref{sec:training:fed}.
 
 Three observations follow from Table~\ref{tab:taxonomy}, and each is developed later.
 
-\textbf{The stage column is uneven.} Training and serving are well populated; \emph{delivery} is
-addressed almost exclusively by the PIR line, and only one recommendation system in the table ---
-\pirsonaplain{}~\cite{pirsona2021} --- spans collection, training and delivery together. The
+\textbf{The stage column is uneven.} Training and serving are well populated, while \emph{delivery}
+is addressed almost exclusively by the PIR line. Only one recommendation system in the table,
+\pirsonaplain{}~\cite{pirsona2021}, spans collection, training and delivery together. The
 oblivious-memory row group has no stage at all, because those works are primitives that a system
 must be built \emph{from}. Section~\ref{sec:both} takes up what this unevenness means.
 
@@ -170,7 +170,7 @@ must be built \emph{from}. Section~\ref{sec:both} takes up what this unevenness 
 are those assuming non-collusion. This is most visible in PIR, where the authors of
 SimplePIR~\cite{simplepir2023} position their single-server throughput as approaching ``the
 performance of the fastest two-server private-information-retrieval schemes (which require
-non-colluding servers)'' --- the comparison being worth making precisely because removing the
+non-colluding servers)''. That comparison is worth making precisely because removing the
 assumption normally costs something.
 
 \textbf{Semi-honest is the norm at scale.} Every recommendation system in the table is

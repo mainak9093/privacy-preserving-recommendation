@@ -5,24 +5,24 @@
 \noindent
 Recommender systems are trained on records of what people consume, and that data has been shown to
 be identifying as well as sensitive. A large body of work asks whether such systems can be built
-without requiring their operator to see the underlying data, but the answers come from several
-communities --- secure multi-party computation, private information retrieval, oblivious memory,
-federated learning and differential privacy --- which assume different threat models and, crucially,
-protect different parts of the system.
+without requiring their operator to see the underlying data. The answers come from several
+communities: secure multi-party computation, private information retrieval, oblivious memory,
+federated learning, and differential privacy. These communities assume different threat models and,
+crucially, protect different parts of the system.
 
 This survey organises that landscape around the recommendation \emph{pipeline}: collection,
-training, serving and delivery. We propose a taxonomy along four axes --- trust model, privacy
-notion, pipeline stage protected, and adversary model --- and place the surveyed systems on it. We
-then treat the cryptographic line in detail: the building blocks, the private-training literature
-from garbled circuits through to three-party power iteration, and the private-retrieval literature
-that has developed largely in parallel under the name private nearest-neighbour search.
+training, serving and delivery. We propose a taxonomy along four axes: trust model, privacy
+notion, pipeline stage protected, and adversary model. Every surveyed system is placed on this
+taxonomy. We then treat the cryptographic line in detail: the building blocks, the private-training
+literature from garbled circuits through to three-party power iteration, and the private-retrieval
+literature that has developed largely in parallel under the name private nearest-neighbour search.
 
 Three observations emerge. Approaches are consistently cheaper in proportion to the trust
 assumptions they make, and the fastest systems in every family assume non-colluding parties.
-Almost every system evaluated at realistic scale is semi-honest. And the delivery stage --- fetching
-the recommended item without revealing which it was --- is addressed almost entirely by the private
-information retrieval literature in isolation from any recommender, with the one system spanning
-both halves predating the modern private-retrieval line. We also argue that published costs in this
+Almost every system evaluated at realistic scale is semi-honest. And the delivery stage, which
+fetches the recommended item without revealing which it was, is addressed almost entirely by the
+private information retrieval literature in isolation from any recommender. The one system spanning
+both halves predates the modern private-retrieval line. We also argue that published costs in this
 field are not comparable across papers, and report each system's claims in the terms its authors
 stated them rather than constructing a ranking.
 \end{abstract}

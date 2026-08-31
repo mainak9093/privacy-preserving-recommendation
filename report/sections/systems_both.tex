@@ -19,7 +19,7 @@ while simultaneously keeping said consumption patterns private''~\cite{pirsona20
 
 The authors frame the difficulty as one of apparently incompatible goals: private information
 retrieval and collaborative filtering are ``seemingly antithetical primitives''. PIR exists to
-hide which item a user fetches; collaborative filtering works by relating users to one another
+hide which item a user fetches. Collaborative filtering works by relating users to one another
 through exactly what they fetched.
 
 The resolution has three parts. Delivery uses the computationally $1$-private multiserver PIR of
@@ -31,15 +31,15 @@ from the query traffic itself, so no separate ratings upload is required. Traini
 Two aspects are worth carrying forward. First, the collection-from-delivery mechanism is, as far
 as this survey found, unique to \pirsonaplain{}: it makes the pipeline a cycle rather than a
 sequence. Second, the authors are explicit that the design ``opted for the most performant
-primitives available (at the expense of rather strong non-collusion assumptions)'' --- a
+primitives available (at the expense of rather strong non-collusion assumptions)'': a
 $s{+}1$-server, pairwise non-colluding model.
 
-\subsection{\nudgeplain{}: collection, training and scoring}
+\subsection{\nudgeplain{}: collection, training and serving}
 \label{sec:both:nudge}
 
-\nudge{} spans collection, training and serving. Users secret-share ratings; three servers train
-by power iteration; the servers then compute each user's recommendation scores in shared form and
-forward them, so the servers never learn the ranking.
+\nudge{} spans collection, training and serving. Users secret-share ratings, three servers train
+by power iteration, and the servers then compute each user's recommendation scores in shared form
+and forward them, so the servers never learn the ranking.
 
 What it does not do is stated by its authors as a non-goal: \nudgeplain{} ``relies on other means
 (e.g., Apple's private relay, Tor, or cryptographic private information retrieval) to let users
@@ -53,10 +53,10 @@ Putting the two halves together is not simply a matter of running one after the 
 reasons that this survey can identify from the sources read.
 
 \textbf{Trust models must agree.} A composed system inherits the union of its components'
-assumptions. Here the two lines happen to be compatible --- \nudgeplain{} assumes three servers
+assumptions. Here the two lines happen to be compatible: \nudgeplain{} assumes three servers
 with at most one compromised~\cite{nudge2026}, \duoramplain{} tolerates ``a single passive
 corruption'' in a two- or three-party setting~\cite{duoram2023}, and \pracplain{} assumes ``none
-of the three parties \dots\ collude''~\cite{prac2024} --- but that is a fact to be checked, not
+of the three parties \dots\ collude''~\cite{prac2024}. But that is a fact to be checked, not
 assumed. Where a retrieval system is single-server (\tiptoeplain{}, \panther{}) and a training
 system requires non-collusion, the composition is governed by the weaker assumption.
 
@@ -70,7 +70,7 @@ roles for a third party is not a matter of running them side by side.
 
 \textbf{The interface between stages carries information.} \nudgeplain{} reveals the item
 embeddings $\itemembed$ in the clear as a deliberate design choice, and forwards score vectors to
-users. Whatever the delivery mechanism, it operates on outputs that are themselves informative ---
+users. Whatever the delivery mechanism, it operates on outputs that are themselves informative,
 a point Section~\ref{sec:open:functionality} develops.
 
 \subsection{What the field has and has not built}
@@ -81,7 +81,7 @@ the serving stage is well served, and \emph{delivery} is addressed almost entire
 literature in isolation from any recommender.
 
 The private-retrieval systems of Section~\ref{sec:retrieval} are, with the exception of
-\pirsonaplain{}, not connected to privately trained models --- they take a corpus and embeddings
+\pirsonaplain{}, not connected to privately trained models. They take a corpus and embeddings
 as given. The private-training systems of Section~\ref{sec:training} produce models and scores and
 stop. \pirsonaplain{} spans both, but predates the private-nearest-neighbour line almost in its
 entirety: \sannsplain{} appeared in 2020, \tiptoeplain{} in 2023, and

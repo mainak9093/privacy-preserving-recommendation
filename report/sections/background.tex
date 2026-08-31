@@ -56,8 +56,8 @@ It is useful to separate a deployed recommender into four stages:
 
 \begin{enumerate}
   \item \textbf{Collection.} Ratings, clicks or views leave the user and reach the service.
-  \item \textbf{Training.} A model --- here, the factorisation
-        $\ratings \approx \userembed \cdot \itemembed$ --- is fitted to the collected data.
+  \item \textbf{Training.} A model, here the factorisation
+        $\ratings \approx \userembed \cdot \itemembed$, is fitted to the collected data.
   \item \textbf{Serving.} For a given user, scores are computed over the catalogue and a ranking
         is produced.
   \item \textbf{Delivery.} The user fetches the recommended item itself: the film, the article,
@@ -90,8 +90,8 @@ that the training protocol was protecting.
   \draw[->] (s) -- (d);
 
   \node[leak, below=5mm of c] {ratings, and\\ who submitted them};
-  \node[leak, below=5mm of t] {the training set;\\ intermediate model state};
-  \node[leak, below=5mm of s] {which user asked;\\ what scored highly};
+  \node[leak, below=5mm of t] {the training set\\ and intermediate model state};
+  \node[leak, below=5mm of s] {which user asked\\ and what scored highly};
   \node[leak, below=5mm of d] {which item was\\ actually fetched};
 
   \draw[decorate, decoration={brace, mirror, amplitude=4pt}]
@@ -99,7 +99,7 @@ that the training protocol was protecting.
         node[midway, below=5pt, font=\scriptsize] {what an adversary observes at each stage};
 \end{tikzpicture}
 \caption{The recommendation pipeline. Approaches surveyed here protect different subsets of these
-         four stages; a pipeline is only as private as its weakest stage.}
+         four stages, and a pipeline is only as private as its weakest stage.}
 \label{fig:pipeline}
 \end{figure}
 
@@ -112,9 +112,9 @@ hypothetical one.
 
 Narayanan and Shmatikov~\cite{narayanan2008} present ``a new class of statistical
 de-anonymization attacks against high-dimensional micro-data, such as individual preferences,
-recommendations, transaction records''. Applying it to the Netflix Prize dataset --- ``anonymous
-movie ratings of 500,000 subscribers'' --- with the Internet Movie Database as background
-knowledge, they report having ``successfully identified the Netflix records of known users,
+recommendations, transaction records''. They applied it to the Netflix Prize dataset, described as
+``anonymous movie ratings of 500,000 subscribers'', using the Internet Movie Database as background
+knowledge, and report having ``successfully identified the Netflix records of known users,
 uncovering their apparent political preferences and other potentially sensitive information''.
 They further note that the attack is ``robust to perturbation in the data'' and tolerates ``some
 mistakes in the adversary's background knowledge''. Ratings data, in other words, is identifying

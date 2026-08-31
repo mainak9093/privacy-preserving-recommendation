@@ -7,8 +7,8 @@
 
 This section introduces the primitives the systems in Sections~\ref{sec:training}
 and~\ref{sec:retrieval} are assembled from. The treatment is deliberately shallow on
-constructions and deliberate about \emph{costs}, because it is the cost profile of each primitive
---- and in particular whether it costs communication, computation, or rounds --- that determines
+constructions and deliberate about \emph{costs}, because it is the cost profile of each primitive,
+and in particular whether it costs communication, computation, or rounds, that determines
 which systems are built from which pieces.
 
 \subsection{Secret sharing}
@@ -24,14 +24,14 @@ communication. Multiplication of two shared values is not, and is classically ha
 precomputed correlated randomness in the form of multiplication triples~\cite{beaver1991}.
 
 In \emph{replicated} $2$-out-of-$3$ sharing, $x = x_0 + x_1 + x_2$ and party $i$ holds the pair
-$(x_i, x_{i+1})$. Any two parties can reconstruct; a single party learns nothing. This is the
+$(x_i, x_{i+1})$. Any two parties can reconstruct it, while a single party learns nothing. This is the
 sharing used by the three-party systems in Section~\ref{sec:training:mpc}, and its attraction is
 that a party holding two of the three summands can compute a share of a product locally, so that
 degree-two functions become very cheap~\cite{araki2016}.
 
 Several systems additionally assume the \emph{PRF model}, in which each pair of parties holds a
-shared pseudorandom-function key and can therefore generate correlated randomness --- notably
-shares of zero --- without communicating at all.
+shared pseudorandom-function key and can therefore generate correlated randomness, notably
+shares of zero, without communicating at all.
 
 \subsection{Garbled circuits}
 \label{sec:prim:gc}
@@ -39,23 +39,23 @@ shares of zero --- without communicating at all.
 Garbled circuits~\cite{yao1986} allow two parties to evaluate a Boolean circuit on private inputs
 in a constant number of rounds. The cost is borne in bandwidth: the garbled circuit must be
 transmitted, so communication scales with circuit size. For data-oblivious algorithms whose
-circuit size grows with the whole input --- as is the case for gradient descent over a rating
-matrix --- this is the binding constraint, and it is the reason the systems in
+circuit size grows with the whole input, as is the case for gradient descent over a rating
+matrix, this is the binding constraint, and it is the reason the systems in
 Section~\ref{sec:training:gc} are superseded by later secret-sharing approaches.
 
 \subsection{Homomorphic encryption}
 \label{sec:prim:he}
 
 Homomorphic encryption permits computation directly on ciphertexts. Partially homomorphic schemes
-support one operation --- additively homomorphic schemes such as Paillier's~\cite{paillier1999}
-are used in several of the systems below --- while fully homomorphic encryption supports
+support one operation. Additively homomorphic schemes such as Paillier's~\cite{paillier1999}
+are used in several of the systems below, while fully homomorphic encryption supports
 arbitrary circuits. Gentry~\cite{gentry2009} established the latter is possible via
 \emph{bootstrapping}: it suffices to construct a scheme that can homomorphically evaluate a
 slightly augmented version of its own decryption circuit.
 
 The relevance of homomorphic encryption to this survey is structural rather than technical. It is
 the primitive that permits \emph{single-server} constructions, and therefore the one that removes
-the non-collusion assumption discussed in Section~\ref{sec:taxonomy:trust} --- at a computational
+the non-collusion assumption discussed in Section~\ref{sec:taxonomy:trust}, at a computational
 cost that Sections~\ref{sec:prim:pir} and~\ref{sec:retrieval} quantify.
 
 \subsection{Function secret sharing and distributed point functions}
@@ -93,8 +93,8 @@ parties'', yielding ``a very lightweight online phase'', while noting that prior
 two-party work lacked ``support for math functions (e.g., sigmoid, and reciprocal square root)''
 and restricted all values to a single bitwidth. Pika~\cite{pika2022} reports protocols for
 division, exponentiation, logarithm and tanh with ``constant round complexity (3 for semi-honest,
-4 for malicious)'' and communication ``54--121$\times$ lower than prior art'', and --- unusually
-for this survey --- extends them to malicious security in the honest-majority setting.
+4 for malicious)'' and communication ``54--121$\times$ lower than prior art'', and, unusually
+for this survey, extends them to malicious security in the honest-majority setting.
 \grotto{} contributes a structural observation about the DPF tree that lets ``a single DPF'' do
 what state-of-the-art approaches ``require many DCFs to do''.
 
@@ -105,9 +105,9 @@ Private information retrieval (PIR) lets a client fetch record $j$ from a server
 without the server learning $j$. The literature divides on the trust assumption.
 
 \emph{Multi-server} PIR distributes the database across servers assumed not to
-collude~\cite{chor1995}. Hafiz and Henry~\cite{hafiz2019} study this setting --- ``several
+collude~\cite{chor1995}. Hafiz and Henry~\cite{hafiz2019} study this setting, describing ``several
 untrusted servers work to obliviously service remote clients' requests for data and yet no pair of
-servers colludes'' --- and report efficiency ``with respect to every cost metric --- download,
+servers colludes'', and report efficiency ``with respect to every cost metric --- download,
 upload, computation, and round complexity''. Their family of protocols recovers, as special
 cases, the two-server instances of the seminal scheme of Chor et al.\ and the DPF-based
 construction of Boyle et al.~\cite{hafiz2019}. This is the scheme \pirsona{} builds on.
@@ -119,7 +119,7 @@ learning-with-errors, reporting ``10 GB/s/core server throughput'' that ``approa
 performance of the fastest two-server private-information-retrieval schemes (which require
 non-colluding servers)''. The authors state the cost plainly: ``relatively large communication
 costs: to make queries to a 1 GB database, the client must download a 121 MB `hint' about the
-database contents'', after which each query needs 242~KB; a variant, DoublePIR, shrinks the hint
+database contents'', after which each query needs 242~KB. A variant, DoublePIR, shrinks the hint
 to 16~MB at 345~KB per query and 7.4~GB/s/core~\cite{simplepir2023}. Spiral~\cite{spiral2022}
 composes two lattice-based encryption schemes and reports ``at least a $4.5\times$ reduction in
 query size, $1.5\times$ reduction in response size, and $2\times$ increase in server throughput
@@ -128,7 +128,7 @@ compared to previous systems''.
 Two further directions matter later. Corrigan-Gibbs and Kogan~\cite{cgk2020} construct
 single-server schemes with ``sublinear amortized server time'' by having the client ``first fetch
 a small `hint' about the database contents'', paying a linear cost once and answering subsequent
-queries in sublinear time; this preprocessing paradigm is what Pacmann (Section~\ref{sec:retrieval:sublinear})
+queries in sublinear time. This preprocessing paradigm is what Pacmann (Section~\ref{sec:retrieval:sublinear})
 depends on. Angel et al.~\cite{sealpir2018} reduce query size ``up to $274\times$'' and introduce
 probabilistic batch codes giving ``up to $40\times$ speedup over processing queries one at a
 time'', which matters for any recommender serving many users concurrently.
@@ -153,8 +153,8 @@ factor of one hundred or more, and their initialization time by a factor of thou
 instantiating ORAMs holding $2^{34}$ bytes. They are explicit about the trade they make: deriving
 the construction from FSS ``significantly reduces the amount of secure computation required to
 implement an ORAM access, albeit at the cost of $O(n)$ efficient local memory
-operations''~\cite{floram2017}. That trade --- accept linear local computation to buy sublinear
-communication --- recurs throughout Section~\ref{sec:retrieval}.
+operations''~\cite{floram2017}. That trade, accepting linear local computation to buy sublinear
+communication, recurs throughout Section~\ref{sec:retrieval}.
 
 \duoram{} follows Floram's DPF-based approach and reports reducing communication further: for
 memories with $n$ addressable locations it performs ``a sequence of $m$ arbitrarily interleaved
@@ -172,13 +172,13 @@ contributes binary search, heap and AVL-tree protocols over \duoramplain{}.
 \subsection{Fixed-point arithmetic, and why it dominates the cost}
 \label{sec:prim:fixedpoint}
 
-The primitives above compute over rings and finite fields; recommendation computes over the reals.
+The primitives above compute over rings and finite fields, while recommendation computes over the reals.
 Bridging that gap with fixed-point arithmetic is where much of the practical cost of these systems
 is incurred, which is why it deserves its own subsection rather than a footnote.
 
 A real value $v$ is represented as $\lfloor v \cdot 2^{\fracbits} \rfloor \in \ring$. Addition is
 then free, but the product of two $\fracbits$-scaled values is $2\fracbits$-scaled and must be
-\emph{truncated} back; and repeated multiplication requires \emph{normalisation} to stop values
+\emph{truncated} back. Repeated multiplication also requires \emph{normalisation} to stop values
 growing without bound. Both are non-linear operations, and both are expensive under secret
 sharing.
 

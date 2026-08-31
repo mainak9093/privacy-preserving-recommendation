@@ -8,7 +8,7 @@
 Every system in this section computes the same object: a low-rank factorisation
 $\ratings \approx \userembed \cdot \itemembed$ of a rating matrix nobody is allowed to see. They
 differ in the cryptographic family they use and, as this section argues, in the \emph{algorithm}
-they choose to run --- a choice that turns out to be driven by cryptographic rather than
+they choose to run, a choice that turns out to be driven by cryptographic rather than
 statistical considerations.
 
 \subsection{The garbled-circuit era}
@@ -16,7 +16,7 @@ statistical considerations.
 
 The first practical system was that of Nikolaenko et al.~\cite{nikolaenko2013}, which evaluates
 gradient descent inside a garbled circuit across two non-colluding
-servers.\footnote{We were unable to obtain this paper; the characterisation here follows
+servers.\footnote{We were unable to obtain this paper. The characterisation here follows
 \nudge{}'s description and measurements of it.} Its cost profile is what one expects from
 Section~\ref{sec:prim:gc}: because the computation must be data-oblivious, the circuit is sized by
 the whole rating matrix, and communication follows. \nudgeplain{} reports this family requiring
@@ -47,10 +47,10 @@ argument rather than just the chronology.
 
 SecureML~\cite{secureml2017} established the two-server pattern: data owners ``distribute their
 private data among two non-colluding servers who train various models on the joint data using
-secure two-party computation''. Its contributions are revealing of where the difficulty lies ---
+secure two-party computation''. Its contributions are revealing of where the difficulty lies:
 ``new techniques to support secure arithmetic operations on shared decimal numbers'' and
 ``MPC-friendly alternatives to non-linear functions such as sigmoid and softmax''. The linear
-algebra was not the problem; fixed-point arithmetic and non-linearities were.
+algebra was not the problem. Fixed-point arithmetic and non-linearities were.
 
 SecureNN~\cite{securenn2019} moved to three parties, giving protocols for ``matrix multiplication,
 convolutions, Rectified Linear Units, Maxpool, normalization and so on \dots\ such that no single
@@ -71,7 +71,7 @@ communication, so an algorithm consisting mostly of matrix--vector products sepa
 non-linear steps is far cheaper than one that is not. \nudgeplain{} therefore replaces gradient
 descent with \emph{power iteration}, leaving truncation and normalisation as the only operations
 that cost rounds. The user embeddings $\userembed$ remain secret-shared while the item embeddings
-$\itemembed$ are revealed in the clear --- a design decision with consequences taken up in
+$\itemembed$ are revealed in the clear, a design decision with consequences taken up in
 Sections~\ref{sec:both} and~\ref{sec:open:functionality}.
 
 The reported results give the field its current reference point: on Netflix, ``half a million
@@ -83,7 +83,7 @@ factorization and just shy of non-private neural recommenders, which score
 state of one server''.
 
 That quality figure deserves emphasis. It is the strongest available evidence that cryptographic
-privacy in recommendation need not cost accuracy --- the cost is paid in compute and
+privacy in recommendation need not cost accuracy: the cost is paid in compute and
 communication, not in the quality of what users are recommended.
 
 \subsection{Federated approaches}
@@ -97,7 +97,7 @@ can be federated without a loss of accuracy compared to a standard implementatio
 The privacy of that arrangement is weaker than it appears, and the clearest evidence comes from
 inside the federated literature itself. Chai et al.~\cite{chai2021} design a user-level
 distributed matrix factorisation in which each user ``only uploads the gradient information
-(instead of the raw preference data) to the server'' --- and then explicitly ``prove that it could
+(instead of the raw preference data) to the server'', and then explicitly ``prove that it could
 still leak users' raw data''. Their response is to add homomorphic encryption to the gradient
 channel.
 
@@ -113,7 +113,7 @@ cryptographic or differentially private mechanism was added on top.
 McSherry and Mironov~\cite{mcsherry2009} brought differential privacy to recommendation in the
 context of the Netflix Prize. The guarantee is orthogonal to everything above: it bounds what the
 \emph{released model} reveals about any individual, rather than protecting the computation. It is
-therefore complementary to the cryptographic approaches --- and, as
+therefore complementary to the cryptographic approaches. As
 Section~\ref{sec:open:functionality} argues, it addresses a leak that cryptography structurally
 cannot.
 
@@ -124,7 +124,7 @@ cannot.
   \item[Garbled circuits] stop at scale. Circuit size grows with the data, and communication with
         it.
   \item[Homomorphic encryption] stops at cost. It buys the single-server trust model, and pays in
-        computation; in practice it is applied to specific channels rather than whole training
+        computation. In practice it is applied to specific channels rather than whole training
         loops.
   \item[Secret-sharing MPC] stops at the trust assumption. It is now fast enough for real
         datasets, but every system in this family requires two or three non-colluding parties, and

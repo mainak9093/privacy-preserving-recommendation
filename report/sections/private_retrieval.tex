@@ -7,7 +7,7 @@
 
 Section~\ref{sec:training} ended with a trained model. Two problems remain: computing a ranking
 for a user without revealing their profile, and fetching the recommended item without revealing
-which item it was. Both reduce to retrieval, and both have been studied --- largely by a different
+which item it was. Both reduce to retrieval, and both have been studied largely by a different
 community, and mostly under the name \emph{private nearest-neighbour search} rather than
 recommendation.
 
@@ -16,11 +16,11 @@ recommendation.
 
 Retrieval in the clear is fast because of indices: a $k$-d tree, an inverted file, or a
 navigable-graph structure lets a query touch a small fraction of the corpus. An index is useful
-precisely \emph{because} the path taken through it depends on the query --- and that is exactly
+precisely \emph{because} the path taken through it depends on the query, and that is exactly
 what obliviousness forbids, since the access pattern would reveal the query.
 
 This gives the field its organising trade-off. Either scan the whole corpus for every query, and
-accept cost linear in corpus size; or keep the index and hide the traversal, which requires
+accept cost linear in corpus size, or keep the index and hide the traversal, which requires
 oblivious memory (Section~\ref{sec:prim:oram}) and its attendant overhead. Every system below
 takes a position on this trade.
 
@@ -29,8 +29,8 @@ takes a position on this trade.
 
 \sanns~\cite{sanns2020} is the origin point, and it names our application directly: secure $k$-NN
 search is ``the backbone of several cloud-based services such as recommender systems, face
-recognition, and database search''. It offers two protocols --- ``an optimized linear scan and a
-protocol based on a novel sublinear time clustering-based algorithm'' --- proved secure ``in the
+recognition, and database search''. It offers two protocols: ``an optimized linear scan and a
+protocol based on a novel sublinear time clustering-based algorithm'', proved secure ``in the
 standard semi-honest model'' and built from ``lattice-based additively homomorphic encryption,
 distributed oblivious RAM, and garbled circuits''. Notably for
 Section~\ref{sec:both}, it contributes ``a new circuit for the approximate top-$k$ selection from
@@ -60,7 +60,7 @@ Pacmann carefully offloads limited computation and storage to the client, no lon
 computationally-intensive cryptographic techniques.'' The client runs a graph-based ANN search
 ``where in each hop on the graph, the client privately retrieves local graph information from the
 server'', combining a graph ANN algorithm with ``a recent class of PIR schemes that trade offline
-preprocessing for online computational efficiency'' --- the preprocessing paradigm of
+preprocessing for online computational efficiency'', the preprocessing paradigm of
 Corrigan-Gibbs and Kogan~\cite{cgk2020}. It reports ``up to 2.5$\times$ better search accuracy on
 real-world datasets than prior work'', reaching ``90\% quality of a state-of-the-art non-private
 ANN algorithm'', and on datasets up to 100 million vectors ``up to 62\% reduction in computation
@@ -68,8 +68,8 @@ time and 22\% reduction in overall latency''.
 
 \compass~\cite{compass2025} keeps the index server-side and hides the traversal with oblivious
 memory, contributing ``a novel way to traverse a state-of-the-art graph-based semantic search
-index and a white-box co-design with Oblivious RAM''. Its named techniques --- Directional
-Neighbor Filtering, Speculative Neighbor Prefetch, and Graph-Traversal Tailored ORAM --- are all
+index and a white-box co-design with Oblivious RAM''. Its named techniques are Directional
+Neighbor Filtering, Speculative Neighbor Prefetch, and Graph-Traversal Tailored ORAM, all
 consequences of that co-design, and it reports ``user-perceived latencies within or around a
 second'', ``orders of magnitude faster than baselines under various network conditions''. It also
 states the strongest adversary model in this section: privacy of ``data, queries, and results,
@@ -111,7 +111,7 @@ queries'' with a protocol running ``in just a few seconds \dots\ on databases wi
 records''.
 
 The structural point transfers directly to recommendation. Both settings involve a query that is
-sensitive, a corpus that is sensitive, and --- critically --- an \emph{answer} that is sensitive.
+sensitive, a corpus that is sensitive, and, critically, an \emph{answer} that is sensitive.
 Protecting the computation does not protect the answer, a theme
 Section~\ref{sec:open:functionality} develops.
 
@@ -122,7 +122,7 @@ Section~\ref{sec:open:functionality} develops.
   \item[Linear scan] stops at throughput. Touching the whole corpus per query bounds queries per
         second, and \wallyplain{}'s measurements of \tiptoeplain{} quantify the
         bound~\cite{wally2024}.
-  \item[Client-side graph traversal] stops at client resources --- \pacmannplain{}'s design
+  \item[Client-side graph traversal] stops at client resources. \pacmannplain{}'s design
         deliberately shifts cost to the client, and \wallyplain{} reports the storage and offline
         streaming that this requires~\cite{wally2024}.
   \item[ORAM-based traversal] stops at the cost of obliviousness itself, which is why

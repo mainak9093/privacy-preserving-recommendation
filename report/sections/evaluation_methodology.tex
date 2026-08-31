@@ -20,7 +20,7 @@ subsets of MovieLens-100K. Scale differences of this magnitude are not a detail:
 cost grows with the product of users and items behaves qualitatively differently at the two ends
 of that range.
 
-The private-retrieval systems evaluate on document and vector corpora instead --- \tiptoe{} on
+The private-retrieval systems evaluate on document and vector corpora instead: \tiptoe{} on
 360 million web pages with MS MARCO for quality, \panther{} on ``10 million points'',
 \pacmann{} on datasets ``up to 100 million vectors''. There is no shared benchmark spanning the
 two halves of the pipeline, which is a direct consequence of the split described in
@@ -52,12 +52,12 @@ Which of them dominates depends entirely on the deployment. \floram{}'s authors 
 efficient local memory operations'' in exchange for less secure computation~\cite{floram2017}, a
 trade that is favourable on a fast machine and unfavourable on a slow link.
 \duoramplain{} moves work into ``a data-independent preprocessing phase, leaving just $O(m)$ words
-of online communication''~\cite{duoram2023} --- an offline/online split that is invisible in a
+of online communication''~\cite{duoram2023}. This is an offline/online split that is invisible in a
 single end-to-end number.
 
 Because of this, network conditions are part of the result rather than a detail of the setup.
-\nudgeplain{}'s headline figure is a local-area network measurement~\cite{nudge2026};
-ABY2.0 benchmarks ``over LAN and WAN networks''~\cite{aby22021}; \compassplain{} reports being
+\nudgeplain{}'s headline figure is a local-area network measurement~\cite{nudge2026}.
+ABY2.0 benchmarks ``over LAN and WAN networks''~\cite{aby22021}. \compassplain{} reports being
 ``orders of magnitude faster than baselines under various network conditions''~\cite{compass2025}.
 A figure quoted without its network model, hardware and dataset is not a result, and this survey
 has tried to quote none.
@@ -73,8 +73,8 @@ mixed-protocol two-party computation.
 
 The strongest papers in this survey also compare against the honest, unflattering baseline. Both
 of the quality comparisons quoted in Section~\ref{sec:eval:quality} are of that kind, and
-\wallyplain{}'s characterisation of its predecessors --- reporting \tiptoeplain{} at ``909 QPS''
-and \pacmannplain{} at ``614 MB of client storage''~\cite{wally2024} --- is a further example of a
+\wallyplain{}'s characterisation of its predecessors, reporting \tiptoeplain{} at ``909 QPS''
+and \pacmannplain{} at ``614 MB of client storage''~\cite{wally2024}, is a further example of a
 paper stating precisely what it improves on.
 
 \subsection{Why cross-paper comparison is unsound}

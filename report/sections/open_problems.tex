@@ -32,7 +32,7 @@ questions: serving private recommendations with only \emph{two} non-colluding pa
 
 The single-server line shows the trade rather than resolving it. SimplePIR removes the assumption
 entirely and reports throughput approaching that of two-server schemes, at the cost of a 121~MB
-client hint per gigabyte of database~\cite{simplepir2023}; \tiptoeplain{} likewise requires
+client hint per gigabyte of database~\cite{simplepir2023}. \tiptoeplain{} likewise requires
 ``no hardware enclaves or non-colluding servers'' and pays for it in server
 compute~\cite{tiptoe2023}. Whether a recommendation pipeline can be built in the single-server
 model at competitive cost is open.
@@ -41,7 +41,7 @@ model at competitive cost is open.
 \label{sec:open:delivery}
 
 This is the gap most visible in Table~\ref{tab:taxonomy}. Delivery is addressed almost entirely by
-the PIR literature, in isolation from any recommender; \pirsonaplain{}~\cite{pirsona2021} is the
+the PIR literature, in isolation from any recommender. \pirsonaplain{}~\cite{pirsona2021} is the
 one surveyed system connecting delivery to training, and it predates the private-nearest-neighbour
 work of Section~\ref{sec:retrieval} almost entirely.
 
@@ -53,8 +53,8 @@ retrieval systems of Section~\ref{sec:retrieval} take their corpora and embeddin
 Two questions follow, neither of which this survey found answered. What does it cost to compose a
 modern private-retrieval backend with a privately trained recommender, given the composition
 obstacles of Section~\ref{sec:both:composition}? And does \pirsonaplain{}'s
-collection-from-delivery mechanism --- harvesting shared consumption histories from PIR query
-traffic --- transfer to a modern training substrate?
+collection-from-delivery mechanism, harvesting shared consumption histories from PIR query
+traffic, transfer to a modern training substrate?
 
 \subsection{Leakage through the recommendation itself}
 \label{sec:open:functionality}
@@ -73,13 +73,13 @@ disclosive.
 
 \nudgeplain{}'s design makes the point concrete: it reveals the item embeddings $\itemembed$ in
 the clear, and reveals recommendation scores to the user, both by design~\cite{nudge2026}. Neither
-is a flaw --- both are what the system is for --- but both are information that no amount of
+is a flaw: both are what the system is for. But both are information that no amount of
 additional cryptography inside the protocol would remove.
 
 Differential privacy addresses exactly this class of leak, at a utility
 cost~\cite{dwork2014,mcsherry2009}. Composing cryptographic and differentially private guarantees
-in a recommendation pipeline --- protecting the computation with one and the output with the other
---- appears only partially explored. \wally{} is the system in this survey that most clearly
+in a recommendation pipeline, protecting the computation with one and the output with the other,
+appears only partially explored. \wally{} is the system in this survey that most clearly
 combines the two notions, and it does so for retrieval rather than for recommendation.
 
 \subsection{Evaluation and comparability}
