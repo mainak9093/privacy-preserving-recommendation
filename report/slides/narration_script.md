@@ -6,21 +6,21 @@
 ---
 
 ## PART I — The Problem and the Map
-**Speaker 1 · target ~7.5 min**
+**Speaker 1 · target ~8.5 min at a normal pace (Mainak speaks medium-to-fast, so real time should land closer to 7–7.5 min — still inside the 7–8 min per-member guideline)**
 
 ### Slide 1 — Title [0:20]
-Hi everyone. Our literature survey is on *privacy-preserving recommendation systems*, and specifically the **cryptographic** approaches to building them. I'm [name], and I'll be presenting the first part along with my group members. The four of us split the talk into four sections, which I'll outline in a moment.
+Hi everyone. Our literature survey is on *privacy-preserving recommendation systems*, and specifically the **cryptographic** approaches to building them. I'm Mainak , and I'll be presenting the first part along with my group members. The four of us split the talk into four sections, which I'll outline in a moment.
 
-### Slide 2 — Outline [0:30]
-Here's the roadmap. I'll start with the problem — why recommendation is a privacy risk in the first place — and set up the framework the whole survey is organized around: a four-stage pipeline, and a taxonomy for placing systems on it. My second and third teammates will then go deep on the two technical halves — private *training*, and private *retrieval and delivery*. And our fourth speaker will cover how this field evaluates itself and what remains open. Let's start with the problem.
+### Slide 2 — Outline [0:35]
+Here's the roadmap. I'll start with the problem — why recommendation is a privacy risk in the first place — and set up the framework the whole survey is organized around: a four-stage pipeline, and a taxonomy for placing systems on it. Shrasti goes next, covering the cryptographic toolkit and private *training*. Our third and fourth speakers will then take private *retrieval and delivery*, and finally how this field evaluates itself and what remains open. Let's start with the problem.
 
 ### Slide 3 — Part I divider [0:05]
 *(Pause on the section slide, then continue.)*
 
-### Slide 4 — Why this is a problem [1:15]
+### Slide 4 — Why this is a problem [1:35]
 So, why is this hard, and why does it matter? Recommender systems are built from the most revealing data users produce — what you watched, what you read, what you bought, what you clicked. That this data is *sensitive* is obvious. What's less obvious, and what really motivates this whole field, is that it's **identifying**.
 
-The classic result here is Narayanan and Shmatikov, in 2008. They took the Netflix Prize dataset — which was released as *anonymized* movie ratings — and, using publicly available IMDb profiles as background knowledge, they re-identified specific users and uncovered what they called "apparent political preferences and other potentially sensitive information." So anonymizing the data by stripping names simply wasn't enough.
+The classic result here is Narayanan and Shmatikov, in 2008. They took the Netflix Prize dataset — which was released as *anonymized* movie ratings — and, using publicly available IMDb profiles as background knowledge, they re-identified specific users and uncovered what they called "apparent political preferences and other potentially sensitive information." And this isn't a fragile, one-off trick that only works under lab conditions: the authors themselves show the attack is "robust to perturbation in the data" and tolerates "some mistakes in the adversary's background knowledge" — so an attacker doesn't need clean data or perfect outside information, just *some*. So anonymizing the data by stripping names simply wasn't enough.
 
 That result launched a large body of work asking a single question: can we build a recommender whose operator *never sees the underlying data*? And the answers come from several different research communities — secure multi-party computation, private information retrieval, oblivious memory, federated learning, and differential privacy. The problem with that, and the reason a survey is useful, is that these communities use different vocabulary, assume different threat models, and — crucially — protect *different parts of the system*.
 
@@ -57,7 +57,7 @@ Second, **cost is bought with assumptions, consistently.** The cheapest protocol
 
 And third, **semi-honest is the norm at scale.** Every recommendation system evaluated at realistic scale assumes a passive adversary. The malicious-security exceptions exist, but they're narrow, and none of them is a full pipeline.
 
-That framing — the pipeline and these four axes — is the lens for everything that follows. I'll hand over to [name], who'll take us into the cryptographic building blocks and private training.
+That framing — the pipeline and these four axes — is the lens for everything that follows. I'll hand over to Shrasti, who'll take us into the cryptographic building blocks and private training.
 
 **[TRANSITION → Speaker 2]**
 
@@ -67,7 +67,7 @@ That framing — the pipeline and these four axes — is the lens for everything
 **Speaker 2 · target ~7.5 min**
 
 ### Slide 10 — Part II divider [0:10]
-Thanks, [name]. I'm going to cover the cryptographic toolkit these systems are built from, and then the first technical half of the pipeline: private *training*.
+Thanks, Mainak. I'm going to cover the cryptographic toolkit these systems are built from, and then the first technical half of the pipeline: private *training*.
 
 ### Slide 11 — Cryptographic building blocks [1:40]
 Let me quickly introduce the primitives, because the rest of the talk is really about how systems combine these. The thing to pay attention to for each one is its *cost profile* — does it cost communication, computation, or rounds of interaction?
@@ -118,10 +118,10 @@ But there's one limit *none* of these families addresses: every system here ends
 ---
 
 ## PART III — Private Serving, Retrieval, and Multi-Stage Systems
-**Speaker 3 · target ~7.5 min**
+**Speaker 3 · target ~6.5 min**
 
 ### Slide 17 — Part III divider [0:10]
-Thanks. So training gives us a model and some scores — but the user still has to *fetch* the recommended item. My section is about that second half of the pipeline: serving and delivery, and the handful of systems that try to do both halves at once.
+Thanks, Shrasti. So training gives us a model and some scores — but the user still has to *fetch* the recommended item. My section is about that second half of the pipeline: serving and delivery, and the handful of systems that try to do both halves at once.
 
 ### Slide 18 — The obstruction: indices are data-dependent [1:15]
 After training, two problems remain: compute a ranking for a user without revealing their profile, and fetch the top item without revealing which item it was. Both of these reduce to **retrieval**, and interestingly this has mostly been studied by a *different* community, under the name *private nearest-neighbour search* rather than recommendation.
@@ -151,17 +151,17 @@ The other is Nudge, which we saw in training — it also spans collection, train
 
 And composing stages is genuinely hard, for three reasons the survey identifies: the trust models of the two halves have to *agree*; the roles assigned to each party need not match up; and the *interface* between stages itself carries information.
 
-### Slide 22 — What the field has and has not built [0:55]
+### Slide 22 — What the field has and has not built [1:00]
 So if you read that big table by *column* instead of by row, here's the state of the field. The training stage is well served. The serving stage is well served. But **delivery** is addressed almost entirely by the PIR literature, in *isolation* from any actual recommender.
 
-The gap in one sentence: private-retrieval systems take a corpus and embeddings *as given*, and private-training systems produce models and *stop*. The one system that spans both — Pirsona — actually *predates* the modern private-nearest-neighbour line by several years. So the two halves of this problem have basically been solved *separately*. And that observation sets up our final section. Over to [name].
+The gap in one sentence: private-retrieval systems take a corpus and embeddings *as given*, and private-training systems produce models and *stop*. The one system that spans both — Pirsona — *predates* that private-nearest-neighbour line almost in its entirety: it published in 2021, before Tiptoe in 2023 and the whole 2024-to-2025 wave — though Sanns, in 2020, actually came first. So the two halves of this problem have basically been solved *separately*. And that observation sets up our final section. Over to [name].
 
 **[TRANSITION → Speaker 4]**
 
 ---
 
 ## PART IV — Evaluation, Open Problems, and Conclusion
-**Speaker 4 · target ~7 min**
+**Speaker 4 · target ~6.5 min**
 
 ### Slide 23 — Part IV divider [0:10]
 Thanks, [name]. I'll close by looking at how this field *measures* itself — which turns out to be surprisingly subtle — and then walk through the open problems and our conclusion.
@@ -211,12 +211,14 @@ That's our survey. Thank you all for watching, and we're happy to take any quest
 ---
 
 ### Timing summary
-| Part | Speaker | Slides | Target |
+| Part | Speaker | Slides | Target (read at ~140 wpm) |
 |------|---------|--------|--------|
-| I — Problem & Map | 1 | 1–9 | ~7.5 min |
-| II — Building Blocks & Training | 2 | 10–16 | ~7.5 min |
-| III — Serving, Retrieval & Multi-stage | 3 | 17–22 | ~7.5 min |
-| IV — Evaluation & Open Problems | 4 | 23–29 | ~7.0 min |
-| **Total** | | **29** | **~29.5 min** |
+| I — Problem & Map | 1 (Mainak) | 1–9 | ~8.5 min (Mainak's own pace is faster — expect ~7–7.5 min) |
+| II — Building Blocks & Training | 2 (Shrasti) | 10–16 | ~7.5 min |
+| III — Serving, Retrieval & Multi-stage | 3 | 17–22 | ~6.5 min |
+| IV — Evaluation & Open Problems | 4 | 23–29 | ~6.5 min |
+| **Total** | | **29** | **~29.5 min at 140 wpm; less in practice** |
+
+Per-slide bracket sums were re-derived directly from the `[m:ss]` tags after Part I was elaborated, rather than eyeballed — Part III and IV's old labels (~7.5 / ~7.0 min) had drifted about 30–55 seconds above their own bracket sums even before this edit; those are now corrected too, not just Part I's.
 
 **Delivery tips:** Practice once with a timer — if a part runs long, the easiest cuts are the per-system detail numbers (you can say "roughly" instead of exact figures). Don't read the tables aloud row by row; point to the shape and say what it means. And rehearse the four transition lines so the handoffs feel smooth on camera.
