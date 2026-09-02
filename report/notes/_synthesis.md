@@ -1,9 +1,24 @@
 # Synthesis — the argument the survey is built to make
 
-**Status:** draft, written 2026-08-15 before the reading was done.
-**This document is decided at the synthesis meeting on 23 August, not before.** Everything
-below is a hypothesis for the group to attack. If the reading kills it, that is the reading
-doing its job — say so at the meeting rather than writing around it.
+**Status: SUPERSEDED, kept for the record. Updated 2026-09-03.**
+
+This was written on 2026-08-15 as a pre-reading hypothesis, and it was never revised. The
+synthesis meeting it was written for (PHASES task 1.3, planned for 23 August) left no record of
+having happened, and the survey was drafted from `evidence.md` instead, which is the artifact that
+actually grounds every claim in the shipped report.
+
+**Do not treat anything below as the agreed position.** The survey's real thesis is in
+`../sections/systems_both.tex` and `../sections/open_problems.tex`, and its central structural
+claim was checked for counterexamples on 2026-09-03, recorded in `forward_citation_sweep.md`.
+What survives below is of historical interest only: it shows what we guessed before the reading,
+and it is worth comparing against what we ended up arguing.
+
+Original header, as written on 2026-08-15:
+
+> **Status:** draft, written 2026-08-15 before the reading was done.
+> **This document is decided at the synthesis meeting on 23 August, not before.** Everything
+> below is a hypothesis for the group to attack. If the reading kills it, that is the reading
+> doing its job, so say so at the meeting rather than writing around it.
 
 ---
 

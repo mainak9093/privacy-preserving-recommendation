@@ -104,7 +104,10 @@
 %      grep -rn '\\todo{\|\\verify{\|\\gap{' sections/ *.tex
 % ==========================================================================
 \newif\ifdraft
-\drafttrue
+% Flipped for the Milestone 1 submission copy, 2026-09-03. Nothing currently
+% renders differently, since no live \todo/\verify/\gap remains in any section
+% that survey.tex inputs, but the submitted PDF should not be a draft build.
+\draftfalse
 
 \newcommand{\draftnote}[1]{%
   \ifdraft{\color{DraftOrange}\sffamily\small[\,#1\,]}\fi}

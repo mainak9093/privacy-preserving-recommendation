@@ -112,12 +112,18 @@ Filled in just before each submission, from the tables above.
 
 ### Milestone 1 — Literature survey (31 Aug 2026)
 
+> **Backfilled 2026-09-03 from git history, not from live logging.** Only work with evidence in
+> this repository is recorded below. All 16 commits to date are authored by Mainak, so that is the
+> only row that can be filled from the repo. **The three blank rows are not a claim that nothing
+> was done, they are a statement that nothing was recorded.** Each member should fill their own row
+> before 12 September, since Milestone 2 is graded specifically on per-member contribution.
+
 | Member | Track | Video slot | Report sections written | Other |
 |---|---|---|---|---|
-| Mainak Sarkar | | | | |
-| Shrasti Dwivedi | | | | |
-| Aditya Anand | | | | |
-| Shravan Agrawal | | | | |
+| Mainak Sarkar | Not formally assigned (acted across all four) | Part I, slides 1-9 | All 11 sections of `report/sections/` | Bibliography rebuilt from DBLP (66 entries, 0 unverified); 40 PDFs acquired and author-verified; `notes/evidence.md` tier system; deck source; narration script; forward-citation sweep (task 1.4) |
+| Shrasti Dwivedi | *to be filled in by Shrasti* | Part II, slides 10-16 (per narration script) | | |
+| Aditya Anand | *to be filled in by Aditya* | | | |
+| Shravan Agrawal | *to be filled in by Shravan* | | | |
 
 ### Milestone 2 — Mid-term report (12 Sep 2026)
 
