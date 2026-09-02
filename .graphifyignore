@@ -1,0 +1,37 @@
+# What graphify should NOT index.
+#
+# This is deliberately different from .gitignore. Both directories below are
+# legitimately tracked in git and must stay tracked. They just have no business
+# in a knowledge graph whose purpose is navigating OUR work.
+#
+# Measured on the 2026-09-03 rebuild, before this file existed:
+#   third_party  540 nodes  61.0%
+#   references   221 nodes  25.0%
+#   report        29 nodes   3.3%   <- the entire literature survey
+# 86% of the graph was material we either never edit or did not write, and the
+# god-node list came back as Uint128 / Share128 / PowerIteration(), which are
+# Nudge's Go internals rather than anything in this project.
+
+# Vendored Nudge reference implementation. ~10.7K lines of Go, CGo and assembly.
+# CLAUDE.md makes it a black box we never edit, so indexing its call graph
+# actively buries our own material.
+third_party/
+
+# The 40 acquired paper PDFs. They are the survey's evidence base, not its
+# structure. What we concluded from them lives in report/notes/evidence.md and
+# report/sections/, which ARE indexed.
+references/
+
+# Build artefacts and caches.
+graphify-out/
+**/*.aux
+**/*.log
+**/*.fls
+**/*.fdb_latexmk
+**/*.synctex.gz
+**/*.nav
+**/*.snm
+**/*.toc
+**/*.out
+**/*.bbl
+**/*.blg
