@@ -21,6 +21,10 @@ INC      := -Iinclude
 GIT_SHA  := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 CXXFLAGS := $(STD) $(OPT) $(WARN) $(INC) -DOBLIVREC_GIT_SHA=\"$(GIT_SHA)\"
 PY       := py -3.13
+# bcrypt is the Windows CNG CSPRNG used for DPF key material (see
+# include/oblivrec/csprng.hpp). ws2_32 is for the TCP channel. Both are
+# Windows system libraries, not third-party dependencies.
+LDLIBS   := -lbcrypt -lws2_32
 
 BUILD    := build
 SRC      := $(wildcard src/common/*.cpp src/dpf/*.cpp src/pir/*.cpp src/serve/*.cpp src/net/*.cpp)
@@ -58,7 +62,7 @@ $(BUILD)/%.o: %.cpp
 
 $(BUILD)/%.exe: tests/%.cpp $(OBJ)
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $< $(OBJ) -o $@
+	$(CXX) $(CXXFLAGS) $< $(OBJ) -o $@ $(LDLIBS)
 
 test: all
 	@fail=0; \

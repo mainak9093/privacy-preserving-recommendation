@@ -70,6 +70,32 @@ negation is placed. The reason to record the choice explicitly is that getting
 it backwards makes every test fail in a way that resembles a tree traversal
 bug rather than a sign error, which is an expensive place to spend a day.
 
+\subsection{Where the key material comes from}
+\label{sec:tech:dpf:rng}
+
+The initial seeds are the entire secret. Every correction word in a key is
+public-looking by construction, and the security argument rests on an
+adversary being unable to guess or reconstruct the two initial seeds.
+
+The first version of this code seeded a Mersenne Twister and used its output
+as seed material. That was a genuine break rather than an infelicity. A
+Mersenne Twister is fully reconstructible from 624 consecutive outputs, so an
+adversary who observed enough key material could rebuild the tree and recover
+$\alpha$, which is precisely the value the construction exists to hide. The
+seeding also supplied roughly 64 bits of entropy against a claimed security
+parameter of $\seclen = 128$.
+
+Key material is now drawn from the operating system generator through the
+Windows CNG interface. The failure policy is to abort rather than fall back to
+a weaker source, because a silent fallback would leave a broken guarantee
+indistinguishable from a working one. The accompanying tests check the
+properties that actually fail in practice: that successive draws differ across
+two thousand samples, that output is not stuck at a constant, that the bit
+balance and byte spread are sane, and that odd request lengths neither overrun
+the caller's buffer nor leave part of it unwritten. None of that establishes
+cryptographic quality, which no test suite can, and the report does not claim
+otherwise.
+
 \subsection{Testing: the structural invariant, checked at every node}
 \label{sec:tech:dpf:testing}
 

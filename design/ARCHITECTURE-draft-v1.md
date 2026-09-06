@@ -245,8 +245,26 @@ Boyle–Gilboa–Ishai GGM-tree construction, written by us.
 
 - **PRG:** AES-128 fixed-key Davies–Meyer (`π(x) ⊕ x`) with AES-NI; one seed → two children plus
   two control bits.
-- **Key size:** `d·(λ+2) + b` bits. For `n = 4096`: **≈ 260 bytes**, against `32 KB` for a naive
-  one-hot query. That factor is why this is practical, and it is W1's headline number.
+- **Key size:** ~~`d·(λ+2) + b` bits. For `n = 4096`: **≈ 260 bytes**~~ **CORRECTED 2026-09-06
+  against the implementation.** The old figure was wrong twice over: the formula omitted the
+  initial seed and the self-describing header, and the 260-byte evaluation was done at 16 domain
+  bits rather than the 12 that `n = 4096` implies. It also overloaded `d`, which §2 already uses
+  for the embedding dimension, to mean tree depth.
+
+  The packed format is `1 + 4 + 16 + 18·domain_bits + ⌈b/8⌉` bytes. **Measured** by
+  `DpfKey::SizeBytes()`, which a test asserts equals the real serialised length:
+
+  | domain bits | `n` | key, `b=64` | key, `b=128` | naive one-hot (`b=64`) | compression |
+  |---:|---:|---:|---:|---:|---:|
+  | 10 | 1,024 | 209 B | 217 B | 8,192 B | 39× |
+  | 11 | 2,048 | 227 B | 235 B | 16,384 B | 72× |
+  | 12 | 4,096 | **245 B** | 253 B | 32,768 B | **134×** |
+  | 16 | 65,536 | 317 B | 325 B | 524,288 B | 1654× |
+
+  The `32 KB` naive figure was correct. The compression factor is still the headline number, it is
+  just 134× at `n = 4096` rather than the ~126× the old pair of numbers implied. The ML-100K PIR
+  domain is `domain_bits = 11` (1682 items padded to 2048), so **227 bytes** is the figure that
+  applies to this project's actual demo.
 - **API** (`include/oblivrec/dpf.hpp`):
   ```cpp
   std::pair<DpfKey,DpfKey> Gen(uint32_t alpha, Ring beta, uint32_t domain_bits);
@@ -384,3 +402,10 @@ ranking of approaches is expected to change between them and **that change is th
 | 2026-08-15 | One DPF implementation serves both the FSS gates and the PIR layer | Same primitive, two consumers. Forking it would double the work and the bug surface. |
 | 2026-08-15 | Build order S1 (serving+delivery) → S2 (training) → S3 (composition) | S1 is lower-risk, demos early, and its DPF is a prerequisite for S2's non-linear gates. |
 | 2026-08-15 | Fixed-width records throughout | Variable width leaks through response size. |
+| 2026-09-06 | **Key material comes from the OS CSPRNG (`BCryptGenRandom`), never from `std::mt19937_64`** | The first implementation of `Gen` seeded a Mersenne Twister and used its output as DPF seeds. That is a real break, not a style point: the initial seeds *are* the secret, and MT19937 is fully reconstructible from 624 consecutive outputs, so an adversary seeing enough key material could rebuild the GGM tree and recover `alpha`. It also gave ~64 bits of seed entropy against a claimed `lambda = 128`. `bcrypt` is a Windows system library, so this is not a new third-party dependency. **Failure policy is abort, never degrade**, because a silent fallback makes a broken guarantee indistinguishable from a working one. |
+| 2026-09-06 | Hand-written `Makefile` driven by `mingw32-make`, not CMake | CMake is not installed on the dev box and installing it would breach RULES A7. Supersedes REQUIREMENTS §9's toolchain line. The first target is `check-toolchain`, because g++ here fails **silently** (no binary, no error) when `/c/msys64/mingw64/bin` is off `PATH`. |
+| 2026-09-06 | `-std=gnu++17`, and a local `oblivrec::Span<T>` instead of `std::span` | `unsigned __int128` is a GNU extension, so strict `-std=c++17` loses the `numeric_limits` specialisation. §7.1's API sketch uses `std::span`, which is C++20 while REQUIREMENTS §9 mandates C++17, so we supply the small part of it this project uses rather than bumping the standard. |
+| 2026-09-06 | **DPF uses the difference convention**, i.e. no `(-1)^party` factor | Textbook BGI applies the factor and gives `Eval_0 + Eval_1 = f(x)`. §7.1 states the invariant as a *difference*, so the factor is omitted. Algebraically identical. Recorded because getting it backwards makes every test fail in a way that looks like a tree-traversal bug rather than a sign error. |
+| 2026-09-06 | **No DCF and no oblivious top-*k* in S1** | The comparison gate's only consumers are `Trunc_t` and `ApproxNormalize`, both of which are S2. And per the 2026-08-20 correction the user selects top-*k* locally from the reconstructed score vector, so the servers never learn `T` regardless. §6's `SEL_SORT`/`SEL_TOURN` apparatus and §7.1's claim that a DPF and a DCF are the same primitive are both superseded. [NUDGE]'s own repository keeps `dcf/` and `multdpf/` separate, which corroborates the distinction. |
+| 2026-09-06 | §2's `ell = 10` is retained, now on evidence rather than by default | Measured: nDCG@20 stays within 0.5% across `ell` from 10 to 400 while the SVD subspace angle falls five orders of magnitude. Since `ell` multiplies the only interactive cost in training, this makes the 40× communication saving free. See `docs/finding-ell-vs-quality.md`. |
+| 2026-09-06 | Phase 2's exit criterion drops `tcpdump` for a channel-boundary transcript plus a distinguisher experiment | There is no `tcpdump` on Windows. A transcript recorded at the channel boundary is better provenance than a packet capture, and a distinguisher run over many trials is stronger evidence than one capture looking random, because it demonstrates an adversary *failing* rather than bytes *appearing* random. |

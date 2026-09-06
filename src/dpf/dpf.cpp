@@ -10,10 +10,10 @@
 // ==========================================================================
 #include "oblivrec/dpf.hpp"
 
+#include "oblivrec/csprng.hpp"
+
 #include <cassert>
-#include <chrono>
 #include <cstring>
-#include <random>
 #include <stdexcept>
 
 namespace oblivrec {
@@ -59,21 +59,12 @@ template u128 Convert<u128>(const Block&);
 
 namespace {
 
+// Key material comes from the OS CSPRNG. See include/oblivrec/csprng.hpp for
+// why this is not a std::mt19937_64: the DPF's initial seeds are the secret,
+// and a Mersenne Twister is reconstructible from its own output.
 Block RandomBlock() {
-  // Seeded from the OS entropy source. std::random_device on mingw is not
-  // guaranteed non-deterministic, so it is mixed with a high-resolution clock
-  // reading. For a course artefact this is adequate and the limitation is
-  // stated in the report rather than hidden.
-  static thread_local std::mt19937_64 rng([] {
-    std::random_device rd;
-    std::uint64_t a = (static_cast<std::uint64_t>(rd()) << 32) ^ rd();
-    std::uint64_t b = static_cast<std::uint64_t>(
-        std::chrono::high_resolution_clock::now().time_since_epoch().count());
-    return a ^ (b * 0x9e3779b97f4a7c15ULL);
-  }());
   std::uint8_t buf[16];
-  for (int i = 0; i < 16; ++i)
-    buf[i] = static_cast<std::uint8_t>(rng() & 0xff);
+  RandomBytes(buf, sizeof(buf));
   return Block::FromBytes(buf);
 }
 
