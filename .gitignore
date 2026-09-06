@@ -32,9 +32,10 @@ bench/figures/
 !references/*.pdf
 # The built survey PDF ships alongside its sources.
 !report/survey.pdf
-# The mid-term PDFs likewise. Teammates should be able to read the report
-# without a LaTeX toolchain.
-!report/midterm.pdf
+# The technical report PDF, so teammates can read it without a LaTeX
+# toolchain. midterm.pdf is deliberately NOT un-ignored yet: the only build on
+# disk is the stale 2026-08-15 stub, and tracking it would ship a misleading
+# artefact. Add the exception on day 7 when the real two-page report is written.
 !report/midterm_technical.pdf
 # The presentation deck, built from report/slides/survey_slides.tex, which IS
 # tracked -- the deck is reproducible from source (needs the metropolis theme).

@@ -1,0 +1,134 @@
+\section{The distributed point function}
+\label{sec:tech:dpf}
+
+A point function $f_{\alpha,\beta}$ takes the value $\beta$ at $x = \alpha$ and
+zero everywhere else. A $(2,2)$-distributed point function splits it into two
+keys, each of which individually hides both $\alpha$ and $\beta$, such that the
+two evaluations recombine to $f_{\alpha,\beta}(x)$. The construction is that of
+Boyle, Gilboa and Ishai, and it is written by us rather than imported, because
+it is the component a viva will probe hardest and because the same
+implementation serves both halves of this project: the private read layer in
+Section~\ref{sec:tech:pir}, and the function secret sharing gates that private
+training will need in the next phase.
+
+\subsection{Why the keys are small}
+\label{sec:tech:dpf:size}
+
+The construction is a binary tree of pseudorandom seeds. Each key holds one
+initial seed and one correction word per level, so key size is
+\emph{logarithmic} in the domain while a naive one-hot query is linear. Table
+\ref{tab:tech:keysize} gives measured sizes from the serialiser rather than
+from the closed form, since the closed form is what the design draft got wrong.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Measured DPF key size against the naive alternative. The packed
+format is $1 + 4 + 16 + 18\,\mathrm{db} + \lceil \bits/8 \rceil$ bytes, and
+\texttt{SizeBytes()} is asserted equal to the actual serialised length.}
+\label{tab:tech:keysize}
+\begin{tabular}{@{}rrrrrr@{}}
+\toprule
+domain bits & $\items$ & key, $\bits=64$ & key, $\bits=128$ & naive one-hot & compression \\
+\midrule
+10 & 1{,}024  & 209 B & 217 B & 8{,}192 B   & $39\times$ \\
+11 & 2{,}048  & 227 B & 235 B & 16{,}384 B  & $72\times$ \\
+12 & 4{,}096  & 245 B & 253 B & 32{,}768 B  & $134\times$ \\
+16 & 65{,}536 & 317 B & 325 B & 524{,}288 B & $1654\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The design draft claims roughly 260 bytes at $\items = 4096$ against 32~KB
+naive. The 32~KB figure is right. The 260-byte figure is not: the measured
+value is \textbf{245 bytes}, and the discrepancy comes from the draft's formula
+omitting both the initial seed and the self-describing header, while
+simultaneously evaluating at 16 domain bits rather than the 12 that
+$\items = 4096$ implies. The number in this report is measured by a test that
+prints it, which is why the error surfaced.
+
+\subsection{The sign convention}
+\label{sec:tech:dpf:sign}
+
+Textbook presentations of this construction define
+$\Eval_b = (-1)^b\bigl(\mathrm{Convert}(s) + t \cdot \mathrm{CW}_{\text{last}}\bigr)$,
+which yields the \emph{sum} convention $\Eval_0(x) + \Eval_1(x) = f(x)$. The
+specification for this project instead states the invariant as a
+\emph{difference}. We therefore omit the $(-1)^b$ factor and return
+$\mathrm{Convert}(s) + t \cdot \mathrm{CW}_{\text{last}}$ directly, giving
+%
+\[
+  \Eval(k_0, x) - \Eval(k_1, x) =
+  \begin{cases}
+    \beta & x = \alpha \\
+    0     & \text{otherwise.}
+  \end{cases}
+\]
+%
+The two conventions are algebraically identical and differ only in where the
+negation is placed. The reason to record the choice explicitly is that getting
+it backwards makes every test fail in a way that resembles a tree traversal
+bug rather than a sign error, which is an expensive place to spend a day.
+
+\subsection{Testing: the structural invariant, checked at every node}
+\label{sec:tech:dpf:testing}
+
+A black-box test reports only that a leaf is wrong. The characteristic failure
+of this construction is a mistaken control-bit update, which stays invisible
+until enough levels have accumulated for it to change an output, and therefore
+presents as ``correct at two domain bits, wrong at eight''. Bisecting that from
+leaf values is slow.
+
+The test suite therefore walks \emph{both} parties' trees in lockstep and
+asserts the underlying structural invariant at every internal node. Writing
+$(s_b, t_b)$ for party $b$'s state:
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+On the path to $\alpha$  & $s_0 \neq s_1$ and $t_0 \oplus t_1 = 1$ \\
+Off the path             & $s_0 = s_1$ and $t_0 \oplus t_1 = 0$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Off the path the two parties hold identical state, which is precisely why
+their contributions cancel. On the path they differ and their control bits
+disagree, which is what lets the final correction word inject $\beta$ at
+exactly one leaf. Every correctness property of the scheme follows from these
+two lines, so a violation names the exact level and node at which the
+construction first went wrong.
+
+This checker was written \emph{before} the generator was trusted, and both
+were exercised together on the first run.
+
+\subsection{Correctness results}
+\label{sec:tech:dpf:results}
+
+The structural invariant holds at every node for every $\alpha$ in every
+domain up to eight bits, and at sampled $\alpha$ up to eleven bits.
+
+The difference invariant is checked against a brute-force point function
+oracle for every $\alpha$ and every $x$: exhaustively to ten domain bits on
+the 64-bit ring and nine on the 128-bit ring, then for all $x$ at sampled
+$\alpha$ at eleven and twelve bits. Edge cases that off-by-one errors land on
+are covered explicitly, namely $\alpha$ at the first and last index, $\beta = 0$
+where everything must cancel, and $\beta = -1$ where the ring wraps. A separate
+check confirms that $\beta = 1$ reconstructs exactly, since the read layer
+depends on that with no tolerance for an error term.
+
+Traversal is implemented once and shared by single-point evaluation,
+whole-domain evaluation and the test checker, so there is one traversal
+implementation to be wrong rather than three.
+
+\subsection{What is implemented but not yet verified}
+\label{sec:tech:dpf:pending}
+
+Whole-domain evaluation and key serialisation are implemented, because the
+header is a frozen cross-component contract and had to be complete, but they
+are so far exercised only indirectly. Extending the exhaustive invariant to
+sixteen domain bits through whole-domain evaluation, asserting that it agrees
+with single-point evaluation at every index, and round-tripping serialised keys
+are the next steps. The key sizes in
+Table~\ref{tab:tech:keysize} do come from the real serialiser, so that path is
+at least exercised.
