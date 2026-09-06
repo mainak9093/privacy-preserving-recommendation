@@ -102,7 +102,7 @@ Meetings, deck building, report writing, dry runs — anything not attributable 
 
 | Date | Who | What |
 |---|---|---|
-| | | |
+| 2026-09-06 | Mainak | **S1 sprint day 1, foundation.** Build system: hand-written `Makefile` for `mingw32-make` (cmake is not installed and installing it would breach the no-new-dependencies rule), with a `check-toolchain` guard that turns g++'s silent as/ld spawn failure into a loud one. Headers `span.hpp` (a C++17 stand-in for `std::span`), `ring.hpp` (`RingTraits` for `u64` and `u128`, ring width templated from day one), `fixedpoint.hpp`, `prg.hpp`. `src/common/aes.cpp`: AES-NI fixed-key MMO PRG plus a scalar AES-128 reference. `tests/test_aes.cpp` passes the FIPS-197 known-answer vector and 10k AES-NI-vs-scalar comparisons; `tests/test_ring.cpp` covers byte round-trips, two's-complement negatives and additive homomorphism on both rings. Python oracle `model/{data,mf,metrics}.py`: power iteration written to mirror the protocol structure rather than calling SVD, nDCG@20 = 0.4536 on ML-100K `u1`. **Finding: recommendation quality is flat in the iteration count** (`docs/finding-ell-vs-quality.md`, raw data in `bench/results/oracle_ell_sweep.jsonl`) — the SVD subspace angle falls five orders of magnitude from `ell=10` to `ell=400` while nDCG@20 moves 0.5%, which justifies running private training at `ell=10` for a fortyfold communication saving. Started `report/midterm_technical.tex` (4 pages so far). |
 
 ---
 

@@ -1,0 +1,39 @@
+\section{Scope of this slice}
+\label{sec:tech:scope}
+
+The full system has two halves. Private \emph{training} learns a
+factorisation of a rating matrix that no server may see, and private
+\emph{delivery} fetches the recommended item without revealing which item it
+was. The requirements document fixes the build order as S1, then S2, then
+S3: serving and delivery first, then training, then the composition. S1 is
+first because it is lower risk, it demonstrates something end to end early,
+and the distributed point function it needs is a prerequisite for the
+non-linear gates that private training will need later.
+
+This report covers S1 only. The model is trained \emph{in the clear} by the
+Python oracle of Section~\ref{sec:tech:oracle}, and everything downstream of
+that model is private. Private training is the subject of the next phase and
+no claim is made about it here.
+
+\subsection{What is deliberately absent}
+\label{sec:tech:scope:absent}
+
+Three components specified in the design draft are not built in this slice,
+and each was cut for a stated reason rather than for lack of time.
+
+A distributed comparison function is not implemented. Its only consumers are
+the truncation and normalisation protocols, both of which belong to private
+training. The design draft asserts that a distributed point function and a
+distributed comparison function are the same primitive. They are not, and the
+reference implementation of \nudgeplain{} keeps them in separate modules,
+which corroborates the distinction.
+
+Oblivious top-$\topk$ selection is not implemented. The user reconstructs the
+score vector and selects the top $\topk$ locally, so no server learns the
+selection regardless of whether an oblivious selector exists. The apparatus
+would protect something that is already protected.
+
+Network emulation is not used. The development machine has neither Docker nor
+\texttt{tc netem}, so every measurement in this report is taken on the
+\texttt{local} profile and is labelled as such. Wide-area numbers are
+deferred rather than estimated.

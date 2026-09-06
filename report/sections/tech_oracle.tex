@@ -1,0 +1,102 @@
+\section{The cleartext oracle, and how many power iterations are needed}
+\label{sec:tech:oracle}
+
+Every private component in this project is checked against a cleartext twin.
+The factorisation oracle is therefore the first thing built, before any
+cryptography, and it doubles as baseline B1, the speed-of-light reference
+against which recommendation quality is measured.
+
+\subsection{Construction}
+\label{sec:tech:oracle:construction}
+
+The oracle implements $\ApproxFactor$ as \nudgeplain{} states it, rather than
+calling a singular value decomposition. This is deliberate. The private
+implementation in the next phase must reproduce this procedure step by step
+under secret sharing, so the reference has to match the \emph{structure} of
+the protocol and not merely its output. Concretely, for each of $\dime$
+components a random vector is repeatedly multiplied by
+$\ratings^{\top}\ratings$, made orthogonal to the components already found,
+and normalised. Each converged component is then revealed in the clear and
+becomes a row of $\itemembed$.
+
+Revealing each row before computing the next is what keeps the
+orthogonalisation cheap, because it is then a Gram--Schmidt step against
+public vectors. It is also the reason the item embedding matrix is public to
+every server, which is the premise of the leakage analysis in this project.
+
+A singular value decomposition is still computed, but as a \emph{cross-check}
+rather than as the implementation. Power iteration on
+$\ratings^{\top}\ratings$ converges to the top-$\dime$ right singular
+subspace, so the largest principal angle between the two subspaces should
+approach zero. That check costs two lines and it caught a genuine question on
+the first day.
+
+\subsection{Quality is flat in the iteration count}
+\label{sec:tech:oracle:ell}
+
+At the default of $\iters = 10$ inner rounds the subspace angle is
+$9.66 \times 10^{-1}$ radians, which is nowhere near zero. Sweeping $\iters$
+resolves what that means.
+
+\begin{table}[h]
+\centering
+\small
+\caption{MovieLens-100K, split \texttt{u1}, $\dime = 16$. The subspace angle
+falls by five orders of magnitude while recommendation quality does not move.
+Raw data in \texttt{bench/results/oracle\_ell\_sweep.jsonl}.}
+\label{tab:tech:ell}
+\begin{tabular}{@{}rrrr@{}}
+\toprule
+$\iters$ & subspace angle (rad) & nDCG@20 & Recall@20 \\
+\midrule
+10  & $9.659 \times 10^{-1}$ & 0.4536 & 0.4693 \\
+25  & $4.170 \times 10^{-1}$ & 0.4545 & 0.4677 \\
+50  & $1.834 \times 10^{-1}$ & 0.4525 & 0.4650 \\
+100 & $6.966 \times 10^{-2}$ & 0.4523 & 0.4662 \\
+200 & $3.604 \times 10^{-3}$ & 0.4526 & 0.4664 \\
+400 & $6.652 \times 10^{-6}$ & 0.4526 & 0.4664 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two conclusions follow, and they are separate.
+
+The first is that the implementation is correct. The angle falls
+monotonically to $6.7 \times 10^{-6}$ radians, so the procedure does converge
+to the right subspace. The large angle at $\iters = 10$ is slow convergence
+rather than a defect. The spectrum explains the rate: the ratio of the
+sixteenth to the seventeenth squared singular value is $1.032$, a gap of three
+percent, and power iteration converges as a power of that ratio. The first
+component is easy, with a ratio of $6.44$. The sixteenth is not.
+
+This distinction was nearly lost. A failing cross-check invites the reaction
+of removing the cross-check, which would have converted a correct
+implementation into a silently wrong one.
+
+The second conclusion is the useful one. Across a fortyfold increase in
+$\iters$, nDCG@20 stays between $0.4523$ and $0.4545$, a spread of about half
+a percent with no monotone trend. Ranking does not require the singular
+vectors, only a subspace good enough that the ordering of scores is stable.
+
+\subsection{Why this matters for private training}
+\label{sec:tech:oracle:consequence}
+
+Under two-out-of-three replicated sharing the matrix--vector products are
+non-interactive and therefore free. Truncation and normalisation are the
+entire communication cost of training, and they run once per inner iteration,
+so communication is linear in $\iters$.
+
+The measurement therefore says that private training can run at $\iters = 10$
+and the fortyfold saving in communication costs nothing in recommendation
+quality. That is a design decision resting on evidence rather than on the
+default value in the design draft, and it also discharges an instruction the
+draft had already given and which had not been acted on, namely to measure
+the residual against the cleartext oracle and report iterations against
+quality.
+
+The caveats are stated plainly. This is one dataset, one split, one seed and
+one embedding dimension. The flatness may not survive at MovieLens-1M or at
+$\dime = 32$, and it will be re-measured before the final report relies on it.
+The metric uses binary relevance at a rating of four or above, so these
+numbers are a within-project baseline and are not directly comparable to the
+figures \nudgeplain{} reports on Netflix data under its own convention.

@@ -1,0 +1,60 @@
+%% ==========================================================================
+%%  MID-TERM TECHNICAL REPORT.  Companion to midterm.tex.
+%%
+%%  midterm.tex is the two-page per-member contribution summary the handout
+%%  asks for, and is the graded artefact. THIS document is the technical
+%%  record of what was actually built, and is supplementary.
+%%
+%%  Written incrementally, one section per working day, while the reasoning is
+%%  still fresh. Reconstructing it on the last day is how the detail gets lost.
+%%
+%%  HOUSE STYLE (CLAUDE.md): no em dashes, no prose semicolons.
+%%
+%%  NOTE TO FUTURE EDITORS: write .tex files with the Write tool, not with a
+%%  shell heredoc. Heredocs on this setup collapse every LaTeX line break from
+%%  a double backslash to a single one, which silently destroys tables.
+%%
+%%  Build:  latexmk -pdf midterm_technical.tex
+%% ==========================================================================
+\documentclass[11pt]{article}
+\input{preamble}
+
+\begin{document}
+
+\title{\bfseries OblivRec: Private Serving and Delivery\\[0.3em]
+       \large Mid-Term Technical Report, CS670}
+
+\author{Mainak Sarkar (230619) \and Shrasti Dwivedi (230982) \and
+        Aditya Anand (230065) \and Shravan Agrawal (230984)}
+
+\date{CS670: Cryptographic Techniques for Privacy Preservation\\
+      Indian Institute of Technology Kanpur \\
+      12 September 2026}
+
+\maketitle
+
+\begin{abstract}
+\noindent
+This report records the first implementation slice of OblivRec, a
+recommender that composes the three-party private training core of
+\nudgeplain{} with the private delivery layer of \pirsonaplain{}. The slice
+covers private serving and delivery against a model trained in the clear,
+which is stage S1 of the staging fixed in the requirements. We report a
+distributed point function written from the Boyle--Gilboa--Ishai
+construction, a DPF-based private information retrieval read layer over the
+MovieLens catalogue, a cleartext power-iteration factorisation used as the
+quality oracle, and an experiment quantifying what an observer learns from
+watching which items a user fetches. Private training itself is out of scope
+here and is scheduled for the following phase.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\input{sections/tech_scope}
+\input{sections/tech_oracle}
+
+\bibliographystyle{alpha}
+\bibliography{references}
+
+\end{document}

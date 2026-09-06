@@ -32,6 +32,10 @@ bench/figures/
 !references/*.pdf
 # The built survey PDF ships alongside its sources.
 !report/survey.pdf
+# The mid-term PDFs likewise. Teammates should be able to read the report
+# without a LaTeX toolchain.
+!report/midterm.pdf
+!report/midterm_technical.pdf
 # The presentation deck, built from report/slides/survey_slides.tex, which IS
 # tracked -- the deck is reproducible from source (needs the metropolis theme).
 !report/slides/survey_slides.pdf
@@ -90,3 +94,8 @@ venv/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# ─────────────────────────────────────────────────────────────
+#  C++ build output (Makefile writes here)
+# ─────────────────────────────────────────────────────────────
+build/
