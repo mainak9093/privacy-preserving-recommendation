@@ -155,10 +155,20 @@ $\EvalFull(k_0)[x] - \EvalFull(k_1)[x]$ equals $\beta$ at $x = \alpha$ and zero
 elsewhere. The default test target establishes this for every domain up to
 eleven bits on both rings, in under a second. Eleven bits is not an arbitrary
 stopping point: MovieLens-100K has 1682 items which pad to a 2048-entry domain,
-so it is the domain the demonstration actually runs. The full sweep to sixteen
-bits on both rings runs from a separate target, takes about a quarter of an
-hour, and is deliberately kept out of the default suite, because a suite that
-takes that long stops being run and then stops catching anything.
+so it is the domain the demonstration actually runs.
+
+The full sweep runs from a separate target and has been executed. It covers
+every $\alpha$ against every $x$ for every domain up to \textbf{sixteen bits on
+the 64-bit ring and fifteen on the 128-bit ring}, which is $5.73$ billion and
+$1.43$ billion leaf comparisons respectively, $7.16$ billion in total. It
+passed, at commit \texttt{bce4cb1} on 7 September 2026, in \textbf{27 minutes},
+sustaining about $4.4$ million leaf comparisons per second. The 128-bit ring
+stops one bit lower deliberately, because its comparisons cost roughly twice as
+much and the marginal bit would have added a further twenty minutes for no new
+structural coverage.
+
+It is kept out of the default suite for the obvious reason: a suite that takes
+half an hour stops being run, and then it stops catching anything.
 
 \emph{Claim two, agreement.} Single-point evaluation is checked index by index
 against the whole-domain arrays, exhaustively over every $\alpha$ to eight bits
