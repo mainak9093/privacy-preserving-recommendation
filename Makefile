@@ -33,7 +33,7 @@ OBJ      := $(patsubst %.cpp,$(BUILD)/%.o,$(SRC))
 TESTSRC  := $(wildcard tests/test_*.cpp)
 TESTBIN  := $(patsubst tests/%.cpp,$(BUILD)/%.exe,$(TESTSRC))
 
-.PHONY: all test bench figures clean check-toolchain
+.PHONY: all test check bench figures clean check-toolchain
 
 all: check-toolchain $(TESTBIN)
 
@@ -72,6 +72,27 @@ test: all
 	done; \
 	if [ $$fail -ne 0 ]; then echo ""; echo "TESTS FAILED"; exit 1; fi; \
 	echo ""; echo "all tests passed"
+
+# --------------------------------------------------------------------------
+#  Hardened verification build.
+#
+#  GCC on mingw ships no libasan/libubsan, so -fsanitize=address cannot link
+#  and plain -fsanitize=undefined cannot either. UBSan still works in TRAP
+#  mode, which needs no runtime library: a violation becomes an illegal
+#  instruction, so the test simply dies and the suite reports it.
+#
+#  _GLIBCXX_DEBUG covers std::vector and iterators. It does NOT cover
+#  oblivrec::Span, which is our own type and carries the deserialisation path,
+#  so Span does its own bounds check under these same macros.
+#
+#  Both instrumentations are verified to actually fire, by canaries kept in
+#  the scratchpad rather than by assuming a clean run means a checked run.
+# --------------------------------------------------------------------------
+CHECKFLAGS := -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC -D_GLIBCXX_ASSERTIONS               -fsanitize=undefined -fsanitize-undefined-trap-on-error               -fstack-protector-all
+
+check: check-toolchain
+	@mkdir -p $(BUILD)/check
+	@fail=0; 	for t in $(TESTSRC); do 	  n=$$(basename $$t .cpp); 	  $(CXX) $(STD) -O1 -g $(OPT) $(INC) $(CHECKFLAGS) $$t $(SRC) 	      -o $(BUILD)/check/$$n.exe $(LDLIBS) || { echo "  $$n: BUILD FAILED"; fail=1; continue; }; 	  if ./$(BUILD)/check/$$n.exe > /dev/null 2>&1; then echo "  $$n: clean"; 	  else echo "  $$n: FAILED under hardening"; fail=1; fi; 	done; 	if [ $$fail -ne 0 ]; then echo ""; echo "HARDENED CHECK FAILED"; exit 1; fi; 	echo ""; echo "all clean under UBSan + _GLIBCXX_DEBUG + stack protector + checked Span"
 
 figures:
 	$(PY) bench/scripts/make_figures.py

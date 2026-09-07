@@ -182,9 +182,40 @@ instances, agreeing on all of them, together with the boundary cases of a
 perfect ranking, a worst ranking, a user with no relevant items, and correct
 exclusion of items already seen in training.
 
-The code is additionally clean under a strict warning set including implicit
-conversion and sign-conversion diagnostics, and the suite passes under a
-hardened build with standard-library assertions enabled. An
-undefined-behaviour sanitizer was attempted but the runtime library is absent
-from this toolchain, which is a gap worth closing on a Linux machine before the
-final report.
+\subsection{Hardened verification}
+\label{sec:tech:dpf:hardening}
+
+The code is clean under a strict warning set including implicit conversion and
+sign conversion diagnostics. Beyond that, the whole suite runs under a hardened
+build, available as a build target so that it is repeatable rather than a
+one-off.
+
+The compiler on this machine ships no sanitizer runtime library, so the usual
+address and undefined-behaviour sanitizers cannot link. Undefined-behaviour
+checking is still available in \emph{trap} mode, where a violation compiles to
+an illegal instruction rather than a call into a diagnostic runtime, and that
+needs no library. The suite is clean under it.
+
+A clean run under an instrumentation that silently did nothing would look
+identical to a clean run under one that worked, so both instrumentations were
+verified against deliberate faults. A program performing an out-of-range shift
+runs to completion and prints a nonsense value when uninstrumented, and dies on
+an illegal instruction when instrumented. The bounds check described below
+behaves the same way.
+
+Checking the standard library covers containers and iterators, but it does
+nothing for a hand-written type. That mattered here. The local span type is the
+only unchecked raw-pointer indexing anywhere in this codebase, and it carries
+the deserialisation path, which parses attacker-controlled bytes. The hardened
+build was therefore leaving precisely the most exposed path unverified. The
+span now performs its own bounds check under the same macros, reporting the
+offending index, the size and the source location before aborting. Under a
+release build it costs nothing.
+
+The remaining instrumentation gap is a genuine address sanitizer, which would
+catch heap buffer overflows, use after free and leaks. Its principal failure
+classes do not arise here, because the code performs no manual heap management
+at all: there is no occurrence of \texttt{new}, \texttt{delete},
+\texttt{malloc} or \texttt{free} in the source, and every owning container is a
+standard vector. That is a weaker statement than having run the tool, and it is
+recorded as such rather than presented as equivalent.
