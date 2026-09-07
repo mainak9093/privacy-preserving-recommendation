@@ -147,14 +147,44 @@ Traversal is implemented once and shared by single-point evaluation,
 whole-domain evaluation and the test checker, so there is one traversal
 implementation to be wrong rather than three.
 
-\subsection{What is implemented but not yet verified}
-\label{sec:tech:dpf:pending}
+\subsection{The wire format, and a bug found by testing it}
+\label{sec:tech:dpf:serialize}
 
-Whole-domain evaluation and key serialisation are implemented, because the
-header is a frozen cross-component contract and had to be complete, but they
-are so far exercised only indirectly. Extending the exhaustive invariant to
-sixteen domain bits through whole-domain evaluation, asserting that it agrees
-with single-point evaluation at every index, and round-tripping serialised keys
-are the next steps. The key sizes in
-Table~\ref{tab:tech:keysize} do come from the real serialiser, so that path is
-at least exercised.
+Whole-domain evaluation and key serialisation were written alongside the
+header, since the header is a frozen cross-component contract and had to be
+complete, but they were initially exercised only indirectly. Testing them
+afterwards found one real defect.
+
+Deserialisation accepted a party byte outside $\{0,1\}$. This is not cosmetic.
+Evaluation begins with $t$ set to the party index and the traversal step
+branches on whether $t$ is non-zero, so a party byte of, say, $7$ is truthy and
+the key would \emph{silently evaluate as party one}. A corrupted or malicious
+key therefore produced a wrong reconstruction with no error raised anywhere.
+Since keys arrive over the wire, the fix is to validate on entry rather than to
+trust the sender. The domain size is now validated on the same principle,
+before it is used either to size an allocation or to multiply out an expected
+length.
+
+The tests that found it are retained as regression tests rather than discarded.
+They cover round-tripping on both rings, including that a full pair of keys
+still reconstructs $\beta$ after both have crossed the wire, and they check that
+truncated, over-length, empty, and malformed-header inputs are all rejected.
+Whole-domain and single-point evaluation are asserted to agree at every index,
+and whole-domain evaluation is required to reject a wrongly sized output buffer
+rather than overrun it.
+
+Two further checks were run and left in place. The decimal formatter for the
+128-bit ring writes thirty-nine digits into a forty-byte buffer, so it has zero
+margin at the maximum representable value and that value is now pinned by a
+test. And the ranking metric used for every quality number in this report was
+cross-checked against an independent implementation over two hundred random
+instances, agreeing on all of them, together with the boundary cases of a
+perfect ranking, a worst ranking, a user with no relevant items, and correct
+exclusion of items already seen in training.
+
+The code is additionally clean under a strict warning set including implicit
+conversion and sign-conversion diagnostics, and the suite passes under a
+hardened build with standard-library assertions enabled. An
+undefined-behaviour sanitizer was attempted but the runtime library is absent
+from this toolchain, which is a gap worth closing on a Linux machine before the
+final report.

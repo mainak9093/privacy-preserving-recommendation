@@ -231,10 +231,20 @@ DpfKey<Ring> DpfKey<Ring>::Deserialize(Span<const std::uint8_t> in) {
   DpfKey<Ring> k;
   std::size_t p = 0;
   if (in.size() < 21) throw std::invalid_argument("DpfKey too short");
+
+  // Everything below this point is attacker-controlled: a key arrives over the
+  // wire. Validate before use rather than after.
   k.party = in[p++];
+  if (k.party > 1)
+    throw std::invalid_argument("DpfKey: party must be 0 or 1");
+
   std::uint32_t db = 0;
   for (int i = 0; i < 4; ++i)
     db |= static_cast<std::uint32_t>(in[p++]) << (8 * i);
+  // Checked before SizeBytes() multiplies it, so the length arithmetic cannot
+  // overflow on a 32-bit size_t, and before cw.resize() allocates on it.
+  if (db == 0 || db > 31)
+    throw std::invalid_argument("DpfKey: domain_bits must be in 1..31");
   k.domain_bits = db;
   std::uint8_t buf[16];
   for (int i = 0; i < 16; ++i) buf[i] = in[p++];
