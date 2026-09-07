@@ -25,11 +25,15 @@ from the closed form, since the closed form is what the design draft got wrong.
 \small
 \caption{Measured DPF key size against the naive alternative. The packed
 format is $1 + 4 + 16 + 18\,\mathrm{db} + \lceil \bits/8 \rceil$ bytes, and
-\texttt{SizeBytes()} is asserted equal to the actual serialised length.}
+\texttt{SizeBytes()} is asserted equal to the actual serialised length. The naive
+column and the compression ratio are both taken at $\bits = 64$, so the ratio
+understates the $\bits = 128$ case, where a one-hot query would itself double.
+These figures are printed by \texttt{tests/test\_dpf\_serialize.cpp} and copied
+here, not the other way round.}
 \label{tab:tech:keysize}
 \begin{tabular}{@{}rrrrrr@{}}
 \toprule
-domain bits & $\items$ & key, $\bits=64$ & key, $\bits=128$ & naive one-hot & compression \\
+domain bits & $\items$ & key, $\bits=64$ & key, $\bits=128$ & naive, $\bits=64$ & compression \\
 \midrule
 10 & 1{,}024  & 209 B & 217 B & 8{,}192 B   & $39\times$ \\
 11 & 2{,}048  & 227 B & 235 B & 16{,}384 B  & $72\times$ \\
@@ -134,14 +138,50 @@ were exercised together on the first run.
 The structural invariant holds at every node for every $\alpha$ in every
 domain up to eight bits, and at sampled $\alpha$ up to eleven bits.
 
-The difference invariant is checked against a brute-force point function
-oracle for every $\alpha$ and every $x$: exhaustively to ten domain bits on
-the 64-bit ring and nine on the 128-bit ring, then for all $x$ at sampled
-$\alpha$ at eleven and twelve bits. Edge cases that off-by-one errors land on
-are covered explicitly, namely $\alpha$ at the first and last index, $\beta = 0$
-where everything must cancel, and $\beta = -1$ where the ring wraps. A separate
-check confirms that $\beta = 1$ reconstructs exactly, since the read layer
-depends on that with no tolerance for an error term.
+\paragraph{Exhaustive correctness is two claims, not one.}
+Treating it as one is what made the requirement look infeasible. The
+specification asks for exhaustive correctness up to sixteen domain bits, and it
+states the invariant over \emph{whole-domain} evaluation. Those are different
+costs. Checking every $\alpha$ against every $x$ costs $4^{D}$ leaf comparisons
+either way, but reaching them through one whole-domain pass per $\alpha$ costs
+two tree walks, whereas reaching them through single-point evaluation costs $D$
+tree walks per index. At sixteen bits that is a factor of eight. So the
+whole-domain formulation carries the headline claim, which is also the
+formulation the specification itself uses, and single-point evaluation is
+bridged to it separately.
+
+\emph{Claim one, the difference invariant.} For every $\alpha$ and every $x$,
+$\EvalFull(k_0)[x] - \EvalFull(k_1)[x]$ equals $\beta$ at $x = \alpha$ and zero
+elsewhere. The default test target establishes this for every domain up to
+eleven bits on both rings, in under a second. Eleven bits is not an arbitrary
+stopping point: MovieLens-100K has 1682 items which pad to a 2048-entry domain,
+so it is the domain the demonstration actually runs. The full sweep to sixteen
+bits on both rings runs from a separate target, takes about a quarter of an
+hour, and is deliberately kept out of the default suite, because a suite that
+takes that long stops being run and then stops catching anything.
+
+\emph{Claim two, agreement.} Single-point evaluation is checked index by index
+against the whole-domain arrays, exhaustively over every $\alpha$ to eight bits
+on both rings and at chosen $\alpha$ beyond that. Composing the two claims
+gives exhaustive correctness for single-point evaluation over the same range.
+
+The $\alpha$ values chosen above the exhaustive bound are not purely random.
+They are the first index, the last index, and the two alternating bit patterns,
+then a seeded random fill, because most significant bit first indexing errors
+show up at exactly those points.
+
+\paragraph{One value of $\beta$ is not a test of $\beta$.}
+An earlier version of this sweep used a single fixed $\beta$ per ring, so
+billions of leaf comparisons all exercised the final correction word at one
+value. That word is built with a sign that depends on a control bit, and it is
+the subtlest line in the generator. The sweep now derives $\beta$ from the
+domain size and $\alpha$ through a mixing function, which costs nothing, keeps
+failures reproducible, and multiplies the number of distinct $\beta$ values
+tested by the size of the domain. The explicit edge cases remain: $\alpha$ at
+the first and last index, $\beta = 0$ where everything must cancel, $\beta = -1$
+where the ring wraps, and a separate check that $\beta = 1$ reconstructs
+exactly, since the read layer depends on that with no tolerance for an error
+term.
 
 Traversal is implemented once and shared by single-point evaluation,
 whole-domain evaluation and the test checker, so there is one traversal

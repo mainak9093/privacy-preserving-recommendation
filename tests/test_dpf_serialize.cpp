@@ -69,13 +69,50 @@ int main() {
     }
   }
 
-  // The serialised length must match the advertised size exactly, since the
-  // report quotes SizeBytes() as the key size.
+  // ---- The key-size table, PRINTED ---------------------------------------
+  //
+  // The report and ARCHITECTURE section 7.1 both quote these numbers, and the
+  // draft's original figure was wrong. So the numbers are produced HERE, by a
+  // test that prints them, and the report copies this output rather than the
+  // other way round. The literals below are pinned so that a change to the
+  // wire format cannot silently invalidate the report.
   {
-    auto kp = Gen<u64>(1, 1, 11);
-    CHECK(Bytes(kp.first).size() == kp.first.SizeBytes());
-    auto k2 = Gen<u128>(1, 1, 11);
-    CHECK(Bytes(k2.first).size() == k2.first.SizeBytes());
+    std::printf("  key sizes (measured, not derived):\n");
+    std::printf("    %4s %8s %10s %10s %14s\n",
+                "bits", "n", "u64 key", "u128 key", "naive u64");
+    struct Expect { std::uint32_t db; std::size_t k64, k128; };
+    const Expect table[] = {
+        {10, 209, 217}, {11, 227, 235}, {12, 245, 253}, {16, 317, 325}};
+    for (const auto& e : table) {
+      auto a = Gen<u64>(1, 1, e.db);
+      auto b = Gen<u128>(1, 1, e.db);
+      const std::size_t s64 = a.first.SizeBytes();
+      const std::size_t s128 = b.first.SizeBytes();
+      const unsigned long long naive =
+          (1ull << e.db) * RingTraits<u64>::kBytes;
+      std::printf("    %4u %8u %9zu B %9zu B %13llu B\n",
+                  e.db, 1u << e.db, s64, s128, naive);
+      CHECK_MSG(s64 == e.k64,
+                "u64 key size changed at db=" + std::to_string(e.db) +
+                    ": got " + std::to_string(s64) + " expected " +
+                    std::to_string(e.k64) + ". The report quotes this number.");
+      CHECK_MSG(s128 == e.k128,
+                "u128 key size changed at db=" + std::to_string(e.db) +
+                    ": got " + std::to_string(s128) + " expected " +
+                    std::to_string(e.k128));
+      // SizeBytes() is only trustworthy if it equals the real serialised
+      // length, which is what the report is really claiming.
+      CHECK(Bytes(a.first).size() == s64);
+      CHECK(Bytes(b.first).size() == s128);
+    }
+    // The closed form, checked across the whole legal range rather than at the
+    // four points the report happens to quote.
+    for (std::uint32_t db = 1; db <= 31; ++db) {
+      auto a = Gen<u64>(0, 1, db);
+      CHECK_MSG(a.first.SizeBytes() ==
+                    21 + std::size_t(db) * 18 + RingTraits<u64>::kBytes,
+                "closed form broke at db=" + std::to_string(db));
+    }
   }
 
   // ---- u128: cw_last is 16 bytes, a distinct path ------------------------

@@ -378,8 +378,42 @@ bench/figures/                 generated, gitignored
 ```
 
 Every record: `{git_sha, host, profile, m, n, d, ell, b, t, k, stage, phase, wall_ms, cpu_ms,
-bytes_sent, timestamp}`. `phase ∈ {setup, matvec, truncate, normalize, fss, topk, pir, net}` so the
-microbenchmark breakdown falls out for free.
+bytes_sent, timestamp}`. `phase ∈ {setup, matvec, truncate, normalize, fss, topk, pir, net,
+oracle}` so the microbenchmark breakdown falls out for free.
+
+**Amended 2026-09-06, once there were two producers rather than zero.** Four clarifications, each
+forced by real data:
+
+1. **`oracle` added to the enum.** It names a *cleartext baseline* measurement. The eight original
+   values are all protocol phases, and the Python quality oracle is not one of them. Labelling its
+   rows `matvec` would be actively false, because `matvec` means the secret-shared phase whose cost
+   S2 is measured against. Filtering to the eight protocol phases still yields the breakdown this
+   section exists for.
+
+2. **The sixteen mandated keys are always present, always in the order above, always with the
+   meanings above. A producer may append its own keys after `bytes_sent` and before `timestamp`,
+   documented here beside the producer.** Currently:
+   - `model/` oracle rows add `ndcg_at_20`, `recall_at_20`, `svd_subspace_angle_rad`.
+   - `bench/bench_dpf` rows add `domain_bits`, `op`, `ring`, `iters`, `rep`, `batch_ms`.
+
+3. **`wall_ms` is per operation, not per batch.** The batch size travels as an `iters` extra, so
+   batch time is recoverable by multiplying. One row is emitted per repetition and nothing is
+   aggregated inside a producer, because aggregation would hide the distribution and the raw file
+   is meant to be raw.
+
+4. **`d` means the embedding dimension and nothing else.** DPF rows leave it null and carry
+   `domain_bits` as an extra instead. `domain_bits` is deliberately **not** derived from `n`:
+   MovieLens-100K has 1682 items in a 2048-entry domain, so a real PIR row will carry `n = 1682`
+   with `domain_bits = 11` and the two genuinely differ. `n` is the item count, `2^domain_bits` is
+   the padded domain.
+
+**Measurement caveat, recorded because it is large.** Absolute timings from `bench_dpf` on the
+development laptop vary by up to roughly 4x between back-to-back runs, consistent with thermal
+throttling: within a single run the spread across repetitions is only 1.1x to 1.7x. Ratios between
+operations in the same run are therefore far more trustworthy than absolute figures, and any
+absolute number quoted from `profile: local` should be read as an order of magnitude. Every
+repetition is retained in the JSONL with its own timestamp, so the drift is visible rather than
+averaged away.
 
 **Figures are never hand-edited and never produced outside `make figures`.** Raw JSONL is committed
 so results survive a machine change; figures are not.
@@ -409,3 +443,7 @@ ranking of approaches is expected to change between them and **that change is th
 | 2026-09-06 | **No DCF and no oblivious top-*k* in S1** | The comparison gate's only consumers are `Trunc_t` and `ApproxNormalize`, both of which are S2. And per the 2026-08-20 correction the user selects top-*k* locally from the reconstructed score vector, so the servers never learn `T` regardless. §6's `SEL_SORT`/`SEL_TOURN` apparatus and §7.1's claim that a DPF and a DCF are the same primitive are both superseded. [NUDGE]'s own repository keeps `dcf/` and `multdpf/` separate, which corroborates the distinction. |
 | 2026-09-06 | §2's `ell = 10` is retained, now on evidence rather than by default | Measured: nDCG@20 stays within 0.5% across `ell` from 10 to 400 while the SVD subspace angle falls five orders of magnitude. Since `ell` multiplies the only interactive cost in training, this makes the 40× communication saving free. See `docs/finding-ell-vs-quality.md`. |
 | 2026-09-06 | Phase 2's exit criterion drops `tcpdump` for a channel-boundary transcript plus a distinguisher experiment | There is no `tcpdump` on Windows. A transcript recorded at the channel boundary is better provenance than a packet capture, and a distinguisher run over many trials is stronger evidence than one capture looking random, because it demonstrates an adversary *failing* rather than bytes *appearing* random. |
+| 2026-09-06 | **"Exhaustive to `d ≤ 16`" is split into two claims with two bounds** | REQUIREMENTS §7 asks for exhaustive correctness and §7.1 states the invariant over `EvalFull`, so the headline claim is carried by `EvalFull` (every alpha against every x) and `Eval` is bridged to it by a separate index-by-index agreement check. Conflating them is why the target looked infeasible: every-alpha-every-x via `EvalFull` costs `4^D · 68 ns` against `4^D · 34D ns` via `Eval`, i.e. 8× less at `d=16`. The cheap path is also the one matching the spec's own wording. |
+| 2026-09-06 | Default `make test` covers `d ≤ 11` exhaustively; the full `d ≤ 16` sweep is opt-in via `make test-exhaustive` | The full sweep is ~15 minutes. A suite that takes fifteen minutes stops being run, and then it stops catching anything. `d = 11` stays in the default tier because 1682 ML-100K items pad to 2048, so it is the domain the demo actually runs. |
+| 2026-09-06 | Exhaustive-sweep `beta` is derived per alpha rather than fixed | The subtlest line in `Gen` is the `(-1)^{t1}` factor on the final correction word, and a single fixed `beta` tested it at exactly one value per ring across billions of leaf checks. A `splitmix64` of `(domain_bits, alpha)` costs nothing and keeps failures reproducible. |
+| 2026-09-06 | Benchmarks write JSONL to stdout; the Makefile does the redirect | Keeps the binary a pure producer with no file I/O and no cwd assumption, and makes append-only-ness visible in the recipe rather than buried in C++. The bench link rule carries a `FORCE` prerequisite because make does not track `CXXFLAGS`, so an unchanged bench source at a new HEAD would otherwise emit rows stamped with the previous commit's SHA. |

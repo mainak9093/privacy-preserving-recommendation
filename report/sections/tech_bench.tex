@@ -1,0 +1,103 @@
+\section{What the primitive costs}
+\label{sec:tech:bench}
+
+Correctness settles whether the construction is right. This section settles
+whether it is affordable, which is the question that decides if the delivery
+layer is buildable at all.
+
+\subsection{How the numbers are produced}
+\label{sec:tech:bench:harness}
+
+Every measurement is emitted as one JSON object per line, carrying the fields
+fixed by the design draft: the commit hash, the host, the network profile, the
+parameter tuple, the pipeline stage and phase, wall time, and bytes sent. The
+commit hash, host and timestamp are filled by the emitter rather than by the
+caller, so a row cannot exist without provenance. The phase is validated
+against the permitted set on the way out, because a misspelled phase produces a
+row that a plotting script silently drops, and that is discovered days later.
+
+Two conventions are worth stating. Wall time is recorded \emph{per operation},
+with the batch size carried alongside so batch time is recoverable. And one row
+is written per repetition, never an aggregate, because the raw file is meant to
+be raw and aggregation inside the producer would hide the distribution.
+
+The benchmark writes to standard output and its human-readable table to
+standard error, with the redirection living in the build system. The binary
+therefore has no file handling and no assumption about the working directory.
+
+Guarding against the compiler optimising away the work being timed is partly
+structural, since the primitive lives in a separate translation unit with
+link-time optimisation switched off, so its bodies are not visible to be
+elided. That would stop being true the moment anyone enabled it, so every
+result is additionally accumulated into a live value that is forced to memory
+and printed as a checksum. Query indices are precomputed outside the timed
+region, because generating them inside it would time the generator, and a
+strictly increasing sweep would give the branch predictor an unrealistically
+easy task on the tree path. The whole-domain output buffer is allocated once,
+outside every loop, since a freshly zeroed eight megabyte buffer per call would
+measure the page fault handler rather than the primitive.
+
+\subsection{Measured cost}
+\label{sec:tech:bench:results}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Median of five repetitions, 64-bit ring unless stated, on the
+development laptop with no network involved. Read the ratios rather than the
+absolute figures, for the reason given below.}
+\label{tab:tech:bench}
+\begin{tabular}{@{}rrrrr@{}}
+\toprule
+domain bits & $\Gen$ ($\mu$s) & $\Eval$ ($\mu$s) &
+$\EvalFull$ ($\mu$s) & $\EvalFull$, $\bits=128$ ($\mu$s) \\
+\midrule
+8  & 0.40 & 0.27 & 18.4   & 52.4    \\
+10 & 1.40 & 0.31 & 81.9   & 199.1   \\
+11 & 1.76 & 0.44 & 281.0  & 440.8   \\
+12 & 1.97 & 0.47 & 379.9  & 889.5   \\
+14 & 1.74 & 0.43 & 1352.7 & 4483.8  \\
+16 & 1.93 & 0.53 & 5536.0 & 14343.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three things follow.
+
+\emph{The delivery layer is affordable at the scale this project targets.} At
+eleven domain bits, which is the padded MovieLens-100K catalogue, one server
+answering one query costs a single whole-domain evaluation, measured at roughly
+$0.28$~ms. Key generation on the client is under two microseconds and the key
+itself is 227 bytes. Nothing here is close to being the bottleneck.
+
+\emph{Whole-domain evaluation earns its place.} Evaluating the entire domain
+through repeated single-point evaluation is between three and four times slower
+than the depth-first whole-domain pass across the range measured, because the
+tree walk is shared rather than repeated from the root for every index. That
+ratio is the entire justification for the second entry point existing.
+
+\emph{Key generation is not dominated by drawing randomness.} A separate
+measurement of a thirty-two byte draw from the operating system generator gives
+about $0.07\,\mu$s, so the two draws a key needs account for well under a
+tenth of generation time even at the smallest domain. This was worth checking
+rather than assuming, because if it had gone the other way the sensible
+optimisation would have been buffering randomness rather than touching the
+tree, and that is not where the cost is.
+
+\subsection{A caveat about the absolute figures}
+\label{sec:tech:bench:caveat}
+
+These numbers were taken on a laptop. Running the benchmark repeatedly in quick
+succession produced absolute timings differing by as much as a factor of four
+between runs, while the spread across repetitions \emph{within} a single run
+stayed between $1.1$ and $1.7$. That pattern is consistent with thermal
+throttling rather than with measurement noise.
+
+The consequence is stated plainly rather than smoothed over. Ratios between
+operations measured in the same run are trustworthy. Absolute figures should be
+read as orders of magnitude, and the conclusions above are drawn only from
+ratios and from margins wide enough that a factor of four does not change them.
+Every repetition is retained in the raw file with its own timestamp, so the
+drift is visible to anyone who looks rather than being averaged away. Obtaining
+figures that would survive being quoted precisely needs a machine that is not
+thermally constrained, and that is deferred rather than faked.
