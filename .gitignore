@@ -14,10 +14,16 @@ graphify-out/
 # ─────────────────────────────────────────────────────────────
 #  Data — downloaded by scripts/fetch_data.py, never committed
 # ─────────────────────────────────────────────────────────────
-data/
+# ANCHORED with a leading slash, deliberately. An unanchored "data/" matches a
+# directory of that name at ANY depth, which silently swallowed
+# tests/data/fixedpoint_vectors.txt, the committed cross-language contract
+# vectors. That file has to be in the repo or the boundary test cannot run on a
+# fresh clone. Only the top-level MovieLens download is meant to be ignored.
+/data/
 model/out/
 *.bin
 !tests/**/*.bin
+!tests/data/**
 
 # ─────────────────────────────────────────────────────────────
 #  Generated artefacts

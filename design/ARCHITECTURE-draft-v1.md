@@ -279,7 +279,15 @@ Boyle–Gilboa–Ishai GGM-tree construction, written by us.
 ### 7.2 The read
 
 The user reconstructs `T` locally, then issues `k` DPF-PIR reads against the replicated catalogue
-`D`. Each server does one `EvalFull` and an inner product against `D`; the shares sum to `D[T_j]`.
+`D`. Each server does one `EvalFull` and an inner product against `D`; the two answers
+**differ** by `D[T_j]`.
+
+> **Corrected 2026-09-08.** This line previously said the shares "sum to" the record. That is the
+> textbook BGI convention, where `Eval_0 + Eval_1 = f(x)`. This project uses the **difference**
+> convention throughout, fixed by §7.1's stated invariant and implemented in `dpf.hpp`, which omits
+> the `(-1)^party` factor. The implementation and the exhaustive tests are right; the prose here had
+> drifted. Reconstruction is
+> `Σ_j (EvalFull(k0)[j] − EvalFull(k1)[j]) · D[j][w] = D[alpha][w]` for each ring word `w`.
 
 **Records are fixed width** (`L = 256 B` for metadata; content records padded to a fixed block
 count). Variable width leaks through response size — this is a *security* requirement, not a

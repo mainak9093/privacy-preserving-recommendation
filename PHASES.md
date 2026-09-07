@@ -129,7 +129,7 @@ Target: MovieLens-100K, `n = 1682`, `d = 16`, `k = 10`, localhost, `SEL_SORT`.
 | 2.3 | Replicated 2-of-3 sharing, PRF setup, three-process wiring | W2 | Three servers reconstruct a shared value |
 | 2.4 | Cleartext power-iteration MF in Python — **the quality oracle** | W3 | nDCG@20 reported on ML-100K |
 | 2.5 | Score computation `⟦a⟧·B`, seen-item masking | W3 | Shares reconstruct to oracle scores |
-| 2.6 | `SEL_SORT` oblivious top-*k* + oblivious swap | W3 | Matches plaintext top-*k* on random inputs |
+| 2.6 | ~~`SEL_SORT` oblivious top-*k* + oblivious swap~~ **CUT 2026-09-06** | W3 | Superseded: the user reconstructs the score vector and selects top-*k* locally, so no server learns `T` regardless. See the Decisions Log in `design/ARCHITECTURE-draft-v1.md §11` and the 2026-08-20 correction in `MEMORY.md §8`. The "Target: ... `SEL_SORT`" line above dies with it. |
 | 2.7 | DPF-PIR read layer, fixed-width records | W1 | Client prints real film titles |
 | 2.8 | TCP framing, batching, `flush()` | W1 + W2 | Three processes talk under load |
 | 2.9 | Benchmark harness, JSONL schema, `make figures` scaffold | W4 | One real figure end to end |

@@ -74,9 +74,81 @@ static void TestRing(const char* name) {
   CHECK(RT::ToDecimal(static_cast<Ring>(1234567890)) == "1234567890");
 }
 
+// ==========================================================================
+//  The CROSS-LANGUAGE half of the fixed-point contract.
+//
+//  tests/data/fixedpoint_vectors.txt is written by model/export.py and is
+//  COMMITTED, so this runs on a fresh clone with no export. It is the only
+//  part of the Python-to-C++ boundary testable without a 12 MB model, and the
+//  boundary is where endianness, sign extension and t-versus-2t scale errors
+//  live.
+//
+//  A missing file is a FAILURE, not a skip: the file is committed, so its
+//  absence means something deleted it.
+// ==========================================================================
+static void TestCrossLanguageContract() {
+  const char* kPath = "tests/data/fixedpoint_vectors.txt";
+  std::FILE* fh = std::fopen(kPath, "r");
+  if (!fh) {
+    CHECK_MSG(false, std::string("cannot open ") + kPath +
+                         " (it is committed, so absence is a real failure)");
+    return;
+  }
+
+  int file_t = -1;
+  int checked = 0;
+  char line[512];
+  while (std::fgets(line, sizeof(line), fh)) {
+    if (line[0] == '#' || line[0] == '\n' || line[0] == '\r') continue;
+
+    int t_val = 0;
+    if (std::sscanf(line, "t %d", &t_val) == 1) {
+      file_t = t_val;
+      // The exporter's t must match this build's, or every vector below is
+      // scaled wrong and the mismatch would look like an encoding bug.
+      CHECK_MSG(file_t == kFracBits,
+                "vector file was written at t=" + std::to_string(file_t) +
+                    " but this build uses t=" + std::to_string(kFracBits));
+      continue;
+    }
+
+    double v = 0.0;
+    long long want = 0;
+    if (std::sscanf(line, "%lf %lld", &v, &want) != 2) continue;
+
+    const u64 got = Encode<u64>(v);
+    CHECK_MSG(static_cast<long long>(got) == want,
+              "Encode(" + std::to_string(v) + ") gave " +
+                  std::to_string(static_cast<long long>(got)) + ", Python said " +
+                  std::to_string(want));
+
+    // The 128-bit ring must agree on every value the 64-bit ring represents,
+    // since the two share one encoding convention.
+    const u128 got128 = Encode<u128>(v);
+    CHECK_MSG(static_cast<long long>(static_cast<i128>(got128)) == want,
+              "u128 Encode disagrees with u64 at " + std::to_string(v));
+
+    // Byte order: what Python packed with '<q' is what FromBytes must read.
+    std::uint8_t buf[8];
+    for (int i = 0; i < 8; ++i)
+      buf[i] = static_cast<std::uint8_t>((static_cast<std::uint64_t>(want) >> (8 * i)) & 0xff);
+    CHECK_MSG(RingTraits<u64>::FromBytes(buf) == got,
+              "little-endian round trip failed at " + std::to_string(v));
+
+    ++checked;
+  }
+  std::fclose(fh);
+
+  CHECK_MSG(file_t == kFracBits, "vector file carried no 't' line");
+  CHECK_MSG(checked >= 20,
+            "only " + std::to_string(checked) + " vectors checked, expected >= 20");
+  std::printf("  cross-language contract: %d vectors agree with Python\n", checked);
+}
+
 int main() {
   std::printf("test_ring\n");
   TestRing<u64>("u64");
   TestRing<u128>("u128");
+  TestCrossLanguageContract();
   return ::oblivrec_test::Report("test_ring");
 }

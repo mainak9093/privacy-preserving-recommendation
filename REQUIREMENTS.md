@@ -159,8 +159,18 @@ of `B` **and is revealed in the clear**; finally `A := U · Bᵀ`.
 
 ### D5 — Private serving and private delivery (must ship) · W1 + W3
 **This is our contribution over [NUDGE].**
-- **D5.1** Score computation `⟦scores⟧ = ⟦a⁽ⁱ⁾⟧ · B`, seen-item masking, oblivious top-*k*
-  selection over the shared score vector, shares sent to the user.
+- **D5.1** Score computation `⟦scores⟧ = ⟦a⁽ⁱ⁾⟧ · B`, seen-item masking, ~~oblivious top-*k*
+  selection over the shared score vector~~, shares sent to the user.
+
+  > **Amended 2026-09-08.** The oblivious top-*k* clause is **cut**, per the 2026-09-06 Decisions
+  > Log row in `design/ARCHITECTURE-draft-v1.md §11`. Reason, from the 2026-08-20 correction in
+  > `MEMORY.md §8`: the servers send shares of the **score vector** and the **user reconstructs it
+  > and selects top-*k* locally**, so no server learns `T` whether or not an oblivious selector
+  > exists. The apparatus would protect something already protected, and its comparator would need
+  > a DCF, whose only real consumers (`Trunc_t`, `ApproxNormalize`) are S2.
+  >
+  > D5.1 therefore reads: score computation, seen-item masking, shares sent to the user. The
+  > `F_serve` ideal functionality in §3.2 is unchanged, since it never said *how* top-*k* is taken.
 - **D5.2** **Private delivery:** the user reconstructs `T` locally and fetches the actual content
   records `D[T]` by DPF-PIR against the replicated catalogue, so no server learns which items were
   recommended or consumed. Fixed-width records; variable width leaks through response size.
@@ -213,7 +223,7 @@ This is a two-halved system and **12 weeks is tight**. The halves are deliberate
 
 | Stage | Contains | If we run out of time |
 |---|---|---|
-| **S1 — Serving + delivery** (D2, D5) | DPF, PIR delivery, oblivious top-*k*, on a model trained *in the clear* | **Ships regardless.** A complete, demonstrable, benchmarkable system on its own. |
+| **S1 — Serving + delivery** (D2, D5) | DPF, PIR delivery, ~~oblivious top-*k*~~ (cut 2026-09-06, see D5.1), on a model trained *in the clear* | **Ships regardless.** A complete, demonstrable, benchmarkable system on its own. |
 | **S2 — Private training** (D1, D3, D4) | 3PC substrate, truncation, normalization, power iteration | Degrade `d`, `ℓ`, and dataset size before dropping it. Report honestly what scale we reached. |
 | **S3 — The composition** (D5.3, D6 B1–B3, D7) | End-to-end loop and the comparative evaluation | The headline result. |
 

@@ -66,9 +66,21 @@ struct DpfKey {
   std::vector<CorrectionWord> cw;   // one per level, size == domain_bits
   Ring          cw_last = 0;        // the final ring correction
 
-  // Packed wire format: 16 + domain_bits*17 + sizeof(Ring) bytes.
-  // The party byte and domain_bits are carried too, so a deserialised key is
-  // self-describing.
+  // Packed wire format, self-describing:
+  //   1 (party) + 4 (domain_bits) + 16 (seed)
+  //     + domain_bits * (16 seed + 1 tL + 1 tR)
+  //     + sizeof(Ring) (cw_last)
+  //   = 21 + 18*domain_bits + sizeof(Ring) bytes.
+  //
+  // At domain_bits = 11 with b = 64 that is 227 bytes, which is the figure the
+  // report quotes for the MovieLens-100K demo.
+  //
+  // An earlier version of this comment said "16 + domain_bits*17 +
+  // sizeof(Ring)", which was wrong twice over: it omitted the 5-byte header and
+  // counted 17 bytes per level rather than 18. It would have given 211 at
+  // domain_bits = 11. SizeBytes() was always right and a test asserts it equals
+  // the real serialised length, so nothing was built on the wrong number, but
+  // anyone sizing a buffer from the comment would have been 16 bytes short.
   std::vector<std::uint8_t> Serialize() const;
   static DpfKey Deserialize(Span<const std::uint8_t> in);
   std::size_t SizeBytes() const;
