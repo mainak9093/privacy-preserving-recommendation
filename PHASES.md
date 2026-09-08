@@ -126,20 +126,26 @@ Target: MovieLens-100K, `n = 1682`, `d = 16`, `k = 10`, localhost, `SEL_SORT`.
 |---|---|---|---|
 | 2.1 | Harden the Phase-1 DPF: `EvalFull`, AES-NI PRG, serialisation, ring template | W1 | `tests/test_dpf.cpp` exhaustive to `d = 16` |
 | 2.2 | FSS zero-test and integer-comparison gates on top of the DPF | W1 | Matches cleartext oracle |
-| 2.3 | Replicated 2-of-3 sharing, PRF setup, three-process wiring | W2 | Three servers reconstruct a shared value |
+| 2.3 | Replicated 2-of-3 sharing, PRF setup, ~~three-process wiring~~ | W2 | **PARTIAL 2026-09-10.** Sharing done (`include/oblivrec/share.hpp`, 500-iteration split/reconstruct/linearity tests); three servers do reconstruct a shared value. The **process wiring is DEFERRED to Phase 3** -- the three parties are three sets of shares in one process, not three processes over a socket. See the Decisions Log and `docs/threat-model.md` section 5. |
 | 2.4 | Cleartext power-iteration MF in Python — **the quality oracle** | W3 | nDCG@20 reported on ML-100K |
 | 2.5 | Score computation `⟦a⟧·B`, seen-item masking | W3 | Shares reconstruct to oracle scores |
 | 2.6 | ~~`SEL_SORT` oblivious top-*k* + oblivious swap~~ **CUT 2026-09-06** | W3 | Superseded: the user reconstructs the score vector and selects top-*k* locally, so no server learns `T` regardless. See the Decisions Log in `design/ARCHITECTURE-draft-v1.md §11` and the 2026-08-20 correction in `MEMORY.md §8`. The "Target: ... `SEL_SORT`" line above dies with it. |
 | 2.7 | DPF-PIR read layer, fixed-width records | W1 | Client prints real film titles |
-| 2.8 | TCP framing, batching, `flush()` | W1 + W2 | Three processes talk under load |
-| 2.9 | Benchmark harness, JSONL schema, `make figures` scaffold | W4 | One real figure end to end |
-| 2.10 | B1 cleartext + B5 full-download baselines | W4 | Numbers in `bench/results/` |
-| 2.11 | **First draft of the threat model** (ARCHITECTURE §9) | W4 | `docs/threat-model.md` exists |
+| 2.8 | ~~TCP framing, batching, `flush()`~~ **DEFERRED 2026-09-10** | W1 + W2 | Moved to Phase 3 to protect the Milestone 2 deliverable. `src/net/` is empty and the Makefile's `-lws2_32` is currently unused. **Consequence, stated rather than buried:** the amended Phase 2 exit criterion (channel transcript + distinguisher) is **NOT met**, and message-size obliviousness rests on the construction rather than on a demonstration. |
+| 2.9 | Benchmark harness, JSONL schema, `make figures` scaffold | W4 | **done 2026-09-09.** `bench/scripts/make_figures.py`; **four** figures, all regenerated from JSONL, none hand-edited (RULES B5). |
+| 2.10 | B1 cleartext + B5 full-download baselines | W4 | **done 2026-09-10.** `bench/bench_baseline.cpp` -> `bench/results/bench_baseline.jsonl`. B1 260 B / 4.7 ns, DPF-PIR 483 B / 0.242 ms, B5 430,592 B / 0.045 ms. **446x fewer bytes than B5, and slower in CPU than both** -- crossover at 8.0 Gbit/s. |
+| 2.11 | **First draft of the threat model** (ARCHITECTURE §9) | W4 | **done 2026-09-10.** `docs/threat-model.md`, with §9.3 promoted from a proposal to a **measurement**. |
 | 2.12 | Two-page mid-term report | All | **Sep 12** |
 
 **Exit criterion — the demo that defines this phase:** `./demo --user 42` returns sensible film
-recommendations *and fetches the records*, while `tcpdump` on the server links shows nothing but
-pseudorandom bytes.
+recommendations *and fetches the records* — **MET 2026-09-08.** Ten real titles, each fetched by
+two-server DPF-PIR, verified byte-exact against a cleartext lookup and agreeing with the Python
+oracle position-for-position.
+
+> The wire half of this criterion is **NOT met.** The original `tcpdump` clause was amended on
+> 2026-09-06 to a channel-boundary transcript plus a distinguisher experiment; both need the
+> networking of 2.3/2.8, which was deferred on 2026-09-10. Recorded here rather than quietly
+> dropped: nothing in this phase has been observed on a wire.
 
 ---
 

@@ -221,33 +221,77 @@ def fig_ell(rows):
 
 
 # --------------------------------------------------------------------------
-#  F3 -- the private read against its baselines. Day 10; the baseline rows do
-#  not exist yet, so this skips cleanly rather than inventing them.
+#  F3 -- the private read against its two baselines, at the operating point.
+#
+#  Deliberately NOT a curve against domain size. Catalogue::LoadMovieLens reads
+#  the real 1682-item file; there is no synthetic catalogue, and plotting a
+#  sweep would mean inventing one. The bytes-against-domain-size story is
+#  already carried analytically by F2.
+#
+#  The two panels must be read together, and the second is the unflattering
+#  one. Showing only bytes would be advocacy rather than evaluation.
 # --------------------------------------------------------------------------
-def fig_pir_cost(dpf_rows, base_rows):
-    pir = [r for r in dpf_rows if r.get("phase") == "pir"]
-    if not pir:
-        print("  SKIP fig_pir_cost: no pir-phase rows")
-        return False
+def fig_pir_cost(base_rows):
     if not base_rows:
-        print("  SKIP fig_pir_cost: no baseline rows yet (Day 10, task 2.10)")
+        print("  SKIP fig_pir_cost: no baseline rows (run mingw32-make bench)")
         return False
 
-    by_db = collections.defaultdict(list)
-    for r in pir:
-        by_db[r["domain_bits"]].append(r["wall_ms"])
-    db = sorted(by_db)
-    med = [float(np.median(by_db[k])) for k in db]
+    by_op = collections.defaultdict(list)
+    for r in base_rows:
+        by_op[r.get("op")].append(r)
 
-    fig, ax = plt.subplots()
-    ax.plot(db, med, color=C_ATTACK, marker="o", ms=4,
-            label="DPF-PIR answer (one server)")
-    ax.set_yscale("log")
-    ax.set_xlabel("domain bits")
-    ax.set_ylabel("median wall time (ms)")
-    ax.set_title("Cost of a private read", fontsize=9)
-    ax.legend(fontsize=7.5)
+    order = ["b1_cleartext", "dpf_pir_answer", "b5_fulldownload"]
+    label = {"b1_cleartext": "B1\ncleartext\n(no privacy)",
+             "dpf_pir_answer": "DPF-PIR\n(this work)",
+             "b5_fulldownload": "B5\nfull download\n(trivially private)"}
+    colour = {"b1_cleartext": C_FLOOR,
+              "dpf_pir_answer": C_ATTACK,
+              "b5_fulldownload": C_CONTROL}
+
+    present = [o for o in order if by_op.get(o)]
+    if not present:
+        print("  SKIP fig_pir_cost: baseline rows carry no recognised op")
+        return False
+
+    byts = [by_op[o][0]["bytes_sent"] for o in present]
+    tms = [float(np.median([r["wall_ms"] for r in by_op[o]])) for o in present]
+    x = np.arange(len(present))
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.0, 3.4))
+    for ax, vals, ylab, title in (
+            (ax1, byts, "bytes per query, one server",
+             "Communication"),
+            (ax2, tms, "median server time per query (ms)",
+             "Server computation")):
+        ax.bar(x, vals, color=[colour[o] for o in present], width=0.6)
+        ax.set_yscale("log")
+        ax.set_xticks(x)
+        ax.set_xticklabels([label[o] for o in present], fontsize=7.5)
+        ax.set_ylabel(ylab)
+        ax.set_title(title, fontsize=9)
+        ax.grid(axis="x", visible=False)
+        for xi, v in zip(x, vals):
+            ax.annotate(f"{v:,.0f}" if v >= 1 else f"{v:.2g}",
+                        xy=(xi, v), xytext=(0, 3), textcoords="offset points",
+                        ha="center", fontsize=7.5)
+        ax.set_ylim(top=max(vals) * 6)
+
     save(fig, "fig_pir_cost.pdf")
+
+    # State the trade in the console too, so a run reports its own conclusion.
+    d = dict(zip(present, zip(byts, tms)))
+    if "dpf_pir_answer" in d and "b5_fulldownload" in d:
+        pb, pt = d["dpf_pir_answer"]
+        bb, bt = d["b5_fulldownload"]
+        # PIR talks to two servers; B5 to one.
+        extra_ms = 2 * pt - bt
+        saved_bytes = bb - 2 * pb
+        if extra_ms > 0 and saved_bytes > 0:
+            bw = saved_bytes / (extra_ms / 1000.0)      # bytes per second
+            print(f"    trade: {bb / (2 * pb):.0f}x fewer bytes, "
+                  f"{extra_ms:.3f} ms extra CPU")
+            print(f"    -> PIR wins below {bw * 8 / 1e9:.1f} Gbit/s, "
+                  f"i.e. on any real network")
     return True
 
 
@@ -262,7 +306,7 @@ def main():
     made += bool(fig_attack(leak))
     made += bool(fig_keysize())
     made += bool(fig_ell(ell))
-    made += bool(fig_pir_cost(dpf, base))
+    made += bool(fig_pir_cost(base))
 
     print(f"\n{made} figure(s) written to {FIGDIR}/")
     if made == 0:

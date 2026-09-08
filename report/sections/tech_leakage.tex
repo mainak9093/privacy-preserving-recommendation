@@ -1,0 +1,146 @@
+\section{What an observer learns without the private read}
+\label{sec:tech:leakage}
+
+The previous section built a private read. This one measures what happens
+without it, and it is the strongest result we have: it is the quantitative
+answer to why the delivery layer must be private at all, and neither reference
+paper reports it, because neither implements both halves of the system.
+
+\subsection{Why a fetch is not one bit}
+\label{sec:tech:leakage:why}
+
+\nudgeplain{} publishes the item embedding matrix $\itemembed$ in the clear.
+That is the design and not an oversight: each converged row of $\itemembed$ is
+opened before the next is computed, which is what makes \textsc{SetOrthogonal}
+a Gram--Schmidt against \emph{public} vectors and keeps the whole
+power-iteration approach affordable under secret sharing.
+
+The consequence is the one this section measures. $\itemembed$ is a complete
+latent-factor model of the catalogue, known to everyone. So an adversary who
+observes \emph{which} records a user fetched does not learn $j$ isolated facts;
+each fetch is a constraint on the user's private embedding $\avec{i}$, a
+projection onto a basis the adversary already holds. The question is how fast
+those constraints collapse.
+
+\subsection{The experiment}
+\label{sec:tech:leakage:setup}
+
+The adversary is given $\itemembed$ and the \emph{indices} of the $j$ records
+the user fetched. It is given neither the scores nor $\userembed$. It computes
+$\hat{a}$, the centroid of the fetched items' unit embeddings, and we report
+$\cos(\hat{a}, \avec{i})$ together with the top-20 overlap between the ranking
+$\hat{a}$ induces and the user's true ranking. All 943 users, at
+$\dime = 16$, $\iters = 10$, against the same factorisation the demo serves.
+
+\paragraph{The control is the load-bearing part of the design.} A
+random-direction control would flatter any attack of this shape. Popular items
+sit near the top of nearly everyone's ranking, so an estimator can score well
+having learned only what is \emph{public}. The honest control therefore runs
+the identical estimator on the $j$ globally most-popular items, ignoring the
+user entirely, and the attack may claim only what it achieves \emph{above} that
+line. The random control is retained to show where the floor actually is.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{figures/fig_attack}
+\caption{Reconstruction of a user's private embedding from observed fetches
+alone, over all 943 users. \textbf{Left:} cosine against the true embedding,
+with the interquartile band on the attack. \textbf{Right:} the share of the
+user's \emph{next} twenty recommendations the adversary can name. Both panels
+share the same controls. The gap between the attack and the popularity control
+is the part that is genuinely about the individual rather than about what is
+popular, and it is stable at $+0.39$ to $+0.42$ across every $j$. Regenerated
+by \texttt{mingw32-make figures} from
+\texttt{bench/results/leakage\_attack.jsonl}.}
+\label{fig:attack}
+\end{figure}
+
+\subsection{Result}
+\label{sec:tech:leakage:result}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Recovery against the number of observed fetches. The overlap column
+excludes the $j$ items already seen, so it measures prediction of the user's
+\emph{next} recommendations rather than repetition of the ones handed to the
+adversary.}
+\label{tab:attack}
+\begin{tabular}{@{}rccc@{}}
+\toprule
+$j$ & $\cos(\hat{a}, a)$ & popularity control & next-20 overlap \\
+\midrule
+1  & \textbf{0.55} & 0.26 & 38\% \\
+2  & 0.66 & 0.26 & 47\% \\
+5  & 0.77 & 0.39 & 53\% \\
+10 & \textbf{0.84} & 0.44 & \textbf{56\%} \\
+20 & 0.89 & 0.47 & 55\% \\
+50 & 0.92 & 0.53 & 46\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{A single observed fetch already gives $\cos = 0.55$, twice the
+popularity control. Ten give $0.84$, and are enough to predict 56\% of that
+user's next twenty recommendations.} The random control sits at $0.003$.
+
+Two caveats we raise ourselves rather than wait to be asked.
+
+First, \emph{an individual user's cosine is not evidence}. The random control's
+interquartile spread is roughly $\pm 0.18$, near $1/\sqrt{\dime}$ at
+$\dime = 16$, so one user scoring $0.2$ is inside the noise of guessing. Only
+population means, and the margin over the popularity control, carry a claim.
+
+Second, the overlap column is \emph{non-monotone}: it peaks near $j = 10$ and
+falls by $j = 50$. That is a property of the metric, not a degradation of the
+attack. The $j$ observed items are excluded from the candidate pool, so as $j$
+grows the easy head of the ranking is progressively removed and what remains is
+a harder tail. The cosine rises monotonically throughout, which is the check
+that the estimate itself keeps improving.
+
+\paragraph{An honest negative result.} We also implemented a second, stronger
+estimator, which uses the fact that the fetched set is the \emph{top} of the
+score vector and so every fetched item outranks every unfetched one --- strictly
+more information than the centroid uses. It is \emph{worse} at every $j \ge 2$
+(0.81 against 0.92 at $j = 50$). We report it rather than quietly dropping it,
+because it sharpens the conclusion rather than weakening it: the cheap, obvious
+attack is already sufficient, so an adversary here needs no sophistication.
+
+\subsection{What it costs to close the gap}
+\label{sec:tech:leakage:cost}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{figures/fig_pir_cost}
+\caption{The private read against the two baselines a reader would otherwise
+propose, at the ML-100K operating point (1682 items, 256\,B records,
+$\mathrm{db} = 11$). Both panels must be read together; showing only the left
+one would be advocacy rather than evaluation.}
+\label{fig:pircost}
+\end{figure}
+
+Figure~\ref{fig:pircost} prices it. Against B5, downloading the entire
+catalogue and filtering at home --- which is trivially private and is the first
+thing a reader proposes, since 430\,KB is not obviously unreasonable ---
+DPF-PIR sends \textbf{446$\times$ fewer bytes} counting both servers.
+
+Against B1, a cleartext lookup with no privacy at all, it costs about
+\textbf{50{,}000$\times$ more server time}. And read plainly,
+\textbf{DPF-PIR is the slowest of the three in server CPU}, about
+$5\times$ slower than B5's local copy. Its advantage is entirely in
+communication.
+
+Setting the extra computation against the saved bytes, the private read is the
+better choice on any link slower than \textbf{8.0\,Gbit/s} --- which is to say
+on every real network, but we would rather state the crossover than imply there
+is not one. Absolute timings on this machine vary up to $4\times$ between
+back-to-back runs, so these are ratios taken within a single run, as
+Section~\ref{sec:tech:bench} explains.
+
+\medskip
+
+Together the two halves of this section make the argument the composition
+exists to make: without a private read, ten observed fetches recover the user;
+with one, the cost of hiding them is a few hundred bytes and a fraction of a
+millisecond. \nudgeplain{} leaves this to ``other means''. This is what those
+means cost.

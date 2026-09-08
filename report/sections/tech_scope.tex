@@ -37,3 +37,16 @@ Network emulation is not used. The development machine has neither Docker nor
 \texttt{tc netem}, so every measurement in this report is taken on the
 \texttt{local} profile and is labelled as such. Wide-area numbers are
 deferred rather than estimated.
+
+Networking itself is not implemented. The three servers in this slice are three
+sets of shares, held and combined in a single process exactly as the protocol
+specifies; there is no socket between them. The consequence is worth stating
+directly rather than leaving to be inferred. Every message in the design has an
+input-independent size, and every expanded \textsc{Dpf} coefficient is a
+pseudorandom share rather than a mostly-zero vector, so an observer on the wire
+would have nothing to distinguish --- but that is an argument from the
+construction, not a demonstration. The channel-boundary transcript and the
+distinguisher experiment that would demonstrate it have not been run. This is
+the largest open gap in the security story of this slice, and it is named here,
+in \texttt{docs/threat-model.md}, and in \texttt{PHASES.md} rather than being
+allowed to pass silently.
