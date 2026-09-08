@@ -38,11 +38,14 @@ bench/figures/
 !references/*.pdf
 # The built survey PDF ships alongside its sources.
 !report/survey.pdf
-# The technical report PDF, so teammates can read it without a LaTeX
-# toolchain. midterm.pdf is deliberately NOT un-ignored yet: the only build on
-# disk is the stale 2026-08-15 stub, and tracking it would ship a misleading
-# artefact. Add the exception on day 7 when the real two-page report is written.
+# The report PDFs, so teammates can read them without a LaTeX toolchain.
+# midterm.pdf was held back while the only build on disk was the stale
+# 2026-08-15 stub, since tracking that would have shipped a misleading
+# artefact. The real two-page report landed 2026-09-11, so the exception this
+# comment promised is now added. It is the GRADED deliverable; it belongs in
+# the repo.
 !report/midterm_technical.pdf
+!report/midterm.pdf
 # The presentation deck, built from report/slides/survey_slides.tex, which IS
 # tracked -- the deck is reproducible from source (needs the metropolis theme).
 !report/slides/survey_slides.pdf

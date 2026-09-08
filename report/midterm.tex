@@ -6,14 +6,19 @@
 %%
 %%  TWO PAGES.  That is the whole specification, and the grading is on
 %%  per-member contribution, not on technical depth.  Do not turn this into a
-%%  short version of the final report.
+%%  short version of the final report --- that material lives in
+%%  midterm_technical.tex, which is 17 pages and is offered as an appendix
+%%  rather than smuggled in here.
 %%
 %%  Source material: docs/contributions.md, kept up to date after EVERY work
 %%  session.  Reconstructing it here on 11 September is how groups lose these
 %%  marks.
 %%
-%%  STUB.  Written after the survey ships.  Shares preamble.tex and
-%%  references.bib with survey.tex and final.tex.
+%%  NOTE ON PLACEHOLDERS.  preamble.tex sets \draftfalse, so \todo{...}
+%%  renders as NOTHING.  Placeholders for the other members are therefore
+%%  written as visible body text on purpose.  A \todo here would silently
+%%  produce an empty subsection in the built PDF, which is exactly the failure
+%%  this milestone punishes.
 %%
 %%  Build:   latexmk -pdf midterm.tex
 %% ==========================================================================
@@ -21,7 +26,8 @@
 \input{preamble}
 
 % Two pages means tighter margins than the survey.
-\geometry{margin=1in}
+\geometry{margin=0.9in}
+\setlength{\parskip}{0.35em}
 
 \begin{document}
 
@@ -35,28 +41,100 @@
 
 \maketitle
 \thispagestyle{empty}
-
-\todo{Two pages, hard limit. Structure below is a proposal --- confirm the
-      expected format with the TA (open question Q7 in MEMORY.md).}
+\vspace{-2em}
 
 \section*{Project status}
-\todo{Three or four sentences. What the system is, what stage it is at, what
-      changed since the survey. Name the architecture decision taken at the
-      instructor meeting.}
+
+\textbf{OblivRec} composes the two systems the instructor pointed us to:
+\textsc{Nudge}'s three-server private matrix factorisation with
+\textsc{Pirsona}'s DPF-based private retrieval. That composition is the
+contribution. \textsc{Nudge}'s own non-goals state that it \emph{``relies on
+other means \ldots\ to let users fetch data items in a private way''}, and
+\textsc{Pirsona}'s training core is superseded --- so each paper leaves open
+exactly what the other supplies, and nobody has connected them.
+
+Since the survey we have built and verified the \textbf{serving and delivery
+half (S1)} end to end on MovieLens-100K, against a model factorised in the
+clear. \texttt{demo -{}-user 42 -{}-k 10} splits a user's embedding across three
+servers, scores all 1682 items locally on each, lets the user reconstruct and
+select the top ten, and then fetches each recommended record by two-server
+DPF-PIR --- returning ten real film titles, each verified byte-exact against a
+cleartext lookup. Private \emph{training} (S2) begins now and is due for the
+final report; no claim is made about it here.
+
+The strongest result is a measurement neither base paper reports. Because
+\textsc{Nudge} publishes the item embedding matrix in the clear by design, an
+observed fetch is not one bit of information but a projection onto a known
+basis. We show that \textbf{ten observed fetches recover a user's private
+embedding to $\cos = 0.84$ and predict 56\% of their next twenty
+recommendations} --- which is the quantitative reason the delivery layer has to
+be private at all.
 
 \section*{Per-member contributions}
-\todo{One short subsection per member, drawn from docs/contributions.md.
-      Each must name concrete artefacts --- components built, protocols
-      implemented, sections written, experiments run --- not effort.
-      Evidence is the git history; make sure it corroborates.}
 
-% \subsection*{...}
-% \subsection*{...}
-% \subsection*{...}
-% \subsection*{...}
+\subsection*{Mainak Sarkar (230619) --- W1, FSS core and delivery}
 
-\section*{Next steps}
-\todo{What remains before 6 November, and who is on what. Keep it to a short
-      list --- the schedule lives in PHASES.md, not here.}
+Wrote the entire implementation to date; every commit in the repository is
+evidence for this section.
+
+\begin{itemize}\itemsep0.15em
+  \item \textbf{The distributed point function}, from the Boyle--Gilboa--Ishai
+    construction rather than imported. Verified \emph{exhaustively}: every
+    $\alpha$ against every $x$ to 16 domain bits on $b=64$ and 15 on $b=128$
+    --- $7.16 \times 10^{9}$ leaf checks in 27 minutes. Keys are 227\,B at the
+    demo's operating point against 16\,KB for a naive query.
+  \item \textbf{Found and fixed a real security bug} in key generation: it
+    seeded a Mersenne Twister and used the output as DPF seed material. The
+    seeds \emph{are} the secret and MT19937 is reconstructible from 624
+    outputs, so an adversary with enough key material could rebuild the tree
+    and recover $\alpha$. Replaced with the OS CSPRNG, abort-on-failure.
+  \item \textbf{The catalogue and the DPF-PIR read layer} --- fixed-width
+    256\,B records, and a server answer that is one \texttt{EvalFull} plus an
+    unconditional inner product, with no data-dependent branch and no data
+    pattern, since every coefficient is a pseudorandom share.
+  \item \textbf{The serving path} --- 2-of-3 replicated sharing and
+    $\mathbf{a}\cdot\itemembed$ computed locally per server, which needs no
+    multiplication protocol because $\itemembed$ is public. All 1682 scores
+    match the independent Python oracle \emph{bit for bit}.
+  \item \textbf{The leakage analysis} described above, with a popularity
+    control so the result cannot be an artefact of popular items, plus the
+    \textbf{B1/B5 baselines} pricing the private read honestly (446$\times$
+    fewer bytes than downloading the catalogue, but slower in CPU than both
+    baselines; crossover at 8.0\,Gbit/s), and \texttt{docs/threat-model.md}.
+  \item \textbf{Four real bugs found by tests rather than by inspection},
+    including a Python/C++ rounding-mode disagreement and a
+    quantise-then-multiply error that shifted 1650 of 1682 reference scores by
+    an amount any tolerance-based check would have accepted.
+  \item All 11 sections of the survey report, the bibliography (66 DBLP-verified
+    entries), and the 17-page technical report offered as an appendix.
+\end{itemize}
+
+\subsection*{Shrasti Dwivedi (230982) --- W3, factorisation and serving}
+
+Milestone 1: delivered Part II of the recorded presentation (slides 10--16).
+
+\emph{Implementation contributions for this milestone are to be supplied by
+Shrasti and are not recorded in the repository at the time of writing. This
+section is deliberately left factual rather than filled in on her behalf.}
+
+\subsection*{Aditya Anand (230065) --- W2, 3PC substrate}
+
+\emph{Contributions for this milestone are to be supplied by Aditya and are not
+recorded in the repository at the time of writing.}
+
+\subsection*{Shravan Agrawal (230984) --- W4, evaluation and security}
+
+\emph{Contributions for this milestone are to be supplied by Shravan and are not
+recorded in the repository at the time of writing.}
+
+\section*{Next steps before 6 November}
+
+Private training (S2) is the remaining half and starts now: secret-shared power
+iteration, with $\mathrm{Trunc}_t$ and $\mathrm{ApproxNormalize}$ as the only
+interactive steps. Two items were deferred from this phase and are named rather
+than dropped --- the three-process networking, so that message-size
+obliviousness is \emph{demonstrated} on a wire and not only argued from the
+construction, and the wide-area measurements that need it. The schedule lives
+in \texttt{PHASES.md}.
 
 \end{document}
