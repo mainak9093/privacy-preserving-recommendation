@@ -1,0 +1,201 @@
+\section{Private serving and private delivery}
+\label{sec:tech:pir}
+
+This section covers the half of the system that is built and running: the user
+is scored against the catalogue without any server learning the user's
+embedding, and the resulting records are fetched without either serving party
+learning which records were fetched. Private \emph{training} is the next phase
+and is not claimed here.
+
+\subsection{The catalogue is fixed-width, and that is a security property}
+\label{sec:tech:pir:catalogue}
+
+A private read must return the same number of bytes whatever it reads, or the
+response length itself leaks the record. MovieLens-100K's \texttt{u.item} is
+variable-length text, so it is packed into a fixed record of $L = 256$ bytes.
+
+Two fields are dropped. Field~3, the video release date, is \emph{empty on all
+1682 lines} --- measured, not assumed --- and field~4, the IMDb URL, is the
+largest field and is used by nothing downstream. What remains is
+\texttt{id\,|\,title\,|\,date\,|\,19 genre flags}, whose longest instance is
+117 bytes of content, leaving 139 bytes of headroom inside $L$. Every record is
+checked against that budget at load time, so a future dataset with a longer
+title fails loudly at startup rather than truncating silently at answer time.
+
+Fields are carried with explicit one-byte length prefixes rather than a
+delimiter. Nine titles contain Latin-1 bytes and the file does not decode as
+UTF-8 at all, so it is read as bytes and never re-encoded; with arbitrary bytes
+in the payload, any delimiter choice risks colliding with content, whereas a
+length prefix cannot. Three records break a naive parser and each is handled
+explicitly: id~267 is \texttt{unknown} with an empty date and empty URL,
+id~1242 is the width driver, and one release date is \texttt{4-Feb-1971} rather
+than the \texttt{DD-Mon-YYYY} that every other date follows --- which never
+mattered, because dates are carried as opaque text and never parsed into a
+structured type.
+
+The 1682 items pad to a domain of $2048$, so $\mathrm{db} = 11$. Padding
+records are all-zero. This leaks nothing precisely because record width is
+fixed regardless of content: a fetch of a padding slot is indistinguishable
+from a fetch of a real one.
+
+\subsection{The private read}
+\label{sec:tech:pir:read}
+
+The client wants record $\alpha$ without either server learning $\alpha$. It
+generates a DPF key pair for the point function that is $1$ at $\alpha$, sends
+one key to each of $\party{0}$ and $\party{1}$, and each server expands its key
+over the whole domain and takes an inner product against the catalogue,
+
+\[
+  \mathrm{ans}_c[w] \;=\; \sum_{j=0}^{2^{\mathrm{db}}-1}
+    \EvalFull(k_c)[j] \cdot D[j][w],
+  \qquad c \in \{0,1\},
+\]
+
+over the $W = L / (\bits/8)$ ring words of a record ($W = 32$ at $\bits = 64$).
+Because $\EvalFull(k_0)[j] - \EvalFull(k_1)[j]$ is $1$ at $j = \alpha$ and zero
+elsewhere, the \emph{difference} of the two answers is exactly $D[\alpha]$.
+Note the difference rather than the sum: this project omits the $(-1)^c$ factor,
+per Section~\ref{sec:tech:dpf:sign}.
+
+Two properties carry the obliviousness claim, and they are worth separating
+because the second is the stronger one:
+
+\begin{enumerate}
+  \item The server touches \emph{every} record, in index order, with no
+    data-dependent branch. The loop bound is the domain size and nothing inside
+    the loop depends on $\alpha$.
+  \item Each expanded coefficient is a \emph{share}, so it is pseudorandom at
+    every index rather than zero at all but one. There is no data pattern for a
+    compiler to exploit or a cache-timing observer to see, even in principle.
+    This is strictly more than ``the code contains no branch''.
+\end{enumerate}
+
+The system has three servers but the DPF is $(2,2)$. We fix $\party{0}$ and
+$\party{1}$ as the key holders; all three hold the catalogue, which is public
+data, so replication costs nothing in privacy.
+
+\paragraph{What it costs.} At $\mathrm{db} = 11$ a query is a single
+\textbf{227-byte} key per server against a 2048-entry domain
+(Table~\ref{tab:tech:keysize}), against 16~KB for the naive one-hot query the
+same read would otherwise need: a $72\times$ reduction in upload. The server's
+work is one $\EvalFull$ plus $2^{11} \times 32$ ring multiply-accumulates.
+
+\paragraph{Verification.} Reads are checked byte-exactly against a cleartext
+lookup: 60 random indices at $\bits = 64$ and 20 at $\bits = 128$, plus both
+domain endpoints, padding slots, and rejection of a key whose domain width does
+not match the server's.
+
+One test in this group was wrong, and establishing that took more work than
+accepting it would have. A natural check --- ``no word of one server's share
+should equal the plaintext'' --- fails, with 18 of 32 words matching. That is
+not a leak. Records pad to 256 bytes while content never exceeds 117, and the
+trailing genre bytes are usually zero, so the upper words are identically zero
+across the \emph{entire} catalogue; any linear combination of zeros is zero,
+for every $\alpha$ equally. It is public structure, not a signal. The test now
+derives from the data which words actually vary --- 14 of 32 at $\bits = 64$
+and 7 of 16 at $\bits = 128$, which agree at 112 bytes and so cross-check each
+other --- and asserts only on those.
+
+\subsection{Scoring under secret sharing}
+\label{sec:tech:pir:serving}
+
+User embeddings $\userembed$ are secret; item embeddings $\itemembed$ are
+public, which is \textsc{Nudge}'s design and is what makes its power iteration
+cheap. The user's row is shared 2-of-3, and because $\itemembed$ is public,
+$\mathbf{s} = \avec{i} \cdot \itemembed$ is a \emph{linear map applied to a
+shared vector by a public matrix}. Each server computes its own share of all
+$\items$ scores entirely locally: no communication, no correlated randomness,
+no multiplication protocol, no rounds. This is the single largest saving in the
+serving path and it comes directly from $\itemembed$ being public.
+
+\paragraph{Scores stay at $2\fracbits$ scale.} Both factors are encoded at
+$\fracbits$ fractional bits, so the product carries $2\fracbits$. Truncating
+back to $\fracbits$ requires $\mathrm{Trunc}_\fracbits$, which is interactive
+and belongs to the training phase, so serving decodes at $2\fracbits$ instead.
+This is recorded rather than left implicit because getting it wrong scales
+every score by $2^{20}$, which is \emph{monotone} and therefore completely
+invisible in a ranking.
+
+\paragraph{The seen-item mask.} The ideal functionality sets already-rated
+items to $-\infty$, which a finite ring cannot represent. We use an additive
+shared vector carrying $-(2^{55})$ at seen positions and zero elsewhere;
+servers add it to their score shares, which is again local. Observed encoded
+scores peak near $9.7 \times 10^{12}$ and the ring floor is near
+$-9.2 \times 10^{18}$, so the sentinel sits about $3700\times$ below any real
+score and about $256\times$ above the floor. Both margins are asserted by a
+test rather than argued in prose. The comparison in the top-$\topk$ selection
+is \emph{signed}: comparing these two's-complement values as unsigned would
+sort masked items \emph{first}, and a smoke test inspecting only the head of
+the list would not notice.
+
+We state one thing plainly rather than overclaim it: in this phase the user
+reconstructs the score vector anyway, so masking server-side is
+\emph{equivalent} to masking client-side. It is implemented server-side because
+that is what the ideal functionality specifies and what the composed system
+will need once the servers do more than a linear map --- not because this phase
+requires it.
+
+\subsection{The float-to-ring boundary}
+\label{sec:tech:pir:boundary}
+
+Exactly one program converts a float into a ring element:
+\texttt{model/export.py}. Everything downstream trusts it, so it is tested as a
+contract rather than assumed. A committed file of 25 \texttt{<double> <int64>}
+pairs --- zero, both signs, the quantum and half the quantum, the observed
+extremes of $\userembed$, $\itemembed$ and the scores, and the two's-complement
+edge --- is read by the C++ test suite, so the boundary is checked on a fresh
+clone with no export run.
+
+It found two bugs immediately, both of which would have been hard to find
+later.
+
+\textbf{Rounding mode.} \texttt{numpy.rint} and Python's \texttt{round} use
+banker's rounding, half to even, so $\mathrm{rint}(0.5) = 0$; C++
+\texttt{std::round} rounds half away from zero, so $\mathrm{round}(0.5) = 1$.
+They disagree at every exact half-quantum. The contract test caught this on its
+first run. Python was changed to match C++, since C++ is what ships.
+
+\textbf{Quantise-then-multiply is not multiply-then-quantise.} The reference
+scores were originally computed by encoding the float product; the protocol
+multiplies encoded factors, which rounds $\dime$ times and then accumulates
+exactly. The two disagreed on \textbf{1650 of 1682 scores}, by up to
+$2.1 \times 10^{7}$ out of $4.3 \times 10^{12}$. That is about $5\times10^{-6}$
+relative and irrelevant to the ranking, which is exactly why it matters: any
+tolerance-based comparison would have accepted it, and the oracle would have
+been quietly wrong for every later exact test. The reference now computes what
+the protocol computes, in arbitrary-precision integers.
+
+Serving is therefore checked against the oracle by \textbf{exact} equality, not
+by tolerance. A linear map over a ring has no tolerance to spend, and a
+tolerance here would hide precisely the endianness, sign-extension and
+scale bugs the boundary is prone to. All 1682 scores match bit-for-bit.
+
+\paragraph{Ring width, measured.} An open question in the design was whether
+$\bits = 64$ suffices at MovieLens scale or whether $\bits = 128$ is needed.
+Measured on the actual factorisation: $\userembed$ peaks at $61.4$,
+$\itemembed$ at $0.219$ (every row has unit $L_2$ norm by construction), and at
+$\fracbits = 20$ the worst-case $\dime = 16$ accumulation is
+$\mathbf{47.8}$ \textbf{bits of the 63 available} --- roughly a $32{,}000\times$
+margin. Quantisation costs $\max|S_q - S| = 5.3 \times 10^{-5}$, far below the
+gaps between top-20 scores, so the ranking is preserved. So $\bits = 64$ is
+sufficient at this scale, and the implementation remains templated on the ring
+so the $\bits = 128$ arm is tested alongside it at every step.
+
+\subsection{End to end}
+\label{sec:tech:pir:demo}
+
+\texttt{demo --user 42 --k 10} runs the whole path: the embedding is split
+across three servers, each scores the catalogue locally, the user reconstructs
+and selects the top ten, and each of the ten records is then fetched by a
+two-server DPF-PIR read. It prints ten real film titles, and it checks itself
+twice: every fetched record is compared byte-for-byte against a cleartext
+lookup, and the ranking is compared position-for-position against the
+independently computed Python reference. Both agree.
+
+For user~42, masking the 112 items already rated in the training split, the top
+ten are \emph{The Princess Bride}, \emph{Indiana Jones and the Last Crusade},
+\emph{Toy Story}, \emph{Jerry Maguire}, \emph{Apt Pupil}, \emph{Good Will
+Hunting}, \emph{Back to the Future}, \emph{The Rock}, \emph{Mission:
+Impossible} and \emph{Aladdin} --- fetched at a cost of one 227-byte key per
+server per title, with neither server able to say which titles they were.

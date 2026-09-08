@@ -50,6 +50,12 @@ OBJ      := $(patsubst %.cpp,$(BUILD)/%.o,$(SRC))
 TESTSRC  := $(wildcard tests/test_*.cpp)
 TESTBIN  := $(patsubst tests/%.cpp,$(BUILD)/%.exe,$(TESTSRC))
 
+# src/apps/ is deliberately NOT in SRC: these translation units have main().
+# Linking them into the object list would give every test binary a second
+# entry point. They get their own pattern rule below.
+APPSRC   := $(wildcard src/apps/*.cpp)
+APPBIN   := $(patsubst src/apps/%.cpp,$(BUILD)/%.exe,$(APPSRC))
+
 BENCHSRC := $(wildcard bench/bench_*.cpp)
 BENCHBIN := $(patsubst bench/%.cpp,$(BUILD)/bench/%.exe,$(BENCHSRC))
 
@@ -57,9 +63,9 @@ BENCHBIN := $(patsubst bench/%.cpp,$(BUILD)/bench/%.exe,$(BENCHSRC))
 EXHAUSTIVE_BITS ?= 16
 CHECK_BITS      ?= 8
 
-.PHONY: all test test-exhaustive check bench figures clean check-toolchain FORCE
+.PHONY: all test test-exhaustive check bench figures clean check-toolchain apps demo FORCE
 
-all: check-toolchain $(TESTBIN)
+all: check-toolchain $(TESTBIN) $(APPBIN)
 
 # --------------------------------------------------------------------------
 # The guard. Compiles a 3-line translation unit and hard-fails if no object
@@ -85,6 +91,14 @@ $(BUILD)/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(BUILD)/%.exe: tests/%.cpp $(OBJ)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $< $(OBJ) -o $@ $(LDLIBS)
+
+# Same target pattern as the tests' rule. GNU make picks whichever rule has an
+# existing prerequisite, and no name is ever both tests/x.cpp and
+# src/apps/x.cpp, so the two cannot collide. The `test` loop iterates TESTBIN
+# rather than build/*.exe, so an app binary can never be run as a test.
+$(BUILD)/%.exe: src/apps/%.cpp $(OBJ)
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $< $(OBJ) -o $@ $(LDLIBS)
 
@@ -207,6 +221,16 @@ figures:
 	  echo "target, so figures stay unbuildable until it lands, deliberately."; \
 	  exit 1; }
 	$(PY) bench/scripts/make_figures.py
+
+# --------------------------------------------------------------------------
+#  The Phase 2 exit criterion. Needs data/ml-100k/ and model/out/, so it is a
+#  separate target rather than part of `test`: the suite must stay green on a
+#  fresh clone that has neither.
+# --------------------------------------------------------------------------
+apps: check-toolchain $(APPBIN)
+
+demo: $(BUILD)/demo.exe
+	./$(BUILD)/demo.exe --user 42 --k 10
 
 clean:
 	rm -rf $(BUILD)

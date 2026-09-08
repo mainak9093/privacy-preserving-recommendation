@@ -156,19 +156,52 @@ def main():
     nb = write_matrix(os.path.join(OUT, "B.bin"), B)
 
     # Scores stay at 2t. See the module docstring.
-    su = S[DEMO_USER]
-    enc_scores = [encode(x, 2 * T) for x in su]
+    #
+    # COMPUTED FROM THE ENCODED MATRICES, NOT FROM THE FLOAT PRODUCT.
+    #
+    # This distinction is not pedantic and it cost a test failure to find.
+    # Quantise-then-multiply is a different operation from
+    # multiply-then-quantise:
+    #
+    #   wrong:  encode(sum_k A[k]*B[k][j], 2t)     one rounding, at the end
+    #   right:  sum_k encode(A[k]) * encode(B[k][j])   d roundings, then exact
+    #
+    # The servers only ever hold ENCODED values, so the second is what the
+    # protocol computes and therefore what a reference must reproduce. The
+    # first disagreed with C++ on 1650 of 1682 scores, by up to 2.1e7 out of
+    # 4.3e12. That is about 5e-6 relative, which is invisible to any
+    # tolerance-based check and irrelevant to the ranking, but it would have
+    # left the oracle quietly wrong for every later exact comparison.
+    #
+    # Python integers are arbitrary precision, so this accumulates exactly;
+    # the int64 fit was already checked by the headroom assertion above.
+    a_enc = [encode(x) for x in A[DEMO_USER]]
+    b_enc = [[encode(x) for x in B[k]] for k in range(d)]
+    enc_scores = [sum(a_enc[k] * b_enc[k][j] for k in range(d))
+                  for j in range(n)]
+    for v in enc_scores:
+        if not (-(1 << 63) <= v < (1 << 63)):
+            raise OverflowError(
+                f"score {v} does not fit int64 at 2t={2 * T}; b=64 is too narrow")
     with open(os.path.join(OUT, "scores_u42.bin"), "wb") as fh:
         fh.write(pack_i64(enc_scores))
 
     # The expected answer, masking items the user already rated in training.
-    masked = su.copy()
-    masked[train[DEMO_USER] > 0] = -np.inf
-    top = np.argsort(-masked)[:10]
+    #
+    # Ranked on the ENCODED scores, for the same reason those are computed
+    # from encoded factors: that is what the system ranks. The float score is
+    # written alongside purely so the file is readable by a human.
+    su_float = S[DEMO_USER]
+    ranked = sorted(
+        (j for j in range(n) if train[DEMO_USER][j] == 0),
+        key=lambda j: (-enc_scores[j], j))
+    top = ranked[:10]
     with open(os.path.join(OUT, "top10_u42.txt"), "w", encoding="utf-8",
               newline="\n") as fh:
+        fh.write("# rank\titem\tencoded_score_2t\tfloat_score\ttitle\n")
         for rank, j in enumerate(top):
-            fh.write(f"{rank}\t{j}\t{su[j]!r}\t{titles.get(int(j), '?')}\n")
+            fh.write(f"{rank}\t{j}\t{enc_scores[j]}\t{float(su_float[j]):.9f}\t"
+                     f"{titles.get(int(j), '?')}\n")
 
     nvec = write_contract_vectors(A, B, S)
 
