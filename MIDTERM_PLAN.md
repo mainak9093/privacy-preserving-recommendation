@@ -1,5 +1,18 @@
 # Plan for the stretch before the mid-term (Sep 3 to Sep 12)
 
+> ## ⚠️ SUPERSEDED — kept for the record, do not plan from it
+>
+> **This document was written on 3 September, when it was true that no implementation code
+> existed. That is no longer the case.** All four "must have by Sep 12" items are done, and so is
+> item 5, the nice-to-have DPF-based fetch, which now runs end to end.
+>
+> **For the current status and for what is still unclaimed, read
+> [`docs/HANDOVER.md`](docs/HANDOVER.md).**
+>
+> This file is left in place unedited below because the proposed ownership split in §5 is still
+> the basis for the W1–W4 assignment, and because a plan that turned out to be wrong about its own
+> starting point is worth keeping honestly rather than quietly rewriting.
+
 **Status: PROPOSED.** This is written to be discussed and adjusted at our kickoff, not a plan
 already locked in. Nothing here should be started until we have agreed on it together.
 

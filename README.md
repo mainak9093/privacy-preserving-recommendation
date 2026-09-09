@@ -17,12 +17,25 @@ then **delivers the recommended content without any server learning which item w
                                                │
                       item embeddings B (public)  +  user embeddings ⟦A⟧ (shared)
                                                │
-                            ⟦scores⟧ = ⟦a⟧·B ──► oblivious top-k ──► ⟦T⟧
-                                               │
+                            ⟦scores⟧ = ⟦a⟧·B ──► user reconstructs, picks top-k
+                                               │      LOCALLY (see note)
                                   DPF-PIR fetch of the actual content
                                                │
                           the server never learns what you watched
 ```
+
+> **Note.** An earlier version of this diagram showed an *oblivious top-k* selector. That was
+> **cut on 2026-09-06**: the user reconstructs the score vector and selects locally, so no server
+> learns the selection whether or not an oblivious selector exists. See the Decisions Log in
+> `design/ARCHITECTURE-draft-v1.md` §11.
+
+---
+
+### 👉 Picking this project up? Read [`docs/HANDOVER.md`](docs/HANDOVER.md) first.
+
+It has the current status, a reading order, what is built and how to verify it, **and the list of
+unclaimed work** with file paths and acceptance criteria. Teammates filling in their mid-term
+contribution section should go straight to its sections 3 and 4.
 
 ## Why this shape
 
