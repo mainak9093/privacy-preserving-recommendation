@@ -22,6 +22,7 @@
 //  produced here can be quoted without it.
 // ==========================================================================
 #include "oblivrec/factor.hpp"
+#include "oblivrec/netprofile.hpp"
 
 #include <chrono>
 #include <cstdio>
@@ -215,6 +216,39 @@ int main(int argc, char** argv) {
               (unsigned long long)res.truncations);
   std::printf("  normaliser: %s -- %zu scalars revealed\n",
               res.normalizer.c_str(), res.revealed_norms.size());
+
+  // Task 3.10. Training never transmits -- the substrate counts what it would
+  // have sent -- so the honest way to get WAN numbers is to apply the cost
+  // model to those counters rather than to fake a transmission. See
+  // netprofile.hpp for what this does and does not model.
+  const NetProfile profiles[] = {kProfileLan, kProfileWanA, kProfileWanB};
+  std::printf("\n  projected wall time by network profile "
+              "(channel-level model, NOT netem):\n");
+  std::printf("    %-8s %-12s %-12s %-12s %s\n", "profile", "latency s",
+              "transfer s", "total s", "bound by");
+  for (const auto& np : profiles) {
+    const double lat = static_cast<double>(res.rounds) * np.rtt_ms;
+    const double tot = PredictedMs(res.rounds, res.bytes, np);
+    std::printf("    %-8s %-12.1f %-12.1f %-12.1f %s\n", np.name, lat / 1000.0,
+                (tot - lat) / 1000.0, tot / 1000.0,
+                Bottleneck(res.rounds, res.bytes, np));
+    if (jsonl) {
+      std::fprintf(jsonl,
+                   "{\"git_sha\": \"%s\", \"profile\": \"%s\", "
+                   "\"stage\": \"S2\", \"phase\": \"net\", "
+                   "\"op\": \"approxfactor_projected\", "
+                   "\"dataset\": \"ml-100k\", \"d\": %u, \"ell\": %u, "
+                   "\"t\": %u, \"b\": 64, \"rounds\": %llu, "
+                   "\"bytes_sent\": %llu, \"rtt_ms\": %.1f, "
+                   "\"mbps\": %.1f, \"wall_ms\": %.3f, "
+                   "\"bound_by\": \"%s\", \"emulation\": "
+                   "\"channel-level, not netem\", \"timestamp\": \"%s\"}\n",
+                   OBLIVREC_GIT_SHA, np.name, d, ell, t,
+                   (unsigned long long)res.rounds,
+                   (unsigned long long)res.bytes, np.rtt_ms, np.mbps, tot,
+                   Bottleneck(res.rounds, res.bytes, np), Now().c_str());
+    }
+  }
 
   // B, t-scaled, little-endian int64, the same format model/export.py writes.
   {

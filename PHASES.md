@@ -158,21 +158,21 @@ control agrees at 0.483.
 
 The long middle, and the hard half. Modules 2 (MPC) and 3 are being taught right now — use them.
 
-| # | Task | Owner |
-|---|---|---|
-| 3.1 | Non-interactive replicated matrix–vector product; the `MatVecProgram` abstraction | W2 |
-| 3.2 | **`Trunc_t`** — the improved 3-round protocol; benchmark against the naive variant | W2 |
-| 3.3 | **`ApproxNormalize`** — MSNZB seeding via simultaneous FSS comparisons + Newton–Raphson | W2 |
-| 3.4 | `SetOrthogonal` (Gram–Schmidt against the public rows of `B`) | W3 |
-| 3.5 | **`ApproxFactor`** — full power iteration, `d` components × `ℓ` rounds | W3 |
-| 3.6 | Deferred-truncation schedule; derive and assert the headroom bound at startup | W2 + W3 |
-| 3.7 | Convergence study: `ℓ` vs quality against the cleartext oracle | W3 |
-| 3.8 | Scale to MovieLens-1M (`m = 6040, n = 3706, d = 32`) | All |
-| 3.9 | **[PIRSONA] loop:** harvest shared consumption histories from the delivery queries | W1 + W3 |
-| 3.10 | `tc netem` profiles wired into Docker; sweeps run unattended | W4 |
-| 3.11 | B3 (private MF, cleartext fetch) and B4 (MP-SPDZ) baselines | W4 |
-| 3.12 | Threat model → full leakage profile + real/ideal simulation sketch | W4 |
-| 3.13 | Docker image + one-command reproducibility | W4 |
+| # | Task | Owner | Status |
+|---|---|---|---|
+| 3.1 | Non-interactive replicated matrix–vector product; `MatVecProgram` | W2 | **done 2026-09-11.** `mpc.hpp`/`mvp.hpp`. Thm 4.2 asserted against the byte counter: a 4x64 shared matrix costs 96 B because communication tracks the 4-element output. **Corrected §3.3's draft claim** that rounds equal the number of NonLinear stages — a shared matrix costs a round by itself. |
+| 3.2 | **`Trunc_t`** — 3-round protocol, benchmarked against the naive variant | W2 | **done 2026-09-11.** Worst error 1 unit over 3200 values. The naive local variant is **catastrophically wrong on 24.8%** of values — measured, and it is the whole argument for paying 3 rounds. |
+| 3.3 | **`ApproxNormalize`** — MSNZB via simultaneous FSS comparisons + Newton–Raphson | W2 | **PARTIAL.** Cleartext reference done and calibrated: **4 Newton steps** give worst-case 4.7e-4 relative error, and the shared protocol would cost **57 rounds**. The SHARED protocol is **NOT built** — it needs the FSS comparison gate (old task 2.2). Training runs meanwhile on a normaliser that reveals `‖v‖`; see `docs/threat-model.md` §7.4, recorded as **open**. |
+| 3.4 | `SetOrthogonal` (Gram–Schmidt against the public rows of `B`) | W3 | **done 2026-09-11.** Needs **no multiplication protocol** — every product is share-times-public once `B` is opened, asserted by the counters not moving. Not free though: the projection lands at 3t and rescaling is truncation. Priced against keeping `B` shared: **6 rounds and 1800 B**. |
+| 3.5 | **`ApproxFactor`** — full power iteration, `d` components × `ℓ` rounds | W3 | **done 2026-09-12.** Runs end to end on ML-100K; agrees with the cleartext twin to 1.5e-06 (1-\|cos\|). Normaliser is pluggable — see 3.3. |
+| 3.6 | Deferred-truncation schedule; derive and assert the headroom bound at startup | W2 + W3 | **done 2026-09-12.** Derived from public parameters, asserted before any work, and it earns its place by REFUSING t=30 at b=64. Caught a real overflow: `‖v‖²` squares an un-normalised v and needs 84 bits. |
+| 3.7 | Convergence study: `ℓ` vs quality against the cleartext oracle | W3 | **done 2026-09-12.** Private training matches the oracle within **±0.007 nDCG@20 at every ℓ** — fixed point plus a real truncation protocol costs essentially nothing in quality. |
+| 3.8 | Scale to MovieLens-1M | All | **PARTIAL, and the reason is stated.** The D9.1 headroom study covers ML-100K, ML-1M and Netflix scale analytically: **b=64 survives to ML-1M at t≤20 but loses the deferred schedule**; at Netflix scale with t=24 there is no safe schedule. The full MPC run at ML-1M is **not** performed: a dense shared 6040×3706 matrix plus transpose is ~2.1 GB with three parties in one process. |
+| 3.9 | **[PIRSONA] loop:** harvest shared consumption histories from the delivery queries | W1 + W3 | **done 2026-09-12.** `harvest.hpp`. `PirServer::Answer` already computed the share of the one-hot indicator and **discarded it**; it is now accumulated, converted to replicated form in one round, and feeds training. Adds **no new leak** — query counts were already leaked by design. |
+| 3.10 | ~~`tc netem` profiles wired into Docker~~ **SUBSTITUTED 2026-09-12** | W4 | No `tc`, no Docker, and `wsl --status` reports WSL is not installed. Replaced by `netprofile.hpp`: a `DelayChannel` decorator for S1's real sockets, and a cost model applied to S2's measured round/byte counters. **Labelled channel-level emulation, never netem.** Result: private training is **round-bound on every profile** (80.6 s latency vs 5.2 s transfer on wan_a). |
+| 3.11 | B3 (private MF, cleartext fetch) and B4 (MP-SPDZ) baselines | W4 | **B3 done 2026-09-12** (`bench/scripts/baselines.py` joins measured rows into the B1/B2/B3/B5 table). **B4 BLOCKED with reasons**: needs Linux/Docker, needs S2 first, and installing MP-SPDZ breaches RULES A7. |
+| 3.12 | Threat model → full leakage profile + real/ideal simulation sketch | W4 | **PARTIAL 2026-09-12.** `docs/threat-model.md` §7 now covers S2: the substrate, `B` being opened, truncation, harvesting, and §7.4 the **open** question of the revealing normaliser. The real/ideal **simulation sketch is not written** — carried to Phase 4. |
+| 3.13 | ~~Docker image~~ + one-command reproducibility | W4 | **SUBSTITUTED 2026-09-12.** Docker needs WSL2 or Hyper-V, neither present. Replaced by `mingw32-make reproduce`, which rebuilds every figure and table from a clean checkout on the documented toolchain. What Docker would have added is toolchain pinning, stated in the Makefile header instead. |
 
 **Checkpoints.** Oct 1: `ApproxFactor` completes on ML-100K and quality is within a stated margin of
 the oracle. Oct 12: **feature freeze** on the base system — after this, only stretch, evaluation,

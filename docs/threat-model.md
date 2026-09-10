@@ -1,7 +1,7 @@
 # OblivRec — threat model and leakage profile
 
-**Status:** updated 2026-09-11 (networking landed; see §5). Covers **S1 only** (private serving and delivery). Private
-training is S2 and no claim below applies to it.
+**Status:** updated 2026-09-12. Covers **S1** (serving and delivery) and, as of Phase 3,
+**S2** (private training) — see §7, which is new and includes a decision still open.
 
 This promotes `design/ARCHITECTURE-draft-v1.md §9` to a standalone document and, where §9 posed a
 question, replaces it with a measurement.
@@ -114,6 +114,80 @@ would rather state the crossover than imply there isn't one.
 - **Semi-honest only.** A deviating server is out of scope.
 - **No formal proof.** The argument is a construction-level one, not a simulation-based proof.
 
+## 7. Private training (S2) — added Phase 3
+
+Training now runs under secret sharing. Its leakage is **not** the same as
+serving's, and the differences are worth stating one at a time.
+
+### 7.1 What the substrate itself reveals
+
+Nothing beyond the shape of the computation. Multiplication is Araki-style:
+each party sends one ring element per product, re-randomised by a zero-share
+drawn from a pairwise PRF. A single party sees only uniformly random elements.
+
+**Message sizes depend only on public parameters** — `m, n, d, ell, t, b` —
+never on a value. A matrix–vector product communicates `rows` elements
+regardless of the matrix contents, which is NUDGE Thm 4.2 and is asserted by
+`tests/test_mpc.cpp` against the byte counter rather than argued in prose.
+
+### 7.2 What `B` being opened reveals — unchanged, and already measured
+
+Each converged row of `B` is revealed, exactly as in S1. That is NUDGE's
+design, it is what makes `SetOrthogonal` local, and §4 already measures what
+it costs: ten observed fetches recover a user to `cos = 0.84`. Private training
+does not change this, because it produces the same public `B`.
+
+### 7.3 The truncation protocol
+
+`Trunc_t` opens `x - r` to two of the three parties, where the third generated
+`r`. A single corrupted party holds either `r` or `x - r`, never both, so it
+learns nothing about `x`. The helper role is passed explicitly at every call
+site precisely because giving it to a party that also sees the opening would be
+a total break and an easy mistake.
+
+### 7.4 THE OPEN ONE: the normaliser reveals `‖v‖`
+
+`ApproxNormalize` as specified needs `b+1` simultaneous FSS comparisons — the
+comparison gate that S1 cut because its only consumers are here. **It is not
+built.** Training therefore runs today with `RevealNormNormalizer`, which opens
+`‖v‖²` once per normalisation and rescales by a public constant.
+
+**This is a departure from the specification, not an implementation detail.**
+Section 5 normalises *before* revealing `B[i]`, so the unit vector is public
+and the norm is not. Revealing it leaks, over a `d=16, ell=10` run, **176
+scalars** — the trajectory of the singular values of `U`.
+
+| | reveals | rounds per normalisation |
+|---|---|---|
+| `FssNormalizer` (spec) | nothing | ~57 |
+| `RevealNormNormalizer` (today) | one scalar per call | 2 |
+
+How bad is it? The revealed values are aggregate spectral statistics over
+*all* users, not per-user data, and `B` — a complete latent model of the
+catalogue — is already public by design. So the marginal disclosure is small.
+But "small" is an argument, not a measurement, and unlike §4 we have not
+measured what an adversary can do with those 176 numbers.
+
+**Recorded as OPEN.** The honest options are: build the comparison gate and use
+the spec-faithful normaliser; or keep this one and measure the marginal leak
+the way §4 measures the fetch leak. Every result produced with it carries the
+normaliser's name and the count of scalars revealed, so no number can be quoted
+without its leakage.
+
+### 7.5 Harvesting adds no new leak
+
+The PIRSONA loop (§7.3 of the architecture) accumulates the DPF expansion each
+PIR server already computes, giving shared consumption counts for the next
+training round with no upload step. Each server's accumulator is a share and
+reveals nothing on its own.
+
+It does expose **how many** queries a user made, since the accumulator is
+updated once per query — but the threat model already lists query counts as
+leaked by design, so harvesting reveals nothing that running the PIR layer did
+not. That is exactly why it is free.
+
+---
+
 ## 6. Open items
 
 | | Item | Where |
@@ -122,7 +196,10 @@ would rather state the crossover than imply there isn't one.
 | D9.4 | Sabre-style audit for malformed keys (A5 DoS) | stretch |
 | — | ~~Channel transcript + distinguisher experiment (A6)~~ | **done 2026-09-11** |
 | — | Constant rating count to close the nnz leak | evaluate against the utility cost |
-| — | Timing side channel on the wire (frame *sizes* are now shown constant; inter-frame *timing* is not analysed) | Phase 3 |
+| — | Timing side channel on the wire (frame *sizes* are now shown constant; inter-frame *timing* is not analysed) | Phase 4 |
+| — | **The FSS comparison gate**, and with it the spec-faithful `ApproxNormalize` — see §7.4 | **open, Phase 4** |
+| — | Measure the marginal leak of the revealed norms, the way §4 measures the fetch leak | open |
+| — | Real/ideal simulation sketch for the composed system | Phase 4 |
 
 ---
 

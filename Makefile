@@ -66,7 +66,7 @@ BENCHBIN := $(patsubst bench/%.cpp,$(BUILD)/bench/%.exe,$(BENCHSRC))
 EXHAUSTIVE_BITS ?= 16
 CHECK_BITS      ?= 8
 
-.PHONY: all test test-exhaustive check bench figures clean check-toolchain apps demo demo-net distinguisher FORCE
+.PHONY: all test test-exhaustive check bench figures clean check-toolchain apps demo demo-net distinguisher reproduce FORCE
 
 all: check-toolchain $(TESTBIN) $(APPBIN)
 
@@ -261,6 +261,46 @@ distinguisher: apps
 	done; \
 	bash scripts/run_servers.sh stop
 	$(PY) bench/scripts/distinguisher.py
+
+# --------------------------------------------------------------------------
+#  Task 3.13: one-command reproducibility.
+#
+#  REQUIREMENTS section 9 and PHASES 5.3 ask for a Docker image, and the
+#  Phase 5 exit criterion is "a stranger with Docker can clone the repo and
+#  reproduce Figure 1". Docker is not available here and cannot be: it needs
+#  WSL2 or Hyper-V, and `wsl --status` reports the subsystem is not installed.
+#
+#  So the criterion is met a different way, and the substitution is recorded in
+#  the Decisions Log rather than quietly reinterpreted: this target rebuilds
+#  every artefact the report depends on, from a clean checkout, in one command
+#  on the documented toolchain. What Docker would have added is toolchain
+#  pinning, which is stated in the header of this file instead.
+#
+#  Data is fetched, not vendored: data/ is gitignored, so this is also the
+#  check that a fresh clone can get everything it needs.
+# --------------------------------------------------------------------------
+reproduce: check-toolchain
+	@echo "== 1/7 fetching data (skipped if present)"
+	@test -f data/ml-100k/u.item || $(PY) scripts/fetch_data.py
+	@echo "== 2/7 building"
+	@$(MAKE) --no-print-directory all
+	@echo "== 3/7 tests"
+	@$(MAKE) --no-print-directory test
+	@echo "== 4/7 cleartext oracle and the float-to-ring export"
+	$(PY) model/export.py
+	@echo "== 5/7 private training (S2) and the leakage attack"
+	./$(BUILD)/train.exe --headroom-only
+	@for L in 1 2 5 10 25 50; do 	  ./$(BUILD)/train.exe --d 16 --ell $$L 	      --out model/out/B_private_ell$$L.bin > /dev/null || exit 1; 	done
+	$(PY) model/score_private.py
+	$(PY) model/attack.py
+	@echo "== 6/7 benchmarks and baselines"
+	@$(MAKE) --no-print-directory bench
+	$(PY) bench/scripts/baselines.py
+	@echo "== 7/7 figures"
+	@$(MAKE) --no-print-directory figures
+	@echo ""
+	@echo "reproduce: every figure and table in the report has been rebuilt"
+	@echo "from source and committed raw data on this machine."
 
 clean:
 	rm -rf $(BUILD)
