@@ -106,7 +106,13 @@ SharedVec<Ring> TruncatePair(Mpc3<Ring>& s, const SharedVec<Ring>& x,
     // one line is the difference between a protocol and a leak.
     const Ring mask = s.Gen(a).NextPairwise();
     const Ring mask_b = s.Gen(b).PrevPairwise();
-    (void)mask_b;   // same value by construction; drawn to keep counters level
+    (void)mask_b;   // same value by construction; drawn so both sides agree
+    // AND THE HELPER MUST ADVANCE TOO. a and b each stepped their counter; if
+    // h does not, the three generators fall out of step and every LATER
+    // zero-share stops summing to zero -- which silently corrupts every
+    // subsequent multiplication rather than failing here. This cost a broken
+    // factorisation to find, and Mpc3::Exchange now asserts the invariant.
+    s.Gen(h).Skip(1);
     y_a = static_cast<Ring>(y_a + mask);
     y_b = static_cast<Ring>(y_b - mask);
 

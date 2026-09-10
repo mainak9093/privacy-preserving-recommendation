@@ -111,6 +111,23 @@ Ring Mpc3<Ring>::PrivateRandom(int party) {
 // --------------------------------------------------------------------------
 template <typename Ring>
 SharedVec<Ring> Mpc3<Ring>::Exchange(const std::array<std::vector<Ring>, 3>& z) {
+  // THE INVARIANT THAT MAKES ZERO-SHARES ZERO. Party i's alpha_i cancels
+  // against its neighbours' only if all three generators are at the same
+  // counter. A protocol that draws for two parties and forgets the third
+  // desynchronises them, and from then on every multiplication is silently
+  // wrong -- correct-looking shares of the wrong value. Checked here because
+  // this is the one place every communicating operation passes through.
+  const std::uint64_t c0 = gens_[0]->Counter(), c1 = gens_[1]->Counter(),
+                      c2 = gens_[2]->Counter();
+  if (c0 != c1 || c1 != c2) {
+    throw std::logic_error(
+        "correlated-randomness counters are out of step (" +
+        std::to_string(c0) + ", " + std::to_string(c1) + ", " +
+        std::to_string(c2) +
+        "). Some protocol drew a zero-share for a subset of parties. Every "
+        "draw must advance all three, via Skip() where a party has nothing "
+        "to draw.");
+  }
   const std::size_t n = z[0].size();
   SharedVec<Ring> out(n);
   for (int i = 0; i < 3; ++i) {
