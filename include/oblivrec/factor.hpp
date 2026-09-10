@@ -72,6 +72,7 @@
 
 #include "oblivrec/mf.hpp"
 #include "oblivrec/mpc.hpp"
+#include "oblivrec/msnzb.hpp"
 #include "oblivrec/nonlinear.hpp"
 
 namespace oblivrec {
@@ -153,18 +154,34 @@ class Normalizer {
   virtual const std::vector<double>& Revealed() const = 0;
 };
 
-// Spec-faithful. NOT BUILT: needs the FSS comparison gate.
+// SPEC-FAITHFUL, and now built. Uses the FSS comparison gate (msnzb.hpp) for
+// the inverse-sqrt seed and Newton-Raphson to refine, revealing NOTHING.
+//
+// It needs a ring wide enough to hold the gate's mask: value_bits + kappa + 1.
+// At the ranges power iteration produces that is ~81 bits, so this works at
+// b=128 and the constructor REFUSES at b=64. That refusal is the sharpened
+// D9.1 answer, not an inconvenience -- see msnzb.hpp.
 template <typename Ring>
 class FssNormalizer final : public Normalizer<Ring> {
  public:
-  SharedVec<Ring> Apply(Mpc3<Ring>&, const SharedVec<Ring>&,
-                        std::uint32_t) override;
-  const char* Name() const override { return "fss (not built)"; }
+  // `lo`/`hi` bound msnzb(||v||^2) and `value_bits` bounds its width; both are
+  // public parameters derived from the truncation schedule.
+  FssNormalizer(Mpc3<Ring>& s, std::uint32_t t, std::uint32_t lo,
+                std::uint32_t hi, std::uint32_t value_bits,
+                int newton_steps = 4);
+  ~FssNormalizer() override;
+
+  SharedVec<Ring> Apply(Mpc3<Ring>& s, const SharedVec<Ring>& v,
+                        std::uint32_t t) override;
+  const char* Name() const override { return "fss (reveals nothing)"; }
   bool RevealsNorm() const override { return false; }
   const std::vector<double>& Revealed() const override { return empty_; }
 
  private:
   std::vector<double> empty_;
+  std::unique_ptr<MsnzbGate<Ring>> gate_;
+  std::uint32_t t_ = 0;
+  int steps_ = 4;
 };
 
 // Works today, and LEAKS ONE SCALAR PER CALL. Named so that cannot be missed.

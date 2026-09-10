@@ -115,15 +115,40 @@ std::string TruncationSchedule::Explain() const {
 //  Normalizers.
 // --------------------------------------------------------------------------
 template <typename Ring>
-SharedVec<Ring> FssNormalizer<Ring>::Apply(Mpc3<Ring>&, const SharedVec<Ring>&,
-                                           std::uint32_t) {
-  throw std::runtime_error(
-      "FssNormalizer is not implemented. ApproxNormalize needs b+1 "
-      "simultaneous FSS integer comparisons (ARCHITECTURE 4.2), i.e. the "
-      "comparison gate that S1 cut because its only consumers are here. The "
-      "cleartext reference and its Newton-step calibration exist "
-      "(ApproxNormalizeClear); the shared protocol does not. Pass "
-      "RevealNormNormalizer to run today, and read what it leaks first.");
+FssNormalizer<Ring>::FssNormalizer(Mpc3<Ring>& s, std::uint32_t t,
+                                   std::uint32_t lo, std::uint32_t hi,
+                                   std::uint32_t value_bits, int newton_steps)
+    : t_(t), steps_(newton_steps) {
+  // The constructor is where b=64 is refused, because that is the earliest
+  // point the refusal can be made -- before any training has run.
+  gate_.reset(new MsnzbGate<Ring>(s, lo, hi, value_bits));
+}
+
+template <typename Ring>
+FssNormalizer<Ring>::~FssNormalizer() = default;
+
+template <typename Ring>
+SharedVec<Ring> FssNormalizer<Ring>::Apply(Mpc3<Ring>& s,
+                                           const SharedVec<Ring>& v,
+                                           std::uint32_t t) {
+  // ||v||^2 at 2t, back to t. Nothing is opened.
+  auto n2 = TruncatePair<Ring>(s, s.InnerProduct(v, v), t);
+
+  // The seed comes from the gate; Newton refines it. Still nothing opened --
+  // this is the whole difference from RevealNormNormalizer.
+  auto inv = InvSqrtShared<Ring>(s, n2, t, steps_, *gate_);
+
+  // Broadcast the scalar across the vector and multiply. Both are shared, so
+  // this is a real multiplication rather than the local MulPublic the
+  // revealing normaliser could get away with.
+  SharedVec<Ring> spread(v.size());
+  for (int i = 0; i < 3; ++i) {
+    for (std::size_t j = 0; j < v.size(); ++j) {
+      spread.p[static_cast<std::size_t>(i)][j] =
+          inv.p[static_cast<std::size_t>(i)][0];
+    }
+  }
+  return TruncatePair<Ring>(s, s.MulVec(v, spread), t);
 }
 
 template <typename Ring>
@@ -425,6 +450,12 @@ template FactorResult<u64> ApproxFactorShared<u64>(Mpc3<u64>&,
                                                    const TruncationSchedule&,
                                                    Normalizer<u64>&,
                                                    std::uint64_t);
+template FactorResult<u128> ApproxFactorShared<u128>(Mpc3<u128>&,
+                                                     const SharedMatrix<u128>&,
+                                                     const FactorParams&,
+                                                     const TruncationSchedule&,
+                                                     Normalizer<u128>&,
+                                                     std::uint64_t);
 template std::vector<u64> ApproxFactorClear<u64>(Span<const u64>,
                                                  const FactorParams&,
                                                  std::uint64_t);

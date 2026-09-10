@@ -145,34 +145,45 @@ learns nothing about `x`. The helper role is passed explicitly at every call
 site precisely because giving it to a party that also sees the opening would be
 a total break and an easy mistake.
 
-### 7.4 THE OPEN ONE: the normaliser reveals `‖v‖`
+### 7.4 RESOLVED: the spec-faithful normaliser is built
 
-`ApproxNormalize` as specified needs `b+1` simultaneous FSS comparisons — the
-comparison gate that S1 cut because its only consumers are here. **It is not
-built.** Training therefore runs today with `RevealNormNormalizer`, which opens
-`‖v‖²` once per normalisation and rescales by a public constant.
+This section previously recorded an OPEN question — training ran on a
+normaliser that opened `‖v‖²` because `ApproxNormalize` needs an FSS
+comparison gate that did not exist. **The gate is now built** (`dcf.hpp`,
+`msnzb.hpp`), so there are two paths and the choice is a measured trade rather
+than a compromise:
 
-**This is a departure from the specification, not an implementation detail.**
-Section 5 normalises *before* revealing `B[i]`, so the unit vector is public
-and the norm is not. Revealing it leaks, over a `d=16, ell=10` run, **176
-scalars** — the trajectory of the singular values of `U`.
+| normaliser | reveals | rounds per (d×ℓ) | ring |
+|---|---|---|---|
+| `FssNormalizer` (spec) | **nothing** | ~80 | **b=128 only** |
+| `RevealNormNormalizer` | one scalar per call | ~16 | b=64 or b=128 |
 
-| | reveals | rounds per normalisation |
-|---|---|---|
-| `FssNormalizer` (spec) | nothing | ~57 |
-| `RevealNormNormalizer` (today) | one scalar per call | 2 |
+**The spec-faithful path costs about 5× the rounds and requires a 128-bit
+ring.** That second constraint is not arithmetic and is worth stating on its
+own, because it is a *new* answer to D9.1:
 
-How bad is it? The revealed values are aggregate spectral statistics over
-*all* users, not per-user data, and `B` — a complete latent model of the
-catalogue — is already public by design. So the marginal disclosure is small.
-But "small" is an argument, not a measurement, and unlike §4 we have not
-measured what an adversary can do with those 176 numbers.
+> Opening the masked value `S + r` hides `S` only if `r` is drawn from a range
+> `κ` bits wider than `S`'s. With `κ = 40` and the value ranges power
+> iteration produces, the gate's domain needs ~81 bits. **`b = 64` has no room
+> for the mask at all.** The arithmetic headroom study (§ D9.1) said `b=64`
+> survives to ML-1M but loses the deferred schedule; this says that the moment
+> you want a normaliser that reveals nothing, `b=64` stops being an option.
+> The two constraints bind for different reasons and the tighter one wins.
 
-**Recorded as OPEN.** The honest options are: build the comparison gate and use
-the spec-faithful normaliser; or keep this one and measure the marginal leak
-the way §4 measures the fetch leak. Every result produced with it carries the
-normaliser's name and the count of scalars revealed, so no number can be quoted
-without its leakage.
+`FssNormalizer`'s constructor refuses at `b=64` rather than using a short mask,
+because a gate that silently masked with too few bits would *look* like privacy
+while providing none.
+
+**What is claimed now.** With `b=128` and `FssNormalizer`, private training
+reveals nothing beyond `B` itself — which is public by design and whose cost is
+measured in §4. The leakage profile matches the specification.
+
+**What is still measured only at `b=64`.** The quality study in §3.7 of
+`PHASES.md` (private nDCG@20 within ±0.007 of the oracle) was run on the
+revealing path, because it is the one that fits in a 64-bit ring. Re-running it
+at `b=128` on the no-leak path is Phase 4 work; the arithmetic is the same and
+the truncation error is the same, so the quality is expected to match, but that
+is an expectation and not yet a measurement.
 
 ### 7.5 Harvesting adds no new leak
 
@@ -197,8 +208,8 @@ not. That is exactly why it is free.
 | — | ~~Channel transcript + distinguisher experiment (A6)~~ | **done 2026-09-11** |
 | — | Constant rating count to close the nnz leak | evaluate against the utility cost |
 | — | Timing side channel on the wire (frame *sizes* are now shown constant; inter-frame *timing* is not analysed) | Phase 4 |
-| — | **The FSS comparison gate**, and with it the spec-faithful `ApproxNormalize` — see §7.4 | **open, Phase 4** |
-| — | Measure the marginal leak of the revealed norms, the way §4 measures the fetch leak | open |
+| — | ~~The FSS comparison gate and the spec-faithful `ApproxNormalize`~~ | **done 2026-09-12, §7.4** |
+| — | Re-run the quality study at b=128 on the no-leak path | Phase 4 |
 | — | Real/ideal simulation sketch for the composed system | Phase 4 |
 
 ---

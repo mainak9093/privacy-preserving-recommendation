@@ -78,15 +78,22 @@ void TestFactorSubspace() {
   su.cols = p.n;
   su.data = SplitVec<u64>(Span<const u64>(U.data(), U.size()));
 
-  // The spec-faithful normalizer must refuse, loudly, rather than degrade.
+  // The spec-faithful normaliser is now BUILT, and at b=64 it must refuse at
+  // construction: the FSS gate's mask needs value_bits + kappa + 1 bits, which
+  // a 64-bit ring cannot hold. Refusing early -- before any training runs --
+  // is the point; a gate that silently used a mask too small to hide anything
+  // would look like privacy while providing none.
   {
     Mpc3<u64> s(1);
-    FssNormalizer<u64> fss;
     bool threw = false;
     try {
-      (void)ApproxFactorShared<u64>(s, su, p, sched, fss, 7);
-    } catch (const std::runtime_error&) { threw = true; }
-    CHECK_MSG(threw, "FssNormalizer must refuse rather than silently degrade");
+      FssNormalizer<u64> fss(s, p.t, 12, 28, 30);
+      (void)fss;
+    } catch (const std::exception&) { threw = true; }
+    CHECK_MSG(threw,
+              "FssNormalizer built at b=64; it must refuse, because the gate's "
+              "mask does not fit and a short mask hides nothing");
+    std::printf("  FssNormalizer at b=64: refused, as it must (D9.1)\n");
   }
 
   Mpc3<u64> s(1);
@@ -192,6 +199,68 @@ void TestRoundBudget() {
               static_cast<double>(per_component) / static_cast<double>(p.ell));
 }
 
+// ---- 3.3 COMPLETE: training that reveals nothing -----------------------
+//
+// The same factorisation, at b=128, with the spec-faithful normaliser. The
+// assertion that matters is not that it runs but that Revealed() is EMPTY --
+// this is the path with no leakage-profile departure.
+void TestFactorNoLeak() {
+  FactorParams p;
+  p.m = 20; p.n = 12; p.d = 2; p.ell = 4; p.t = kT; p.max_rating = 5;
+  p.nnz = 20 * 12 / 4;
+
+  std::mt19937_64 rng(606);
+  std::vector<u128> U(std::size_t(p.m) * p.n);
+  for (auto& x : U) {
+    x = static_cast<u128>((rng() % 4 == 0) ? (1 + rng() % 5) : 0);
+  }
+
+  auto sched = TruncationSchedule::Derive(p, 128);
+  sched.AssertHeadroom();
+  CHECK_MSG(sched.Deferred(),
+            "at b=128 the deferred schedule should fit, which is half the "
+            "truncations");
+
+  SharedMatrix<u128> su;
+  su.rows = p.m; su.cols = p.n;
+  su.data = SplitVec<u128>(Span<const u128>(U.data(), U.size()));
+
+  Mpc3<u128> s(21);
+  // ||v||^2 sits around 2^t with v near unit length, so msnzb lands in a band
+  // around t. The bounds are public parameters, not data.
+  FssNormalizer<u128> fss(s, p.t, kT - 8, kT + 8, 30);
+
+  auto res = ApproxFactorShared<u128>(s, su, p, sched, fss, 5);
+
+  CHECK_MSG(res.revealed_norms.empty(),
+            "the spec-faithful normaliser revealed " +
+                std::to_string(res.revealed_norms.size()) +
+                " scalars; it must reveal none");
+
+  double worst_len = 0.0;
+  for (std::uint32_t r = 0; r < p.d; ++r) {
+    double sq = 0.0;
+    for (std::uint32_t j = 0; j < p.n; ++j) {
+      const double f =
+          static_cast<double>(static_cast<std::int64_t>(
+              static_cast<std::uint64_t>(res.B[std::size_t(r) * p.n + j]))) /
+          std::pow(2.0, static_cast<double>(p.t));
+      sq += f * f;
+    }
+    worst_len = std::max(worst_len, std::abs(std::sqrt(sq) - 1.0));
+  }
+  CHECK_MSG(worst_len < 0.05,
+            "B rows from the no-leak path deviate from unit length by " +
+                std::to_string(worst_len));
+
+  std::printf("  NO-LEAK PATH (b=128, FSS normaliser): d=%u ell=%u -> "
+              "%llu rounds, %llu B\n", p.d, p.ell,
+              (unsigned long long)res.rounds,
+              (unsigned long long)res.bytes);
+  std::printf("               %zu scalars revealed (must be 0), B rows unit "
+              "to %.1e\n", res.revealed_norms.size(), worst_len);
+}
+
 }  // namespace
 
 int main() {
@@ -199,6 +268,7 @@ int main() {
   try {
     TestSchedule();
     TestFactorSubspace();
+    TestFactorNoLeak();
     TestRoundBudget();
   } catch (const std::exception& e) {
     std::printf("  FAIL: unexpected exception: %s\n", e.what());

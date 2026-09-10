@@ -73,8 +73,18 @@ class FixedKeyPrg {
   FixedKeyPrg();
   void Expand(const Block& seed, Block* left, Block* right) const;
 
+  // Four outputs per seed: (sL, vL, sR, vR). The DPF needs two blocks per
+  // node; the DCF needs a VALUE word alongside each seed as well, because its
+  // payload accumulates across whole subtrees rather than landing on one leaf.
+  //
+  // Two more fixed keys rather than re-expanding a tweaked seed: keeping all
+  // four derivations independent at the primitive level means the DCF's value
+  // words are not a deterministic function of its seed words, which a
+  // seed-tweaking construction would make them.
+  void Expand4(const Block& seed, Block out[4]) const;
+
  private:
-  AesKeySchedule k0_, k1_;
+  AesKeySchedule k0_, k1_, k2_, k3_;
 };
 
 // The one shared instance. Keys are compile-time constants, so both parties

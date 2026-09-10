@@ -61,7 +61,26 @@ void AesKeySchedule::Encrypt2(__m128i a, __m128i b,
   *ob = _mm_aesenclast_si128(b, rk_[10]);
 }
 
-FixedKeyPrg::FixedKeyPrg() : k0_(kKey0), k1_(kKey1) {}
+// Two more fixed keys for Expand4 (dcf.hpp). Arbitrary constants, fixed at
+// compile time so both parties agree with no setup message -- same rationale
+// as kKey0/kKey1.
+alignas(16) static const std::uint8_t kKey2[16] = {
+    0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
+    0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
+alignas(16) static const std::uint8_t kKey3[16] = {
+    0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe,
+    0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81};
+
+FixedKeyPrg::FixedKeyPrg()
+    : k0_(kKey0), k1_(kKey1), k2_(kKey2), k3_(kKey3) {}
+
+void FixedKeyPrg::Expand4(const Block& seed, Block out[4]) const {
+  // sigma(x) = pi(x) XOR x under four independent fixed keys.
+  out[0].v = _mm_xor_si128(k0_.Encrypt(seed.v), seed.v);
+  out[1].v = _mm_xor_si128(k1_.Encrypt(seed.v), seed.v);
+  out[2].v = _mm_xor_si128(k2_.Encrypt(seed.v), seed.v);
+  out[3].v = _mm_xor_si128(k3_.Encrypt(seed.v), seed.v);
+}
 
 void FixedKeyPrg::Expand(const Block& seed, Block* left, Block* right) const {
   // sigma(x) = pi(x) XOR x, under two independent fixed keys.

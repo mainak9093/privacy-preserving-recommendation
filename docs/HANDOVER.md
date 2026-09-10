@@ -17,10 +17,10 @@ that is said explicitly.
 | | |
 |---|---|
 | **Phase 2 (S1: serving + delivery)** | **functionally complete and demonstrated** |
-| Phase 3 (S2: private training) | not started — this is the next month's work |
-| Test suite | 10 binaries, green in ~2 s, clean under UBSan + `_GLIBCXX_DEBUG` + checked `Span` |
+| Phase 3 (S2: private training) | **task list complete 2026-09-12** — power iteration runs under secret sharing, quality matches the oracle, and the spec-faithful normaliser reveals nothing |
+| Test suite | 18 binaries, clean under UBSan + `_GLIBCXX_DEBUG` + checked `Span` |
 | Graded artifact | `report/midterm.tex` → 2 pages, **three sections still blank** |
-| Technical report | `report/midterm_technical.tex` → 17 pages |
+| Technical report | `report/midterm_technical.tex` → 20 pages (S2 not yet written up) |
 | Networking | **done 2026-09-11** — three separate processes over TCP; exit criterion met in full |
 
 **The one-line summary of the system.** Three servers hold 2-of-3 replicated shares of a user's
@@ -28,6 +28,24 @@ embedding. Because the item matrix `B` is public (that is NUDGE's design), each 
 its share of `scores = a·B` locally — no communication, no multiplication protocol. The user
 reconstructs, picks the top `k` on their own machine, and then fetches each recommended record by
 two-server DPF-PIR, so neither server learns which records were read.
+
+
+### What S2 added, in one paragraph
+
+Private training works. `Mpc3` is the 3PC substrate (pairwise-PRF zero shares,
+Araki multiplication, with rounds and bytes **counted** so NUDGE Thm 4.2 is
+asserted rather than argued). `Trunc_t` has both variants, and the naive one is
+catastrophically wrong on 24.8% of values — which is why the protocol costs 3
+rounds. `ApproxFactor` runs power iteration end to end and matches the
+cleartext oracle within ±0.007 nDCG@20. The PIRSONA loop closes: the DPF
+expansion each PIR server already computed becomes next round's training input
+at no extra communication.
+
+The last gap closed on 12 September: a real **DCF** (`dcf.hpp`, exhaustively
+verified) and the **FSS comparison gate** (`msnzb.hpp`), which give a
+normaliser that reveals nothing. It needs `b=128` — the mask does not fit in 64
+bits — and costs ~5× the rounds of the revealing alternative. Both paths remain
+available and every result records which one produced it.
 
 ---
 
