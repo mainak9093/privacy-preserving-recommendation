@@ -44,7 +44,10 @@ LDLIBS   := -lbcrypt -lws2_32
 
 BUILD    := build
 RESULTS  := bench/results
-SRC      := $(wildcard src/common/*.cpp src/dpf/*.cpp src/pir/*.cpp src/serve/*.cpp src/net/*.cpp)
+# src/mpc/, src/mpc/nonlinear/ and src/mf/ are the S2 (private training) tree,
+# laid out as ARCHITECTURE section 8 specifies. Added when Phase 3 started.
+SRC      := $(wildcard src/common/*.cpp src/dpf/*.cpp src/pir/*.cpp src/serve/*.cpp \
+                       src/net/*.cpp src/mpc/*.cpp src/mpc/nonlinear/*.cpp src/mf/*.cpp)
 OBJ      := $(patsubst %.cpp,$(BUILD)/%.o,$(SRC))
 
 TESTSRC  := $(wildcard tests/test_*.cpp)
