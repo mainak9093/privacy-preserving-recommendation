@@ -1,0 +1,128 @@
+\section{On the wire}
+\label{sec:tech:net}
+
+Everything to this point is a property of the construction. This section is
+about demonstrating it, because an argument that message sizes are
+input-independent and a measurement that they are input-independent are
+different claims, and only the second survives contact with an implementation.
+
+\subsection{Three processes, not three objects}
+\label{sec:tech:net:processes}
+
+The servers are three separate operating-system processes. Each loads only
+public data --- the item matrix $\itemembed$ and the catalogue --- and receives
+one replicated share, which is useless alone. They never talk to each other:
+in this slice every server-side operation is local, because $\itemembed$ is
+public and $\mathbf{a}\cdot\itemembed$ is therefore a linear map on shares. The
+only links are client-to-server, and that is a property of the protocol rather
+than a simplification of the implementation.
+
+Because a server serves one client to completion, nothing here is concurrent,
+and \emph{no threading appears anywhere in this project}. Choosing separate
+processes over threads made that true rather than merely likely.
+
+\paragraph{Framing.} \textsc{Requirements} \S5 fixes the transport as ``plain
+TCP, length-prefixed frames''. A frame is a four-byte little-endian length,
+written with explicit shifts rather than a \texttt{memcpy} of a
+\texttt{uint32\_t}, then exactly that many bytes.
+
+Two details are load-bearing and both are tested. TCP is a byte \emph{stream},
+so a 227-byte key handed to \texttt{send()} may arrive as 200 bytes and then
+27; anything that assumes one \texttt{send()} equals one \texttt{recv()} works
+on loopback with small payloads and fails on a real link, which is the worst
+kind of bug because the demo passes on the development machine. The test
+therefore \emph{forces} a split, by giving the listener a deliberately tiny
+receive buffer, rather than hoping to observe one.
+
+The second is that the declared length is untrusted input. It arrives over a
+socket, so a peer chooses it, and reading it and then allocating that many
+bytes is a four-byte denial of service. It is validated against a cap
+\emph{before} it sizes anything --- the same discipline
+\texttt{DpfKey::Deserialize} already applies, and the reason this parser is
+covered by the hardened build alongside the other two.
+
+\subsection{The distinguisher}
+\label{sec:tech:net:distinguisher}
+
+The phase's exit criterion originally asked for \texttt{tcpdump} on the server
+links showing ``nothing but pseudorandom bytes''. That was amended, partly
+because there is no \texttt{tcpdump} on the development platform, but mainly
+because \emph{bytes looking random is not evidence}. Any fixed byte string
+looks random if you do not know what to compare it against. The claim that
+matters is that an adversary given the wire bytes cannot say which record was
+fetched --- and the way to establish that is to build the adversary and measure
+it losing.
+
+\texttt{probe} records many independent queries for each of several fixed
+record indices, calling $\Gen$ afresh every time, so the keys are independently
+sampled; an adversary fed one key repeated many times would be measuring
+nothing. Two claims are then tested separately, because they can fail
+separately.
+
+\paragraph{Length.} Every frame must be the same size whatever the index. This
+follows from the construction --- key size depends only on the domain width ---
+but a framing change could break it silently, so it is checked in the data.
+Over \textbf{1800 recorded queries across three record indices, every frame is
+228 bytes}.
+
+\paragraph{Content.} A logistic regression is trained on the raw wire bytes and
+scored on held-out data.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Distinguishing between record indices from the wire bytes alone.
+Chance is $0.5$, and it lies inside every interval. The shuffled-label control
+runs the identical pipeline on deliberately destroyed labels: it agrees, which
+is what shows the harness is measuring what it claims to.}
+\label{tab:distinguisher}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+adversary & accuracy & 95\% CI \\
+\midrule
+index 0 vs 1234    & 0.490 & $[0.445,\ 0.534]$ \\
+index 0 vs 777     & 0.494 & $[0.449,\ 0.538]$ \\
+index 1234 vs 777  & 0.500 & $[0.455,\ 0.545]$ \\
+\midrule
+shuffled control   & 0.483 & $[0.439,\ 0.528]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.72\linewidth]{figures/fig_distinguisher}
+\caption{The adversary failing. What matters is not that the points sit near
+$0.5$ but that the chance line falls inside every interval; reporting a bare
+``we got 49\%'' would be claiming more precision than 480 held-out trials
+support.}
+\label{fig:distinguisher}
+\end{figure}
+
+We state the reading carefully. This is not a proof, and a null result is not
+the same as a security proof: it says a particular adversary, given a
+particular feature representation, did not beat chance on this data. What it
+rules out is the failure mode that actually occurs in practice --- a length or
+byte-level pattern correlating with the query --- and it does so by
+demonstrating an adversary losing rather than by asserting that bytes look
+random.
+
+Two things are still explicitly \emph{not} claimed. Inter-frame \emph{timing}
+is not analysed; only sizes and contents are. And an observer who sees both
+server links can reconstruct the record by design, which is what a $(2,2)$
+scheme means and is not a weakness peculiar to this implementation.
+
+\subsection{What it cost to say this}
+\label{sec:tech:net:cost}
+
+The networked path returns the same ten titles, in the same order, as the
+in-process path, with every record still byte-exact --- which is the assertion
+the demo makes rather than a claim we make about it. A full run of the
+protocol, including uploading the shares and the mask and fetching ten records,
+moves about 86\,KB up and 46\,KB down across the three links, framing included.
+
+Almost all of that is the seen-item mask, which is a shared vector of length
+$\items$ and therefore dwarfs the ten 227-byte keys. That is worth noticing
+rather than hiding: it is an argument for masking client-side in this slice,
+where it is anyway equivalent, and it is the first place a wide-area deployment
+would look for a saving.

@@ -64,13 +64,12 @@ precisely what the other supplies.
 
 Since the survey we have built and verified the \textbf{serving and delivery
 half (S1)} end to end on MovieLens-100K, against a model factorised in the
-clear. \texttt{demo -{}-user 42 -{}-k 10} splits a user's embedding across three
-servers, scores all 1682 items locally on each, lets the user reconstruct and
-select the top ten, then fetches each recommended record by two-server DPF-PIR:
-ten real film titles, each verified byte-exact against a cleartext lookup and
-matching an independent Python oracle position for position. Private
-\emph{training} (S2) starts now and is due for the final report; no claim is
-made about it here.
+clear. The demo splits a user's embedding across three servers --- three
+separate OS processes, over TCP --- scores all 1682 items locally on each, lets
+the user reconstruct and select the top ten, then fetches each record by
+two-server DPF-PIR: ten real film titles, each byte-exact against a cleartext
+lookup and matching an independent Python oracle position for position. Private
+\emph{training} (S2) starts now; no claim is made about it here.
 
 The strongest result is a measurement neither base paper reports. Because
 \textsc{Nudge} publishes the item embedding matrix in the clear \emph{by
@@ -97,23 +96,30 @@ repository is evidence for this section.
     seeded a Mersenne Twister and used the output as DPF seed material. The
     seeds \emph{are} the secret and MT19937 is reconstructible from 624
     outputs, so an adversary with enough key material could rebuild the GGM
-    tree and recover~$\alpha$; seed entropy was also $\sim$64 bits against a
-    claimed $\lambda{=}128$. Replaced with the OS CSPRNG, abort-on-failure.
+    tree and recover~$\alpha$. Replaced with the OS CSPRNG, abort-on-failure.
   \item \textbf{Catalogue and DPF-PIR read layer.} Fixed-width 256\,B records
-    with explicit length prefixes (nine titles carry Latin-1 bytes, so any
-    delimiter risks colliding with content). A server answer is one
-    \texttt{EvalFull} plus an unconditional inner product --- no
-    data-dependent branch, and no data \emph{pattern} either, since every
-    expanded coefficient is a pseudorandom share.
+    with explicit length prefixes. A server answer is one \texttt{EvalFull}
+    plus an unconditional inner product --- no data-dependent branch, and no
+    data \emph{pattern} either, since every expanded coefficient is a
+    pseudorandom share.
   \item \textbf{Serving under secret sharing.} 2-of-3 replicated shares, with
     $\mathbf{a}\cdot\itemembed$ computed locally per server --- no
     communication and no multiplication protocol, because $\itemembed$ is
     public. All \textbf{1682 scores match the Python oracle bit for bit}.
+  \item \textbf{Three servers on the wire, and an adversary shown failing.}
+    Separate OS processes over length-prefixed TCP; the networked run returns
+    the same ten titles as the in-process one. Over 1800 recorded queries every
+    frame is 228\,B whatever the record index, and a classifier on the raw wire
+    bytes scores 0.490--0.500 with chance inside every interval.
   \item \textbf{The leakage analysis} above, with a \emph{popularity control}
     so the result cannot be an artefact of popular items sitting near
     everyone's top: the identical estimator run on globally-popular items
     reaches only 0.26--0.53, and the attack's margin over it is a stable
-    $+0.39$ to $+0.42$ at every $j$.
+    $+0.39$ to $+0.42$ at every $j$. Also measured the obvious alternative to
+    a private read and \textbf{showed it fails}: decoys must be
+    popularity-weighted to be unremarkable, so they point where the control
+    already points, and 40 of them (5$\times$ the traffic) still leave the
+    adversary at $0.71$ against a $0.44$ floor.
   \item \textbf{Cost accounting (B1/B5 baselines) and the threat model.}
     DPF-PIR sends \textbf{446$\times$ fewer bytes} than downloading the
     catalogue, but is the \emph{slowest} of the three in server CPU; the report
@@ -128,32 +134,32 @@ repository is evidence for this section.
     bounds-checked \texttt{Span}; a JSONL benchmark harness; and
     \texttt{make figures}, so no figure is ever hand-edited.
   \item \textbf{Report material:} all 11 sections of the survey, the
-    bibliography (66 DBLP-verified entries), and the 17-page technical report.
+    bibliography (66 DBLP-verified entries), and the 20-page technical report.
 \end{itemize}
 
 \subsection*{Shrasti Dwivedi (230982) --- W3, factorisation and serving}
 
 % <<< DELETE this \vspace and type your itemize here. docs/HANDOVER.md section 4.
-\vspace{3.2em}
+\vspace{2.5em}
 
 \subsection*{Aditya Anand (230065) --- W2, 3PC substrate}
 
 % <<< DELETE this \vspace and type your itemize here. docs/HANDOVER.md section 4.
-\vspace{3.2em}
+\vspace{2.5em}
 
 \subsection*{Shravan Agrawal (230984) --- W4, evaluation and security}
 
 % <<< DELETE this \vspace and type your itemize here. docs/HANDOVER.md section 4.
-\vspace{3.2em}
+\vspace{2.5em}
 
 \section*{Next steps before 6 November}
 
 Private training (S2) is the remaining half and begins now: secret-shared power
 iteration, with $\mathrm{Trunc}_t$ and $\mathrm{ApproxNormalize}$ as the only
-interactive steps. Two items were deferred from this phase and are named rather
-than quietly dropped --- the three-process networking, so message-size
-obliviousness is \emph{demonstrated} on a wire rather than only argued from the
-construction, and the wide-area measurements that depend on it. Schedule in
-\texttt{PHASES.md}; handover in \texttt{docs/HANDOVER.md}.
+interactive steps. Phase 2 closed with its exit criterion met in full. What
+remains open from it is named rather than quietly dropped: wide-area
+measurement, which needs network emulation this machine lacks, and the
+inter-frame \emph{timing} channel, which the distinguisher does not analyse.
+Schedule in \texttt{PHASES.md}; handover in \texttt{docs/HANDOVER.md}.
 
 \end{document}

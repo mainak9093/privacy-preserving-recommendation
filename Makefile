@@ -63,7 +63,7 @@ BENCHBIN := $(patsubst bench/%.cpp,$(BUILD)/bench/%.exe,$(BENCHSRC))
 EXHAUSTIVE_BITS ?= 16
 CHECK_BITS      ?= 8
 
-.PHONY: all test test-exhaustive check bench figures clean check-toolchain apps demo FORCE
+.PHONY: all test test-exhaustive check bench figures clean check-toolchain apps demo demo-net distinguisher FORCE
 
 all: check-toolchain $(TESTBIN) $(APPBIN)
 
@@ -231,6 +231,33 @@ apps: check-toolchain $(APPBIN)
 
 demo: $(BUILD)/demo.exe
 	./$(BUILD)/demo.exe --user 42 --k 10
+
+# --------------------------------------------------------------------------
+#  The wire half of the exit criterion.
+#
+#  demo-net launches THREE SEPARATE PROCESSES and runs the identical protocol
+#  across sockets, asserting it returns the same ten titles as the in-process
+#  run. The script polls each server's readiness line rather than sleeping.
+#
+#  distinguisher records many independent PIR queries for several fixed record
+#  indices, then asks whether an adversary given the wire bytes can tell which
+#  index was fetched. Expected answer: no better than chance.
+# --------------------------------------------------------------------------
+demo-net: apps
+	bash scripts/run_servers.sh demo
+
+DIST_TRANSCRIPT := bench/results/distinguisher.jsonl
+DIST_COUNT      ?= 600
+
+distinguisher: apps
+	@rm -f $(DIST_TRANSCRIPT)
+	@bash scripts/run_servers.sh start
+	@for a in 0 1234 777; do \
+	  ./$(BUILD)/probe.exe --alpha $$a --count $(DIST_COUNT) --port 7000 \
+	      --transcript $(DIST_TRANSCRIPT) || exit 1; \
+	done; \
+	bash scripts/run_servers.sh stop
+	$(PY) bench/scripts/distinguisher.py
 
 clean:
 	rm -rf $(BUILD)

@@ -295,11 +295,131 @@ def fig_pir_cost(base_rows):
     return True
 
 
+# --------------------------------------------------------------------------
+#  F5 -- the distinguisher. An adversary FAILING is the evidence.
+#
+#  Plotted as accuracy with its 95% Wilson interval against the chance line.
+#  The reading that matters is whether chance falls INSIDE each interval, so
+#  the chance line and the intervals are the two things the eye must catch.
+# --------------------------------------------------------------------------
+def fig_distinguisher(rows):
+    if not rows:
+        print("  SKIP fig_distinguisher: no rows (run mingw32-make distinguisher)")
+        return False
+
+    real = [r for r in rows if not r.get("shuffled")]
+    ctrl = [r for r in rows if r.get("shuffled")]
+    if not real:
+        print("  SKIP fig_distinguisher: no unshuffled rows")
+        return False
+
+    labels = [r["pair"].replace("alpha=", "").replace("|", " vs ") for r in real]
+    acc = [r["accuracy"] for r in real]
+    lo = [r["accuracy"] - r["ci_lo"] for r in real]
+    hi = [r["ci_hi"] - r["accuracy"] for r in real]
+
+    if ctrl:
+        labels.append("shuffled\ncontrol")
+        acc.append(ctrl[-1]["accuracy"])
+        lo.append(ctrl[-1]["accuracy"] - ctrl[-1]["ci_lo"])
+        hi.append(ctrl[-1]["ci_hi"] - ctrl[-1]["accuracy"])
+
+    x = np.arange(len(labels))
+    colours = [C_ATTACK] * len(real) + ([C_FLOOR] if ctrl else [])
+
+    fig, ax = plt.subplots(figsize=(6.2, 3.4))
+    ax.errorbar(x, acc, yerr=[lo, hi], fmt="o", ms=6, capsize=5, lw=1.4,
+                ecolor="#555555", ls="none",
+                mfc=colours[0], mec=colours[0])
+    for xi, (a, c) in enumerate(zip(acc, colours)):
+        ax.plot([xi], [a], "o", ms=6, color=c)
+
+    ax.axhline(0.5, color="k", ls="--", lw=1.0)
+    ax.annotate("chance", xy=(len(labels) - 0.5, 0.5), xytext=(3, 4),
+                textcoords="offset points", fontsize=8, ha="right")
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=8)
+    ax.set_ylabel("distinguisher accuracy")
+    ax.set_ylim(0.30, 0.70)
+    ax.set_title("An observer cannot tell which record was fetched", fontsize=9)
+    nq = real[0].get("total_queries")
+    fb = real[0].get("frame_bytes")
+    if nq and fb:
+        ax.annotate(f"{nq} recorded queries, every frame {fb} B",
+                    xy=(0.5, 0.02), xycoords="axes fraction", ha="center",
+                    fontsize=7.5, color="#555555")
+    save(fig, "fig_distinguisher.pdf")
+    return True
+
+
+# --------------------------------------------------------------------------
+#  F6 -- the decoy defence, and why it does not work.
+#
+#  The point of this figure is the POPULARITY FLOOR. Decoys must be drawn
+#  popularity-weighted or they are separable by inspection, which means they
+#  point roughly along the popularity direction -- and the popularity direction
+#  is exactly what the control already recovers. So decoys drag the estimate
+#  down towards the control's level and no further.
+#
+#  Plotting the control as a floor line is what makes that visible, and it is
+#  the difference between "decoys help a bit" and "decoys cannot fix this".
+# --------------------------------------------------------------------------
+def fig_decoy(rows):
+    dec = sorted([r for r in rows if r.get("op") == "decoy_defence"],
+                 key=lambda r: r.get("r", 0))
+    if not dec:
+        print("  SKIP fig_decoy: no decoy rows (run py -3.13 model/attack.py)")
+        return False
+
+    # The popularity control at the matching number of real fetches (k=10).
+    pop = [r for r in rows if r.get("op") == "popularity" and r.get("j") == 10]
+    floor = pop[0]["cos_mean"] if pop else None
+
+    r = [x["r"] for x in dec]
+    cos = [x["cos_mean"] for x in dec]
+    overlap = [100 * x["overlap_mean"] for x in dec]
+    kbytes = [x.get("bytes_per_query", 0) / 1000.0 for x in dec]
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.6, 3.4))
+
+    ax1.plot(r, cos, color=C_ATTACK, marker="o", ms=4,
+             label="attack, with decoys")
+    if floor is not None:
+        ax1.axhline(floor, color=C_CONTROL, ls="--", lw=1.2,
+                    label="popularity control (the floor)")
+        ax1.fill_between([min(r), max(r)], 0, floor, color=C_CONTROL,
+                         alpha=0.08, lw=0)
+    ax1.set_xlabel("decoys per query, $r$")
+    ax1.set_ylabel(r"$\cos(\hat{a}, a)$")
+    ax1.set_ylim(0.0, 1.0)
+    ax1.set_title("Decoys cannot push below the popularity floor", fontsize=9)
+    ax1.legend(loc="lower left", fontsize=7.5)
+
+    ax2.plot(kbytes, cos, color=C_ATTACK, marker="o", ms=4)
+    for xi, yi, ri in zip(kbytes, cos, r):
+        if ri in (0, 10, 40):
+            ax2.annotate(f"r={ri}", xy=(xi, yi), xytext=(4, 5),
+                         textcoords="offset points", fontsize=7.5)
+    if floor is not None:
+        ax2.axhline(floor, color=C_CONTROL, ls="--", lw=1.2)
+    ax2.set_xlabel("bandwidth per query (KB)")
+    ax2.set_ylabel(r"$\cos(\hat{a}, a)$")
+    ax2.set_ylim(0.0, 1.0)
+    ax2.set_title("What the protection costs", fontsize=9)
+
+    save(fig, "fig_decoy.pdf")
+    if floor is not None:
+        print(f"    decoys: {cos[0]:.3f} -> {cos[-1]:.3f} at r={r[-1]} "
+              f"({kbytes[-1]:.1f} KB/query); floor is {floor:.3f}")
+    return True
+
+
 def main():
     print("regenerating figures from bench/results/")
     leak = newest_sha(load("leakage_attack.jsonl"), "leakage_attack")
     dpf = newest_sha(load("bench_dpf.jsonl"), "bench_dpf")
     base = newest_sha(load("bench_baseline.jsonl"), "bench_baseline")
+    dist = newest_sha(load("distinguisher_result.jsonl"), "distinguisher")
     ell = load("oracle_ell_sweep.jsonl")     # one row per ell, no sha filter
 
     made = 0
@@ -307,6 +427,8 @@ def main():
     made += bool(fig_keysize())
     made += bool(fig_ell(ell))
     made += bool(fig_pir_cost(base))
+    made += bool(fig_distinguisher(dist))
+    made += bool(fig_decoy(leak))
 
     print(f"\n{made} figure(s) written to {FIGDIR}/")
     if made == 0:

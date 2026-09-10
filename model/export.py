@@ -94,7 +94,14 @@ def git_sha():
         return subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                               capture_output=True, text=True,
                               check=True).stdout.strip()
-    except Exception:
+    except Exception as e:
+        # Do NOT fail silently. This bit for real on 2026-09-10: under memory
+        # pressure the git subprocess could not spawn, and every result row was
+        # stamped "unknown", which RULES D5 forbids. A swallowed provenance
+        # failure is invisible in the data and only shows up much later.
+        print(f"WARNING: git sha unavailable ({type(e).__name__}: {e}); "
+              "rows will be stamped 'unknown' and RULES D5 is not satisfied",
+              file=sys.stderr)
         return "unknown"
 
 

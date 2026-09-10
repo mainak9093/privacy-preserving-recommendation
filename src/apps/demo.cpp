@@ -25,9 +25,13 @@
 //  output imply more than was built.
 // ==========================================================================
 #include "oblivrec/catalogue.hpp"
+#include "oblivrec/channel.hpp"
 #include "oblivrec/pir.hpp"
 #include "oblivrec/serve.hpp"
 #include "oblivrec/share.hpp"
+#include "oblivrec/wire.hpp"
+
+#include <memory>
 
 #include <algorithm>
 #include <cstdint>
@@ -91,17 +95,192 @@ std::string TitleFromRecord(const std::vector<std::uint8_t>& rec) {
   return std::string(reinterpret_cast<const char*>(&rec[5]), len);
 }
 
+// ==========================================================================
+//  The same protocol, over three sockets to three separate PROCESSES.
+//
+//  This is the Phase 2 exit criterion's wire half. Nothing about the protocol
+//  changes -- the point is precisely that it does not. The servers are the
+//  same code doing the same local work; only the transport differs. So the
+//  test worth running is that the networked path returns THE SAME TEN TITLES,
+//  in the same order, as the in-process path, and that every record is still
+//  byte-exact against a cleartext lookup.
+//
+//  Returns 0 on success, or the number of mismatches.
+// ==========================================================================
+int RunNetworked(const std::vector<std::string>& hosts,
+                 const std::vector<std::uint16_t>& ports,
+                 const std::string& transcript,
+                 const std::vector<std::int64_t>& A, std::uint32_t user,
+                 std::uint32_t d, std::uint32_t n,
+                 const std::vector<std::uint8_t>& seen, bool have_seen,
+                 const Catalogue& cat, std::uint32_t k,
+                 const std::vector<std::string>& expect_titles) {
+  std::printf("\n=== networked run: three separate server processes ===\n");
+
+  // Shares are built exactly as before. The client is the only party that
+  // ever holds the whole embedding.
+  std::vector<std::vector<ReplicatedShare<u64>>> a_party(3);
+  for (auto& p : a_party) p.resize(d);
+  for (std::uint32_t i = 0; i < d; ++i) {
+    auto s = Split<u64>(static_cast<u64>(A[std::size_t(user) * d + i]));
+    for (int p = 0; p < 3; ++p)
+      a_party[static_cast<std::size_t>(p)][i] = s[static_cast<std::size_t>(p)];
+  }
+  std::vector<std::vector<ReplicatedShare<u64>>> mask;
+  if (have_seen) mask = BuildMaskShares<u64>(seen, n);
+
+  std::vector<std::unique_ptr<Channel>> ch(3);
+  for (int p = 0; p < 3; ++p) {
+    auto c = TcpConnect(hosts[static_cast<std::size_t>(p)],
+                        ports[static_cast<std::size_t>(p)]);
+    if (!transcript.empty()) {
+      c = RecordTranscript(std::move(c), transcript,
+                           "client-P" + std::to_string(p));
+    }
+    ch[static_cast<std::size_t>(p)] = std::move(c);
+    std::printf("    connected to P%d at %s:%u\n", p,
+                hosts[static_cast<std::size_t>(p)].c_str(),
+                ports[static_cast<std::size_t>(p)]);
+  }
+
+  // ---- scoring: one round trip per server, all three in parallel roles ---
+  std::vector<std::vector<u64>> lo(3);
+  std::vector<std::uint8_t> frame;
+  for (int p = 0; p < 3; ++p) {
+    const auto msg = EncodeShares<u64>(
+        a_party[static_cast<std::size_t>(p)],
+        have_seen ? mask[static_cast<std::size_t>(p)]
+                  : std::vector<ReplicatedShare<u64>>{});
+    ch[static_cast<std::size_t>(p)]->Send(
+        Span<const std::uint8_t>(msg.data(), msg.size()));
+    ch[static_cast<std::size_t>(p)]->Recv(frame);
+    if (MsgOf(frame) != Msg::kScores) {
+      std::fprintf(stderr, "P%d answered the wrong message type\n", p);
+      return 1;
+    }
+    DecodeWords<u64>(frame, lo[static_cast<std::size_t>(p)]);
+  }
+
+  std::vector<std::int64_t> scores(n);
+  for (std::uint32_t j = 0; j < n; ++j) {
+    scores[j] = static_cast<std::int64_t>(
+        static_cast<u64>(lo[0][j] + lo[1][j] + lo[2][j]));
+  }
+  const auto top = TopK(Span<const std::int64_t>(scores.data(), n), k);
+  std::printf("    scored over the wire and selected the top %u locally\n", k);
+
+  // ---- private fetch: P0 and P1 only ------------------------------------
+  PirClient<u64> client(cat.DomainBits());
+  const std::size_t W = RecordWords<u64>();
+  int mismatches = 0;
+  std::vector<std::string> got_titles;
+
+  for (std::uint32_t r = 0; r < top.size(); ++r) {
+    const std::uint32_t j = top[r];
+    auto keys = client.Query(j);
+
+    const auto k0 = EncodeKeyBytes(keys.first.Serialize());
+    const auto k1 = EncodeKeyBytes(keys.second.Serialize());
+    ch[0]->Send(Span<const std::uint8_t>(k0.data(), k0.size()));
+    ch[1]->Send(Span<const std::uint8_t>(k1.data(), k1.size()));
+
+    std::vector<u64> a0, a1;
+    ch[0]->Recv(frame);
+    DecodeWords<u64>(frame, a0);
+    ch[1]->Recv(frame);
+    DecodeWords<u64>(frame, a1);
+    if (a0.size() != W || a1.size() != W) {
+      std::fprintf(stderr, "answer had %zu/%zu words, expected %zu\n",
+                   a0.size(), a1.size(), W);
+      return 1;
+    }
+
+    const auto rec = PirClient<u64>::ReconstructBytes(
+        Span<const u64>(a0.data(), W), Span<const u64>(a1.data(), W));
+    const auto truth = cat.Record(j);
+    for (std::size_t i = 0; i < truth.size(); ++i) {
+      if (rec[i] != truth[i]) { ++mismatches; break; }
+    }
+    got_titles.push_back(TitleFromRecord(rec));
+    std::printf("    %-4u %-6u %s\n", r, j, got_titles.back().c_str());
+  }
+
+  std::uint64_t sent = 0, recvd = 0;
+  for (int p = 0; p < 3; ++p) {
+    ch[static_cast<std::size_t>(p)]->Send(
+        Span<const std::uint8_t>(EncodeBye().data(), 1));
+    sent += ch[static_cast<std::size_t>(p)]->BytesSent();
+    recvd += ch[static_cast<std::size_t>(p)]->BytesReceived();
+    ch[static_cast<std::size_t>(p)]->Flush();
+    ch[static_cast<std::size_t>(p)]->Close();
+  }
+
+  // THE ASSERTION THAT MAKES THIS WORTH RUNNING.
+  if (got_titles != expect_titles) {
+    std::fprintf(stderr,
+                 "\nFAIL: the networked run returned different titles than the\n"
+                 "in-process run. The transport changed the result, which means\n"
+                 "the protocol is not transport-independent after all.\n");
+    return 1 + mismatches;
+  }
+
+  std::printf("\n    %llu bytes sent, %llu received across three links,\n"
+              "    framing included.\n", (unsigned long long)sent,
+              (unsigned long long)recvd);
+  std::printf("    IDENTICAL to the in-process run: same %zu titles, same order,\n"
+              "    every record byte-exact.\n", got_titles.size());
+  return mismatches;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
   std::uint32_t user = 42, k = 10;
+  std::string connect, transcript;
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp(argv[i], "--user") == 0 && i + 1 < argc) {
       user = static_cast<std::uint32_t>(std::strtoul(argv[++i], nullptr, 10));
     } else if (std::strcmp(argv[i], "--k") == 0 && i + 1 < argc) {
       k = static_cast<std::uint32_t>(std::strtoul(argv[++i], nullptr, 10));
+    } else if (std::strcmp(argv[i], "--connect") == 0 && i + 1 < argc) {
+      connect = argv[++i];              // host:p0,host:p1,host:p2
+    } else if (std::strcmp(argv[i], "--transcript") == 0 && i + 1 < argc) {
+      transcript = argv[++i];
     } else {
-      std::fprintf(stderr, "usage: demo [--user N] [--k N]\n");
+      std::fprintf(stderr,
+                   "usage: demo [--user N] [--k N]\n"
+                   "            [--connect H:P,H:P,H:P] [--transcript FILE]\n");
+      return 2;
+    }
+  }
+
+  // Parse the three endpoints up front, so a typo fails before any work.
+  std::vector<std::string> hosts;
+  std::vector<std::uint16_t> ports;
+  if (!connect.empty()) {
+    std::size_t at = 0;
+    while (at <= connect.size()) {
+      const std::size_t comma = connect.find(',', at);
+      const std::string one = connect.substr(
+          at, comma == std::string::npos ? std::string::npos : comma - at);
+      const std::size_t colon = one.rfind(':');
+      if (colon == std::string::npos) {
+        std::fprintf(stderr, "demo: --connect entry \"%s\" is not host:port\n",
+                     one.c_str());
+        return 2;
+      }
+      hosts.push_back(one.substr(0, colon));
+      ports.push_back(static_cast<std::uint16_t>(
+          std::strtoul(one.c_str() + colon + 1, nullptr, 10)));
+      if (comma == std::string::npos) break;
+      at = comma + 1;
+    }
+    if (hosts.size() != 3) {
+      std::fprintf(stderr,
+                   "demo: --connect needs exactly three endpoints, got %zu.\n"
+                   "      The protocol is 2-of-3; all three servers are scored\n"
+                   "      against even though only P0/P1 answer PIR queries.\n",
+                   hosts.size());
       return 2;
     }
   }
@@ -191,6 +370,7 @@ int main(int argc, char** argv) {
   std::printf("    %-4s %-6s %-22s %s\n", "rank", "item", "score (2t-scaled)", "title (fetched privately)");
 
   int mismatches = 0;
+  std::vector<std::string> inproc_titles;
   for (std::uint32_t r = 0; r < top.size(); ++r) {
     const std::uint32_t j = top[r];
     auto keys = client.Query(j);
@@ -206,8 +386,9 @@ int main(int argc, char** argv) {
     for (std::size_t i = 0; i < truth.size(); ++i)
       if (rec[i] != truth[i]) { ++mismatches; break; }
 
+    inproc_titles.push_back(TitleFromRecord(rec));
     std::printf("    %-4u %-6u %-22lld %s\n", r, j,
-                static_cast<long long>(scores[j]), TitleFromRecord(rec).c_str());
+                static_cast<long long>(scores[j]), inproc_titles.back().c_str());
   }
 
   // ---- Cross-check the ranking against the Python oracle ----------------
@@ -243,6 +424,20 @@ int main(int argc, char** argv) {
                      "(%zu of %zu positions match)\n", agree, cmp);
         ++mismatches;
       }
+    }
+  }
+
+  // ---- 5. The same protocol again, over three sockets -------------------
+  if (!connect.empty()) {
+    try {
+      mismatches += RunNetworked(hosts, ports, transcript, A, user, d, n, seen,
+                                 have_seen, cat, k, inproc_titles);
+    } catch (const std::exception& e) {
+      std::fprintf(stderr,
+                   "\ndemo: networked run failed: %s\n"
+                   "Are the servers running? Start them with:\n"
+                   "  bash scripts/run_servers.sh start\n", e.what());
+      return 1;
     }
   }
 

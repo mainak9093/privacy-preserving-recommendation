@@ -1,6 +1,9 @@
 # OblivRec — handover, status, and what is left before 12 September
 
-**Written 2026-09-09. Milestone 2 (mid-term report) is due Saturday 12 September — three days.**
+**Written 2026-09-09, updated 2026-09-11. Milestone 2 is due Saturday 12 September.**
+
+> **Update 2026-09-11: Task A below is DONE.** The networking landed, so the Phase 2 exit
+> criterion is met in full. The remaining unclaimed work is Tasks B–E in §4.
 
 This is the single document to read if you are picking the project up. It says what exists, how
 to check that it works, exactly what is still unclaimed, and how to write your own contribution
@@ -15,10 +18,10 @@ that is said explicitly.
 |---|---|
 | **Phase 2 (S1: serving + delivery)** | **functionally complete and demonstrated** |
 | Phase 3 (S2: private training) | not started — this is the next month's work |
-| Test suite | 9 binaries, green in ~1.8 s, clean under UBSan + `_GLIBCXX_DEBUG` + checked `Span` |
+| Test suite | 10 binaries, green in ~2 s, clean under UBSan + `_GLIBCXX_DEBUG` + checked `Span` |
 | Graded artifact | `report/midterm.tex` → 2 pages, **three sections still blank** |
 | Technical report | `report/midterm_technical.tex` → 17 pages |
-| Deferred | three-process networking (PHASES 2.3 partial, 2.8) |
+| Networking | **done 2026-09-11** — three separate processes over TCP; exit criterion met in full |
 
 **The one-line summary of the system.** Three servers hold 2-of-3 replicated shares of a user's
 embedding. Because the item matrix `B` is public (that is NUDGE's design), each server computes
@@ -237,11 +240,19 @@ two people do not do the same thing.
 
 > **None of these are blocked on anything.** They touch files nobody else is editing.
 
-### Task A — Three-process networking (W2 · PHASES 2.3 + 2.8) · **highest value**
+### ~~Task A — Three-process networking~~ · **DONE 2026-09-11, no longer available**
+
+> Completed on 11 September. `include/oblivrec/channel.hpp`, `src/net/tcp.cpp`,
+> `src/net/transcript.cpp`, `src/apps/server.cpp`, `src/apps/probe.cpp` and `tests/test_channel.cpp`.
+> `make demo-net` runs three separate OS processes and returns the same ten titles as the
+> in-process demo; `make distinguisher` records 1800 queries and shows an adversary at chance.
+> **The Phase 2 exit criterion is now met in full.** The description below is kept for context.
+
+#### Original description
 
 This is the largest deferred item and the most obvious question in a viva: *"you say three servers
 — do they actually talk?"* Right now they do not; the three parties are three sets of shares in one
-process, and `src/net/` is empty.
+process, and `src/net/` was empty. *(Both were true when this was written on 09-11; the work is now done.)*
 
 **Build:**
 - `include/oblivrec/channel.hpp` — a `Channel` interface, `Send(Span<const uint8_t>)` / `Recv(...)`,
@@ -261,7 +272,7 @@ demonstrates an adversary **failing**.
 **Done when:** `demo --net` returns the same ten titles as the in-process demo; the transcript is
 recorded at the channel boundary; the distinguisher reports ≈50% accuracy over ≥1000 trials.
 
-**This closes the half of the Phase 2 exit criterion currently marked NOT MET**, which is
+**This closed the half of the Phase 2 exit criterion that was then marked NOT MET**, which was
 `PHASES.md`'s most visible open item.
 
 ### Task B — The ring-width crossover (W2 · D9.1)

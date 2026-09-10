@@ -78,7 +78,14 @@ def git_sha():
         return subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                               capture_output=True, text=True,
                               check=True).stdout.strip()
-    except Exception:
+    except Exception as e:
+        # Do NOT fail silently. This bit for real on 2026-09-10: under memory
+        # pressure the git subprocess could not spawn, and every result row was
+        # stamped "unknown", which RULES D5 forbids. A swallowed provenance
+        # failure is invisible in the data and only shows up much later.
+        print(f"WARNING: git sha unavailable ({type(e).__name__}: {e}); "
+              "rows will be stamped 'unknown' and RULES D5 is not satisfied",
+              file=sys.stderr)
         return "unknown"
 
 
@@ -141,6 +148,72 @@ def estimate_margin(Bn, fetched, rng, n_items, steps=MARGIN_STEPS):
             np.maximum(active.sum(axis=1, keepdims=True), 1)
         a = unit_rows(a + MARGIN_LR * grad)
     return a
+
+
+def decoy_defence(Bn, B, observed_all, A, S, rated, pop, rng, k=10,
+                  r_grid=(0, 1, 2, 3, 5, 10, 20, 40)):
+    """THE DEFENCE. Fetch the k real recommendations plus r decoys.
+
+    The observer sees k+r indices and cannot tell which are which, so the
+    centroid estimator is dragged toward whatever the decoys point at. The
+    question this answers is not "does it help" -- of course it does -- but
+    HOW MUCH, PER DECOY, so the cost can be weighed against it.
+
+    -----------------------------------------------------------------------
+    DECOYS ARE DRAWN POPULARITY-WEIGHTED, NOT UNIFORMLY, AND THIS MATTERS.
+
+    Real recommendations are popularity-skewed: the top of a.B is dominated
+    by items many people rated. Uniform decoys would come mostly from the long
+    tail and would therefore be SEPARABLE from the real fetches by inspection
+    alone -- the observer would simply discard anything unpopular and run the
+    original attack on what was left.
+
+    Measuring a defence against an adversary too naive to notice that would
+    flatter it. So decoys are sampled with probability proportional to
+    popularity, which is public information the client also has, making them
+    drawn from roughly the distribution real fetches come from.
+    """
+    m = A.shape[0]
+    n = Bn.shape[0]
+    real = observed_all[:, :k]
+
+    # Sampling weights: popularity, normalised. Items already rated are still
+    # eligible as decoys -- the observer cannot see the user's rating history,
+    # so excluding them would be a tell.
+    w = pop.astype(np.float64)
+    if w.sum() <= 0:
+        w = np.ones(n)
+    w = w / w.sum()
+
+    out = []
+    for r in r_grid:
+        if r == 0:
+            fetched = real
+        else:
+            decoys = rng.choice(n, size=(m, r), p=w)
+            fetched = np.concatenate([real, decoys], axis=1)
+
+        a_hat = estimate_centroid(Bn, fetched)
+        cos = cos_rows(a_hat, A)
+        q1, q2, q3 = np.percentile(cos, [25, 50, 75])
+
+        seen = rated.copy()
+        np.put_along_axis(seen, real, True, axis=1)
+        true_top = top_indices(S, seen, TOPK)
+        # Ranked by the PUBLIC B, exactly as the main attack does, so the two
+        # overlap numbers are comparable.
+        est_top = top_indices(a_hat @ B, seen, TOPK)
+        overlap = np.array([
+            len(set(true_top[i]).intersection(est_top[i])) / TOPK
+            for i in range(m)])
+
+        out.append({
+            "r": int(r), "k": int(k),
+            "cos_mean": float(cos.mean()), "cos_median": float(q2),
+            "cos_q1": float(q1), "cos_q3": float(q3),
+            "overlap_mean": float(overlap.mean()),
+        })
+    return out
 
 
 def main():
@@ -222,6 +295,47 @@ def main():
                 "timestamp": stamp,
             })
         print()
+
+    # ---- the defence -----------------------------------------------------
+    print()
+    print("DECOY DEFENCE: fetch the k=10 real recommendations plus r decoys,")
+    print("drawn popularity-weighted so they are not separable by inspection.")
+    print()
+    print(f"  {'r':>3} {'total fetches':>14} {'cos mean':>9} "
+          f"{'top20 overlap':>14} {'bytes/query':>12}")
+
+    # From bench/bench_baseline.cpp at the ML-100K operating point: 483 B per
+    # server per query, two servers per fetch.
+    BYTES_PER_FETCH = 483 * 2
+
+    defence = decoy_defence(Bn, B, observed_all, A, S, rated, pop, rng)
+    for row in defence:
+        total = row["k"] + row["r"]
+        row_bytes = total * BYTES_PER_FETCH
+        print(f"  {row['r']:>3} {total:>14} {row['cos_mean']:>9.4f} "
+              f"{row['overlap_mean']:>13.1%} {row_bytes:>12,}")
+        rows_out.append({
+            "git_sha": sha, "host": host, "profile": "local",
+            "m": int(m), "n": int(n), "d": int(d),
+            "ell": int(mf.ELL_DEFAULT), "b": None, "t": None,
+            "k": TOPK, "stage": "S1", "phase": "leakage",
+            "op": "decoy_defence", "j": int(total), "r": int(row["r"]),
+            "seed": SEED,
+            "cos_mean": row["cos_mean"], "cos_median": row["cos_median"],
+            "cos_q1": row["cos_q1"], "cos_q3": row["cos_q3"],
+            "overlap_mean": row["overlap_mean"],
+            "bytes_per_query": int(row_bytes),
+            "timestamp": stamp,
+        })
+
+    base = defence[0]
+    print()
+    print("The trade, stated so it can be argued with:")
+    for row in defence[1:]:
+        drop = base["cos_mean"] - row["cos_mean"]
+        cost = row["r"] * BYTES_PER_FETCH
+        print(f"  r={row['r']:>3}: cos {base['cos_mean']:.3f} -> "
+              f"{row['cos_mean']:.3f} ({drop:+.3f}) for {cost:,} extra bytes")
 
     with open(RESULTS, "a", encoding="utf-8", newline="\n") as fh:
         for r in rows_out:

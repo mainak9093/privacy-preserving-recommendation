@@ -137,10 +137,66 @@ is not one. Absolute timings on this machine vary up to $4\times$ between
 back-to-back runs, so these are ratios taken within a single run, as
 Section~\ref{sec:tech:bench} explains.
 
+\subsection{Would decoys do instead? No, and the reason is interesting}
+\label{sec:tech:leakage:decoys}
+
+The obvious cheap alternative to a private read is to fetch the $\topk$ real
+recommendations plus $r$ decoys and let the observer sort it out. We measured
+it, because ``obviously insufficient'' is not an argument.
+
+Decoys must be drawn \emph{popularity-weighted}, not uniformly. Real
+recommendations are popularity-skewed, so uniform decoys would come mostly from
+the long tail and be separable by inspection alone --- an observer would
+discard the unpopular ones and run the original attack on what was left.
+Measuring a defence against an adversary too naive to notice that would flatter
+it.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{figures/fig_decoy}
+\caption{The decoy defence, and the floor it cannot cross. Even 40 decoys ---
+five times the real traffic, at 48\,KB per query --- leave the adversary at
+$\cos = 0.71$, far above the popularity control at $0.44$.}
+\label{fig:decoy}
+\end{figure}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Cost and benefit of decoys, at $\topk = 10$. Bandwidth is both
+servers, from Section~\ref{sec:tech:leakage:cost}.}
+\label{tab:decoy}
+\begin{tabular}{@{}rrrr@{}}
+\toprule
+decoys $r$ & fetches & $\cos(\hat{a}, a)$ & bytes/query \\
+\midrule
+0  & 10 & 0.843 & 9{,}660 \\
+5  & 15 & 0.828 & 14{,}490 \\
+10 & 20 & 0.806 & 19{,}320 \\
+40 & 50 & \textbf{0.705} & 48{,}300 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{The defence does not work, and the reason is the same fact that made
+the popularity control necessary.} Because decoys must be popularity-weighted
+to be unremarkable, they point roughly along the popularity direction --- and
+the popularity direction is exactly what the control already recovers, at
+$\cos = 0.44$. So decoys drag the estimate down \emph{towards} the control's
+level and no further. There is a floor built into the defence, and it sits
+where an adversary who watched nobody already stands.
+
+Quintupling the traffic buys a drop of $0.14$ and leaves the adversary far
+above that floor. A private read costs about a tenth of that bandwidth and
+removes the observation entirely. This is a negative result about the
+alternative, and it is the strongest argument for the mechanism this project
+actually builds.
+
 \medskip
 
-Together the two halves of this section make the argument the composition
-exists to make: without a private read, ten observed fetches recover the user;
-with one, the cost of hiding them is a few hundred bytes and a fraction of a
-millisecond. \nudgeplain{} leaves this to ``other means''. This is what those
-means cost.
+Together, the parts of this section make the argument the composition exists to
+make: without a private read, ten observed fetches recover the user; the cheap
+alternative to a private read does not close the gap; and a private read closes
+it for a few hundred bytes and a fraction of a millisecond. \nudgeplain{} leaves
+this to ``other means''. This is what those means cost, and what the plausible
+substitutes do not buy.
