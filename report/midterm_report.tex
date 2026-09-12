@@ -1,0 +1,71 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=0.85in]{geometry}
+\usepackage{booktabs}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+
+\titlespacing{\section}{0pt}{8pt}{4pt}
+\titlespacing{\subsection}{0pt}{6pt}{2pt}
+\setlist[itemize]{topsep=1pt, itemsep=1pt, parsep=0pt, leftmargin=1.4em}
+
+\title{\vspace{-1.5em}CS670 Mid-Term Project Report\\
+\large Privacy-Preserving Recommendation System: OblivRec}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-3em}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Name} & \textbf{Roll No.} \\
+\midrule
+Mainak Sarkar    & 230619 \\
+Shrasti Dwivedi  & 230982 \\
+Shravan Agrawal  & 230984 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.5em}
+\section*{1. Project Status}
+
+The literature survey, \emph{Privacy-Preserving Recommendation Systems: A Survey of Cryptographic Approaches}, is complete, along with its accompanying presentation video (\url{https://youtu.be/5_uQ8ESewRk}). Building on this, we developed \textbf{OblivRec}, a working demonstrator that combines the three-party private-training design of \emph{Nudge} with the private-delivery design of \emph{Pirsona}. Since neither paper specifies how the two compose end-to-end, integrating them and validating the result experimentally is the project's main contribution at this stage.
+
+This stage covers private serving and delivery only; the model itself is still trained in the clear, with private training planned for the next phase. The demonstrator scores each user against the MovieLens-100K catalogue using 2-of-3 replicated secret sharing, and retrieves recommended items through a self-built distributed-point-function (DPF) private-information-retrieval (PIR) layer, ensuring that no server learns the user's data or which items were retrieved. A 20-page technical companion report provides full derivations, correctness proofs, and benchmark data.
+
+Two results are notable. First, private delivery is essential: because the item-embedding matrix is public, an observer who sees which items a user fetches can reconstruct their preferences with high accuracy, predicting 56\% of a user's next twenty recommendations after only ten fetches; adding decoy traffic fails to close this gap even at five times the real volume. Second, private retrieval sends $446\times$ fewer bytes than downloading the full catalogue; weighed against its higher server-side computation, it remains the better overall choice on any link slower than roughly 8~Gbit/s, which is to say on any real network. A trained statistical distinguisher confirmed that neither server can identify which item was fetched from network traffic alone.
+
+\section*{2. Individual Contributions}
+
+\subsection*{Mainak Sarkar (230619) -- DPF construction, correctness, and hardening}
+\begin{itemize}
+    \item Implemented a distributed point function (DPF) from scratch, sharing one traversal implementation across single-point and whole-domain evaluation.
+    \item Built an exhaustive correctness test suite (7.16 billion leaf comparisons, covering every input up to 16 domain bits on the 64-bit ring) and fixed a key-deserialisation bug that silently accepted an invalid party byte.
+    \item Replaced an insecure random-number generator with an OS-level CSPRNG and hardened the build with undefined-behaviour trapping, checked STL containers, and a bounds-checked span type.
+    \item Verified via a statistical distinguisher that an eavesdropper cannot identify a fetched item from raw network traffic.
+\end{itemize}
+
+\subsection*{Shravan Agrawal (230984) -- Private serving and delivery pipeline}
+\begin{itemize}
+    \item Implemented the MovieLens-100K record packing and the DPF-based PIR layer for private item retrieval.
+    \item Implemented the 2-of-3 secret-shared scoring engine, including seen-item masking, using the public item-embedding matrix to keep scoring communication-free.
+    \item Built and validated the float-to-ring encoding, fixing a rounding-mode and a quantisation-order bug, and verified the demo matches the cleartext baseline bit-for-bit.
+    \item Implemented the length-prefixed TCP framing layer connecting the three servers and the client, with validation against partial reads/writes and untrusted inputs.
+\end{itemize}
+
+\subsection*{Shrasti Dwivedi (230982) -- Modeling, benchmarking infrastructure, and coordination}
+\begin{itemize}
+    \item Implemented a cleartext power-iteration baseline and showed recommendation quality remains stable even before full convergence, justifying a cheaper training configuration.
+    \item Built the reproducible benchmarking harness used to measure DPF performance.
+    \item Prepared the literature-survey presentation, coordinated its submission, and led the writing of this report.
+    \item Designed the reconstruction-attack experiment across all 943 users (with popularity and random-direction controls) and showed that a decoy-based defence fails to close the privacy gap even at five times the real traffic.
+\end{itemize}
+
+\end{document}

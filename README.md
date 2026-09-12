@@ -61,22 +61,33 @@ implementation, written from scratch, serves the whole system.
 
 ---
 
-## Where we are: the literature survey
+## Where we are: both halves are built
 
-**No implementation yet, deliberately.** Milestone 1 (31 August) is a literature survey report
-plus a 30-minute recorded presentation. The protocol design drafted before the survey has been
-demoted to [`design/ARCHITECTURE-draft-v1.md`](design/ARCHITECTURE-draft-v1.md) and its empty
-source tree parked under [`archive/scaffold-2026-08-15/`](archive/scaffold-2026-08-15/), because
-two findings put it in doubt:
+> This section said *"No implementation yet, deliberately"* until 13 September 2026. That was true
+> during the literature survey and is no longer. The two concerns recorded here then — that Nudge
+> ships a reference implementation, and that a user could just download the public `B` — were both
+> settled at the instructor meeting, and the system has been built since.
 
-- **Nudge ships a complete MIT-licensed reference implementation**
-  ([NudgeArtifact/private-recs](https://github.com/NudgeArtifact/private-recs)) — so
-  reimplementing its training core may be wasted effort.
-- **`B` is public and each user holds their own ratings**, so at MovieLens scale (~800 KB) a
-  user can download `B` and compute top-*k* locally with no cryptography. What genuinely
-  remains open is the *fetch* — exactly what Nudge delegates to "other means".
+**Milestone 1 (survey) and Milestone 2 (mid-term) are submitted. Both halves of the composition
+now run.**
 
-Both are settled at the instructor meeting. Until then, we read.
+| | Status |
+|---|---|
+| **S1 — private serving and delivery** | complete, demonstrated across three OS processes over TCP |
+| **S2 — private training** | complete; power iteration under 2-of-3 replicated sharing |
+| **S3 — composition and evaluation** | in progress |
+
+Some numbers, all reproducible from committed data (`mingw32-make figures`):
+
+- The DPF is verified **exhaustively** — every `alpha` against every `x`, 7.16 × 10⁹ leaf checks.
+- `demo --user 42` returns ten real film titles, each fetched by two-server DPF-PIR and verified
+  byte-exact against a cleartext lookup.
+- **Ten observed fetches recover a user's private embedding to `cos = 0.84`** and predict 56% of
+  their next twenty recommendations — the measured argument for why delivery must be private.
+  A decoy defence was measured and **fails**; a trained distinguisher on the wire sits at chance.
+- Private training matches the cleartext oracle within **±0.007 nDCG@20** at every `ell`.
+
+Start at [`docs/HANDOVER.md`](docs/HANDOVER.md).
 
 ## Where to start
 
