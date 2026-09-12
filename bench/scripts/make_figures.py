@@ -622,6 +622,138 @@ def fig_stages(rows):
                               if not bad else f"NON-ZERO for {bad}"))
     return True
 
+def fig_compose(rows, quality):
+    """F8, task 4.2: the cost of each half of the composition, isolated.
+
+    Two panels, and the second one is deliberately unflattering. Showing only
+    the first would be advocacy: it says private delivery is nearly free, which
+    is true per byte and false per round trip.
+    """
+    net = [r for r in rows if r.get("phase") == "net"
+           and r.get("op") in ("compose", "compose_batched")]
+    if not net:
+        print("  SKIP fig_compose: no composed rows (run mingw32-make bench)")
+        return False
+
+    arms = ["B1", "B2", "B3", "FULL", "B5"]
+    pretty = {"B1": "B1\ncleartext\n+ fetch",
+              "B2": "B2\ncleartext\n+ PIR",
+              "B3": "B3\nprivate\n+ fetch",
+              "FULL": "FULL\nprivate\n+ PIR",
+              "B5": "B5\ncleartext\n+ download"}
+    colour = {"B1": C_FLOOR, "B2": C_ALT, "B3": C_ALT, "FULL": C_ATTACK,
+              "B5": C_CONTROL}
+
+    def pick(arm, prof, op):
+        for r in net:
+            if (r.get("config") == arm and r.get("profile") == prof
+                    and r.get("op") == op):
+                return r
+        return None
+
+    # nDCG@20 for the two distinct models: oracle (B1/B2/B5), private (B3/FULL).
+    q = {"oracle": None, "private": None}
+    for r in quality:
+        if r.get("ell") == 10 and r.get("d") == 16 and r.get("b") == 64:
+            q["oracle"] = r.get("ndcg_at_20_oracle")
+            q["private"] = r.get("ndcg_at_20_private")
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10.6, 3.9))
+    fig.subplots_adjust(wspace=0.28)
+
+    # ---- panel A: the isolation -- what each half ADDS over B1 ----------
+    #
+    # The task's own words are "the cost of each half, isolated", so plot the
+    # increment over B1 rather than five totals a reader has to subtract by
+    # eye. B1 is the floor and sits at zero by construction.
+    x = np.arange(len(arms))
+    width = 0.38
+    base = {}
+    for prof in ("local", "wan_a"):
+        r = pick("B1", prof, "compose")
+        base[prof] = r["wall_ms"] if r else 0.0
+
+    for off, prof, alpha, lab in ((-width / 2, "local", 1.0, "local"),
+                                  (width / 2, "wan_a", 0.55, "wan_a")):
+        vals = []
+        for a in arms:
+            r = pick(a, prof, "compose")
+            vals.append((r["wall_ms"] - base[prof]) if r else 0.0)
+        bars = ax1.bar(x + off, vals, width,
+                       color=[colour[a] for a in arms], alpha=alpha,
+                       edgecolor="white", linewidth=0.5, label=lab)
+        for b, v in zip(bars, vals):
+            if abs(v) < 0.05:
+                continue          # rounding noise; "-0.0" is not a measurement
+            ax1.annotate(f"{v:+.0f}" if abs(v) >= 10 else f"{v:+.1f}",
+                         xy=(b.get_x() + b.get_width() / 2, v),
+                         xytext=(0, 3 if v >= 0 else -11),
+                         textcoords="offset points", ha="center", fontsize=6.5)
+
+    ax1.axhline(0, color="k", lw=0.8)
+    ax1.set_xticks(x)
+    ax1.set_xticklabels([pretty[a] for a in arms], fontsize=7)
+    ax1.set_ylabel("ms per session, relative to B1")
+    ax1.set_title("What each half costs, isolated", fontsize=9)
+    ax1.grid(axis="x", visible=False)
+    ax1.legend(fontsize=7.5, loc="upper left", title="profile",
+               title_fontsize=7.5)
+
+    # Quality belongs on this panel: without it a reader concludes B5 is the
+    # right answer, when B5 has B1's exact quality AND the lowest latency and
+    # is rejected on bandwidth alone.
+    qline = []
+    for a in arms:
+        src = "private" if a in ("B3", "FULL") else "oracle"
+        qline.append("--" if q.get(src) is None else f"{q[src]:.3f}")
+    ax1.set_xlabel("nDCG@20:   " + "      ".join(qline), fontsize=7,
+                   color="#555555")
+
+    # ---- panel B: wan_a, as built against what batching would give ------
+    built, batched = [], []
+    for a in arms:
+        r = pick(a, "wan_a", "compose")
+        b = pick(a, "wan_a", "compose_batched")
+        built.append(r["wall_ms"] if r else 0.0)
+        batched.append(b["wall_ms"] if b else (r["wall_ms"] if r else 0.0))
+
+    ax2.bar(x - width / 2, built, width, color=[colour[a] for a in arms],
+            label="as built: $k$ sequential round trips")
+    ax2.bar(x + width / 2, batched, width, color=[colour[a] for a in arms],
+            alpha=0.45, hatch="//", edgecolor="white",
+            label="batched into 1 round trip (not implemented)")
+
+    b5 = built[arms.index("B5")]
+    ax2.axhline(b5, color=C_CONTROL, ls="--", lw=1.0)
+    ax2.text(len(arms) - 0.4, b5 * 1.12, "B5 full download", fontsize=7,
+             color=C_CONTROL, ha="right")
+
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(arms, fontsize=8)
+    ax2.set_ylabel("ms per user-session on wan_a")
+    ax2.set_title("On a WAN, round trips decide it -- not bytes", fontsize=9)
+    ax2.grid(axis="x", visible=False)
+    ax2.legend(fontsize=7, loc="upper left")
+
+    fig.text(0.5, -0.10,
+             "wan_a = 30 ms RTT, 100 Mbit/s. Channel-level emulation, not "
+             "netem. Training amortised over m = 943 users per refresh.",
+             ha="center", fontsize=7.5, color="#555555")
+
+    save(fig, "fig_compose.pdf")
+
+    b1 = pick("B1", "wan_a", "compose")
+    b2 = pick("B2", "wan_a", "compose")
+    b3 = pick("B3", "wan_a", "compose")
+    fu = pick("FULL", "wan_a", "compose")
+    if b1 and b2 and b3 and fu:
+        print(f"    wan_a: private delivery costs {b2['wall_ms']-b1['wall_ms']:+.2f} ms, "
+              f"private training {b3['wall_ms']-b1['wall_ms']:+.2f} ms, "
+              f"both {fu['wall_ms']-b1['wall_ms']:+.2f} ms")
+        print(f"    B5 (full download, 1 round trip) = {b5:.2f} ms, "
+              f"i.e. {b2['wall_ms']/b5:.1f}x FASTER than DPF-PIR as built")
+    return True
+
 
 def main():
     print("regenerating figures from bench/results/")
@@ -631,6 +763,8 @@ def main():
     dist = newest_sha(load("distinguisher_result.jsonl"), "distinguisher")
     sweep = newest_sha(load("bench_sweep.jsonl"), "bench_sweep")
     stages = newest_sha(load("bench_stages.jsonl"), "bench_stages")
+    comp = newest_sha(load("bench_compose.jsonl"), "bench_compose")
+    qual = newest_sha(load("train_quality.jsonl"), "train_quality")
     ell = load("oracle_ell_sweep.jsonl")     # one row per ell, no sha filter
 
     made = 0
@@ -642,6 +776,7 @@ def main():
     made += bool(fig_decoy(leak))
     made += bool(fig_sweep(sweep))
     made += bool(fig_stages(stages))
+    made += bool(fig_compose(comp, qual))
 
     print(f"\n{made} figure(s) written to {FIGDIR}/")
     if made == 0:
