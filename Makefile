@@ -25,6 +25,8 @@
 #    check            hardened build: UBSan trap mode, _GLIBCXX_DEBUG, checked Span
 #    test-exhaustive  the full REQUIREMENTS section 7 sweep, about 15 minutes
 #    bench            run benchmarks, appending JSONL to bench/results/
+#                     about 7 minutes since bench_sweep landed (task 4.1);
+#                     bench_sweep alone is ~6.5 min of that
 #    figures          regenerate figures (Day 6; guarded until the script exists)
 #    clean
 # ==========================================================================

@@ -414,12 +414,92 @@ def fig_decoy(rows):
     return True
 
 
+# --------------------------------------------------------------------------
+#  F7 -- the parameter sweep (task 4.1), and the theorem it confirms.
+#
+#  The left panel is the cost model: rounds rise linearly in d and in ell, and
+#  are FLAT in m. The right panel is why that matters -- quadrupling the number
+#  of users quadruples the input matrix while moving the byte count by a few
+#  percent, because communication tracks the intermediate VECTORS and not the
+#  matrix. That is NUDGE Thm 4.2, measured rather than cited.
+# --------------------------------------------------------------------------
+def fig_sweep(rows):
+    train = [r for r in rows
+             if r.get("op") == "approxfactor" and r.get("phase") == "matvec"]
+    if not train:
+        print("  SKIP fig_sweep: no sweep rows (run mingw32-make bench)")
+        return False
+
+    def series(axis, key):
+        pts = collections.defaultdict(list)
+        for r in train:
+            if r.get("axis") == axis and r.get("normalizer", "").startswith("reveal"):
+                pts[r[key]].append(r)
+        out = []
+        for v in sorted(pts):
+            g = pts[v]
+            out.append((v, g[0]["rounds"], g[0]["bytes_sent"],
+                        float(np.median([x["wall_ms"] for x in g]))))
+        return out
+
+    d_s, ell_s, m_s = series("d", "d"), series("ell", "ell"), series("m", "m")
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.6, 3.5))
+
+    for pts, lab, colour, mark in ((d_s, "vary $d$ (components)", C_ATTACK, "o"),
+                                   (ell_s, r"vary $\ell$ (iterations)", C_ALT, "s"),
+                                   (m_s, "vary $m$ (users)", C_CONTROL, "^")):
+        if not pts:
+            continue
+        x = [p[0] for p in pts]
+        y = [p[1] for p in pts]
+        ax1.plot(x, y, color=colour, marker=mark, ms=4, label=lab)
+
+    ax1.set_xscale("log")
+    ax1.set_yscale("log")
+    ax1.set_xlabel("parameter value")
+    ax1.set_ylabel("communication rounds")
+    ax1.set_title(r"Rounds rise in $d$ and $\ell$, and are flat in $m$",
+                  fontsize=9)
+    ax1.legend(fontsize=7.5, loc="upper left")
+
+    # The theorem, made visible: matrix entries against bytes.
+    if m_s:
+        n = 1682
+        entries = [p[0] * n for p in m_s]
+        mb = [p[2] / 1e6 for p in m_s]
+        ax2.plot(entries, mb, color=C_CONTROL, marker="^", ms=6)
+        for i, (e, y, p) in enumerate(zip(entries, mb, m_s)):
+            last = (i == len(entries) - 1)   # keep the rightmost label on-axes
+            ax2.annotate(f"m={p[0]}", xy=(e, y),
+                         xytext=(-4 if last else 4, -10),
+                         ha="right" if last else "left",
+                         textcoords="offset points", fontsize=7.5)
+        grow_x = entries[-1] / entries[0]
+        grow_y = mb[-1] / mb[0]
+        ax2.set_xlabel("input matrix entries ($m \\times n$)")
+        ax2.set_ylabel("communication (MB)")
+        ax2.set_ylim(0, max(mb) * 1.35)
+        ax2.set_title(f"Matrix grows {grow_x:.0f}$\\times$, "
+                      f"traffic grows {100*(grow_y-1):.0f}%", fontsize=9)
+        ax2.annotate("communication tracks the intermediate\n"
+                     "vectors, not the input matrix (Thm 4.2)",
+                     xy=(0.5, 0.12), xycoords="axes fraction", ha="center",
+                     fontsize=7.5, color="#555555")
+
+    save(fig, "fig_sweep.pdf")
+    print(f"    sweep: matrix x{grow_x:.0f} -> bytes x{grow_y:.3f}, "
+          f"rounds unchanged at {m_s[0][1]}")
+    return True
+
+
 def main():
     print("regenerating figures from bench/results/")
     leak = newest_sha(load("leakage_attack.jsonl"), "leakage_attack")
     dpf = newest_sha(load("bench_dpf.jsonl"), "bench_dpf")
     base = newest_sha(load("bench_baseline.jsonl"), "bench_baseline")
     dist = newest_sha(load("distinguisher_result.jsonl"), "distinguisher")
+    sweep = newest_sha(load("bench_sweep.jsonl"), "bench_sweep")
     ell = load("oracle_ell_sweep.jsonl")     # one row per ell, no sha filter
 
     made = 0
@@ -429,6 +509,7 @@ def main():
     made += bool(fig_pir_cost(base))
     made += bool(fig_distinguisher(dist))
     made += bool(fig_decoy(leak))
+    made += bool(fig_sweep(sweep))
 
     print(f"\n{made} figure(s) written to {FIGDIR}/")
     if made == 0:
