@@ -19,6 +19,7 @@ import sys
 
 import matplotlib
 matplotlib.use("Agg")           # no display on this box; must precede pyplot
+import matplotlib.patches as mpatches   # noqa: E402
 import matplotlib.pyplot as plt         # noqa: E402
 import numpy as np                      # noqa: E402
 
@@ -488,8 +489,269 @@ def fig_sweep(rows):
                      fontsize=7.5, color="#555555")
 
     save(fig, "fig_sweep.pdf")
-    print(f"    sweep: matrix x{grow_x:.0f} -> bytes x{grow_y:.3f}, "
-          f"rounds unchanged at {m_s[0][1]}")
+    # grow_x/grow_y are defined inside `if m_s:` above, so guard the report
+    # rather than raising NameError on a run where the m axis is absent.
+    if m_s:
+        print(f"    sweep: matrix x{grow_x:.0f} -> bytes x{grow_y:.3f}, "
+              f"rounds unchanged at {m_s[0][1]}")
+    return True
+
+
+def fig_stages(rows):
+    """F9, task 4.3: where the rounds and the milliseconds actually go.
+
+    Two panels that DISAGREE, which is the result. Rounds are what a WAN
+    charges for; milliseconds are what a local run charges for; the phase that
+    dominates one does not dominate the other.
+    """
+    attrib = [r for r in rows if r.get("op") == "attrib_analytic"]
+    micro = [r for r in rows if r.get("op", "").startswith(
+        ("matvec_", "truncate_", "normalize_", "msnzb_", "topk_", "score_",
+         "pir_"))]
+    if not attrib:
+        print("  SKIP fig_stages: no attribution rows (run mingw32-make bench)")
+        return False
+
+    # ---- panel A: the rounds budget, per configuration ------------------
+    configs, seen = [], set()
+    for r in attrib:
+        key = (r["b"], r.get("normalizer"))
+        if key not in seen:
+            seen.add(key)
+            configs.append(key)
+    configs.sort()
+
+    order = ["matvec", "truncate", "normalize", "fss", "net"]
+    label = {"matvec": "matvec", "truncate": "truncate",
+             "normalize": "normalize", "fss": "FSS gate", "net": "open $B$"}
+    colour = {"matvec": C_CONTROL, "truncate": C_ATTACK, "normalize": C_ALT,
+              "fss": "#762a83", "net": C_FLOOR}
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10.4, 3.8))
+    # The right panel's op names are long and sit on its left edge, so give the
+    # two panels real space between them rather than letting them collide.
+    fig.subplots_adjust(wspace=0.42)
+
+    names = []
+    present = set()          # phases that actually appear in SOME config
+    for i, (b, norm) in enumerate(configs):
+        share = {}
+        for r in attrib:
+            if r["b"] == b and r.get("normalizer") == norm:
+                share[r["phase"]] = r["share_rounds"]
+        left = 0.0
+        for ph in order:
+            v = share.get(ph, 0.0)
+            if v <= 0:
+                continue
+            ax1.barh(i, v, left=left, color=colour[ph], edgecolor="white",
+                     linewidth=0.6)
+            present.add(ph)
+            if v >= 7:
+                ax1.text(left + v / 2, i, f"{v:.0f}%", ha="center",
+                         va="center", fontsize=7.5, color="white")
+            left += v
+        names.append(f"b={b}\n{norm}")
+
+    ax1.set_yticks(range(len(configs)))
+    ax1.set_yticklabels(names, fontsize=7.5)
+    ax1.set_xlabel("share of communication rounds (%)")
+    ax1.set_xlim(0, 100)
+    ax1.set_title("Truncation dominates, in every configuration", fontsize=9)
+    ax1.grid(axis="y", visible=False)
+    # Build the legend from every phase present across ALL configurations. The
+    # FSS gate only appears in the fss row, so labelling from the first bar
+    # alone silently dropped it from the key.
+    handles = [mpatches.Patch(color=colour[ph], label=label[ph])
+               for ph in order if ph in present]
+    ax1.legend(handles=handles, fontsize=7.5, ncol=5, loc="upper center",
+               bbox_to_anchor=(0.5, -0.22), columnspacing=1.1,
+               handlelength=1.2)
+
+    # ---- panel B: measured per-call wall time, standalone ----------------
+    if micro:
+        by_op = collections.defaultdict(list)
+        for r in micro:
+            by_op[r["op"]].append(r["wall_ms"])
+        ops = sorted(by_op, key=lambda o: -float(np.median(by_op[o])))
+        vals = [float(np.median(by_op[o])) for o in ops]
+        cols = []
+        for o in ops:
+            if o.startswith("matvec"):
+                cols.append(C_CONTROL)
+            elif o.startswith("truncate"):
+                cols.append(C_ATTACK)
+            elif o.startswith("normalize"):
+                cols.append(C_ALT)
+            elif o.startswith("msnzb"):
+                cols.append("#762a83")
+            else:
+                cols.append(C_FLOOR)
+        ax2.barh(range(len(ops)), vals, color=cols)
+        ax2.set_yticks(range(len(ops)))
+        ax2.set_yticklabels(ops, fontsize=7)
+        ax2.set_xscale("log")
+        ax2.set_xlabel("median wall time per call (ms), standalone")
+        ax2.set_title("CPU ranks them differently from rounds", fontsize=9)
+        ax2.grid(axis="y", visible=False)
+        ax2.invert_yaxis()
+
+    fig.text(0.5, -0.16,
+             "Left: rounds, which is what a WAN charges for. Right: CPU, "
+             "measured out of the training loop's cache context.",
+             ha="center", fontsize=7.5, color="#555555")
+
+    save(fig, "fig_stages.pdf")
+
+    resid = {(r["b"], r.get("normalizer")): r.get("residual_rounds")
+             for r in attrib}
+    bad = [k for k, v in resid.items() if v not in (0, None)]
+    for (b, norm) in configs:
+        tr = next((r for r in attrib
+                   if r["b"] == b and r.get("normalizer") == norm
+                   and r["phase"] == "truncate"), None)
+        fs = next((r for r in attrib
+                   if r["b"] == b and r.get("normalizer") == norm
+                   and r["phase"] == "fss"), None)
+        if tr:
+            print(f"    b={b} {norm}: truncate {tr['share_rounds']:.1f}% of "
+                  f"rounds, {tr['share_bytes']:.1f}% of bytes" +
+                  (f"; FSS gate {fs['share_rounds']:.1f}%" if fs and
+                   fs["share_rounds"] > 0 else ""))
+    print("    residual: " + ("ALL ZERO -- the breakdown is complete"
+                              if not bad else f"NON-ZERO for {bad}"))
+    return True
+
+def fig_compose(rows, quality):
+    """F8, task 4.2: the cost of each half of the composition, isolated.
+
+    Two panels, and the second one is deliberately unflattering. Showing only
+    the first would be advocacy: it says private delivery is nearly free, which
+    is true per byte and false per round trip.
+    """
+    net = [r for r in rows if r.get("phase") == "net"
+           and r.get("op") in ("compose", "compose_batched")]
+    if not net:
+        print("  SKIP fig_compose: no composed rows (run mingw32-make bench)")
+        return False
+
+    arms = ["B1", "B2", "B3", "FULL", "B5"]
+    pretty = {"B1": "B1\ncleartext\n+ fetch",
+              "B2": "B2\ncleartext\n+ PIR",
+              "B3": "B3\nprivate\n+ fetch",
+              "FULL": "FULL\nprivate\n+ PIR",
+              "B5": "B5\ncleartext\n+ download"}
+    colour = {"B1": C_FLOOR, "B2": C_ALT, "B3": C_ALT, "FULL": C_ATTACK,
+              "B5": C_CONTROL}
+
+    def pick(arm, prof, op):
+        for r in net:
+            if (r.get("config") == arm and r.get("profile") == prof
+                    and r.get("op") == op):
+                return r
+        return None
+
+    # nDCG@20 for the two distinct models: oracle (B1/B2/B5), private (B3/FULL).
+    q = {"oracle": None, "private": None}
+    for r in quality:
+        if r.get("ell") == 10 and r.get("d") == 16 and r.get("b") == 64:
+            q["oracle"] = r.get("ndcg_at_20_oracle")
+            q["private"] = r.get("ndcg_at_20_private")
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10.6, 3.9))
+    fig.subplots_adjust(wspace=0.28)
+
+    # ---- panel A: the isolation -- what each half ADDS over B1 ----------
+    #
+    # The task's own words are "the cost of each half, isolated", so plot the
+    # increment over B1 rather than five totals a reader has to subtract by
+    # eye. B1 is the floor and sits at zero by construction.
+    x = np.arange(len(arms))
+    width = 0.38
+    base = {}
+    for prof in ("local", "wan_a"):
+        r = pick("B1", prof, "compose")
+        base[prof] = r["wall_ms"] if r else 0.0
+
+    for off, prof, alpha, lab in ((-width / 2, "local", 1.0, "local"),
+                                  (width / 2, "wan_a", 0.55, "wan_a")):
+        vals = []
+        for a in arms:
+            r = pick(a, prof, "compose")
+            vals.append((r["wall_ms"] - base[prof]) if r else 0.0)
+        bars = ax1.bar(x + off, vals, width,
+                       color=[colour[a] for a in arms], alpha=alpha,
+                       edgecolor="white", linewidth=0.5, label=lab)
+        for b, v in zip(bars, vals):
+            if abs(v) < 0.05:
+                continue          # rounding noise; "-0.0" is not a measurement
+            ax1.annotate(f"{v:+.0f}" if abs(v) >= 10 else f"{v:+.1f}",
+                         xy=(b.get_x() + b.get_width() / 2, v),
+                         xytext=(0, 3 if v >= 0 else -11),
+                         textcoords="offset points", ha="center", fontsize=6.5)
+
+    ax1.axhline(0, color="k", lw=0.8)
+    ax1.set_xticks(x)
+    ax1.set_xticklabels([pretty[a] for a in arms], fontsize=7)
+    ax1.set_ylabel("ms per session, relative to B1")
+    ax1.set_title("What each half costs, isolated", fontsize=9)
+    ax1.grid(axis="x", visible=False)
+    ax1.legend(fontsize=7.5, loc="upper left", title="profile",
+               title_fontsize=7.5)
+
+    # Quality belongs on this panel: without it a reader concludes B5 is the
+    # right answer, when B5 has B1's exact quality AND the lowest latency and
+    # is rejected on bandwidth alone.
+    qline = []
+    for a in arms:
+        src = "private" if a in ("B3", "FULL") else "oracle"
+        qline.append("--" if q.get(src) is None else f"{q[src]:.3f}")
+    ax1.set_xlabel("nDCG@20:   " + "      ".join(qline), fontsize=7,
+                   color="#555555")
+
+    # ---- panel B: wan_a, as built against what batching would give ------
+    built, batched = [], []
+    for a in arms:
+        r = pick(a, "wan_a", "compose")
+        b = pick(a, "wan_a", "compose_batched")
+        built.append(r["wall_ms"] if r else 0.0)
+        batched.append(b["wall_ms"] if b else (r["wall_ms"] if r else 0.0))
+
+    ax2.bar(x - width / 2, built, width, color=[colour[a] for a in arms],
+            label="as built: $k$ sequential round trips")
+    ax2.bar(x + width / 2, batched, width, color=[colour[a] for a in arms],
+            alpha=0.45, hatch="//", edgecolor="white",
+            label="batched into 1 round trip (not implemented)")
+
+    b5 = built[arms.index("B5")]
+    ax2.axhline(b5, color=C_CONTROL, ls="--", lw=1.0)
+    ax2.text(len(arms) - 0.4, b5 * 1.12, "B5 full download", fontsize=7,
+             color=C_CONTROL, ha="right")
+
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(arms, fontsize=8)
+    ax2.set_ylabel("ms per user-session on wan_a")
+    ax2.set_title("On a WAN, round trips decide it -- not bytes", fontsize=9)
+    ax2.grid(axis="x", visible=False)
+    ax2.legend(fontsize=7, loc="upper left")
+
+    fig.text(0.5, -0.10,
+             "wan_a = 30 ms RTT, 100 Mbit/s. Channel-level emulation, not "
+             "netem. Training amortised over m = 943 users per refresh.",
+             ha="center", fontsize=7.5, color="#555555")
+
+    save(fig, "fig_compose.pdf")
+
+    b1 = pick("B1", "wan_a", "compose")
+    b2 = pick("B2", "wan_a", "compose")
+    b3 = pick("B3", "wan_a", "compose")
+    fu = pick("FULL", "wan_a", "compose")
+    if b1 and b2 and b3 and fu:
+        print(f"    wan_a: private delivery costs {b2['wall_ms']-b1['wall_ms']:+.2f} ms, "
+              f"private training {b3['wall_ms']-b1['wall_ms']:+.2f} ms, "
+              f"both {fu['wall_ms']-b1['wall_ms']:+.2f} ms")
+        print(f"    B5 (full download, 1 round trip) = {b5:.2f} ms, "
+              f"i.e. {b2['wall_ms']/b5:.1f}x FASTER than DPF-PIR as built")
     return True
 
 
@@ -500,6 +762,9 @@ def main():
     base = newest_sha(load("bench_baseline.jsonl"), "bench_baseline")
     dist = newest_sha(load("distinguisher_result.jsonl"), "distinguisher")
     sweep = newest_sha(load("bench_sweep.jsonl"), "bench_sweep")
+    stages = newest_sha(load("bench_stages.jsonl"), "bench_stages")
+    comp = newest_sha(load("bench_compose.jsonl"), "bench_compose")
+    qual = newest_sha(load("train_quality.jsonl"), "train_quality")
     ell = load("oracle_ell_sweep.jsonl")     # one row per ell, no sha filter
 
     made = 0
@@ -510,6 +775,8 @@ def main():
     made += bool(fig_distinguisher(dist))
     made += bool(fig_decoy(leak))
     made += bool(fig_sweep(sweep))
+    made += bool(fig_stages(stages))
+    made += bool(fig_compose(comp, qual))
 
     print(f"\n{made} figure(s) written to {FIGDIR}/")
     if made == 0:

@@ -75,7 +75,7 @@ now run.**
 |---|---|
 | **S1 — private serving and delivery** | complete, demonstrated across three OS processes over TCP |
 | **S2 — private training** | complete; power iteration under 2-of-3 replicated sharing |
-| **S3 — composition and evaluation** | in progress |
+| **S3 — composition and evaluation** | **the loop is closed** — `demo --a/--b` serves a privately trained model; tasks 4.1–4.5 done |
 
 Some numbers, all reproducible from committed data (`mingw32-make figures`):
 
@@ -85,7 +85,17 @@ Some numbers, all reproducible from committed data (`mingw32-make figures`):
 - **Ten observed fetches recover a user's private embedding to `cos = 0.84`** and predict 56% of
   their next twenty recommendations — the measured argument for why delivery must be private.
   A decoy defence was measured and **fails**; a trained distinguisher on the wire sits at chance.
-- Private training matches the cleartext oracle within **±0.007 nDCG@20** at every `ell`.
+- Private training matches the cleartext oracle within **±0.007 nDCG@20** at every `ell`, and the
+  **spec-faithful normaliser — the one that reveals nothing — costs only 0.002–0.005 more**. What
+  it costs instead is rounds: 11519 against 2191.
+- **Composing costs exactly the sum of its halves**: `FULL = B2 + B3 − B1` to the byte. On a
+  30 ms / 100 Mbit link, private delivery adds **2.5 ms** per session and private training **96 ms**
+  amortised over 943 users.
+- **Truncation is ~73% of every communication round** and ~80% of bytes; the FSS comparison gate is
+  **3%**. The breakdown reconciles to zero residual, so it accounts for every round.
+- An honest negative: because delivery is `k` sequential round trips, **on a WAN the full-catalogue
+  download beats DPF-PIR by 4.6×** despite sending 45× more bytes. Batching the queries into one
+  round trip reverses it — and is not yet implemented.
 
 Start at [`docs/HANDOVER.md`](docs/HANDOVER.md).
 

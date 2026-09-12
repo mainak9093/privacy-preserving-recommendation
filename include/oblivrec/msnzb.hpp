@@ -70,8 +70,23 @@ constexpr std::uint32_t kMaskKappa = 40;
 template <typename Ring>
 class MsnzbGate {
  public:
-  // Build the offline material. `lo`/`hi` bound msnzb(S); a value outside is a
-  // programming error, not a silent wrong answer, so Apply checks.
+  // Build the offline material. `lo`/`hi` bound msnzb(S).
+  //
+  // CORRECTED 2026-09-13. This comment previously read "a value outside is a
+  // programming error, not a silent wrong answer, so Apply checks." Apply does
+  // NOT check, and cannot: it only ever sees the masked opening S + r, and
+  // learning msnzb(S) at runtime is precisely the thing the gate exists to
+  // avoid revealing. A check here would defeat the protocol.
+  //
+  // So an out-of-range value IS a silent wrong answer, and callers must size
+  // the range from public parameters. Apply builds its result as a telescoping
+  // sum of 1[S >= 2^k] over k in [lo, hi], so S below 2^lo yields table[0] and
+  // S at or above 2^hi yields table[hi-lo] -- a clamp, with no diagnostic.
+  //
+  // This was not theoretical: a [t-8, t+8] range in the training driver cost
+  // 0.108 of nDCG@20 and left the power iteration orthogonal to the oracle's
+  // subspace, while costing exactly the same rounds and bytes. See the range
+  // note in src/apps/train.cpp.
   MsnzbGate(Mpc3<Ring>& s, std::uint32_t lo, std::uint32_t hi,
             std::uint32_t value_bits);
 

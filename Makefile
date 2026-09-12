@@ -25,8 +25,12 @@
 #    check            hardened build: UBSan trap mode, _GLIBCXX_DEBUG, checked Span
 #    test-exhaustive  the full REQUIREMENTS section 7 sweep, about 15 minutes
 #    bench            run benchmarks, appending JSONL to bench/results/
-#                     about 7 minutes since bench_sweep landed (task 4.1);
-#                     bench_sweep alone is ~6.5 min of that
+#                     about 12 minutes: bench_sweep ~6.5 (task 4.1),
+#                     bench_compose ~3 (4.2), bench_stages ~1 (4.3).
+#                     Deliberately not behind a cheap-by-default flag --
+#                     see the argument in bench/bench_sweep.cpp's header.
+#    reproduce        the whole pipeline end to end, including the
+#                     composition demo. Long; this is the D8 artefact.
 #    figures          regenerate figures (Day 6; guarded until the script exists)
 #    clean
 # ==========================================================================
@@ -290,15 +294,19 @@ reproduce: check-toolchain
 	@$(MAKE) --no-print-directory test
 	@echo "== 4/7 cleartext oracle and the float-to-ring export"
 	$(PY) model/export.py
-	@echo "== 5/7 private training (S2) and the leakage attack"
+	@echo "== 5/8 private training (S2), all three configurations"
 	./$(BUILD)/train.exe --headroom-only
 	@for L in 1 2 5 10 25 50; do 	  ./$(BUILD)/train.exe --d 16 --ell $$L 	      --out model/out/B_private_ell$$L.bin > /dev/null || exit 1; 	done
+	@for L in 1 2 5 10 25 50; do 	  ./$(BUILD)/train.exe --d 16 --ell $$L --b 128 --normalizer reveal 	      --out model/out/B_private_reveal_b128_ell$$L.bin > /dev/null || exit 1; 	done
+	@for L in 1 2 5 10 25 50; do 	  ./$(BUILD)/train.exe --d 16 --ell $$L --b 128 --normalizer fss 	      --out model/out/B_private_fss_b128_ell$$L.bin > /dev/null || exit 1; 	done
 	$(PY) model/score_private.py
+	@echo "== 6/8 the composition: private training feeding private delivery"
+	./$(BUILD)/demo.exe --user 42 --k 10 	    --a model/out/A_private_ell10.bin 	    --b model/out/B_private_ell10.bin 	    --expect model/out/top10_u42_private_ell10.txt
 	$(PY) model/attack.py
-	@echo "== 6/7 benchmarks and baselines"
+	@echo "== 7/8 benchmarks and baselines"
 	@$(MAKE) --no-print-directory bench
 	$(PY) bench/scripts/baselines.py
-	@echo "== 7/7 figures"
+	@echo "== 8/8 figures"
 	@$(MAKE) --no-print-directory figures
 	@echo ""
 	@echo "reproduce: every figure and table in the report has been rebuilt"

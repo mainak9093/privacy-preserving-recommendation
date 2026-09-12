@@ -40,6 +40,8 @@
 //  which produced it, and the b=128 arm runs BOTH so the difference is in the
 //  data rather than in a footnote.
 // ==========================================================================
+#include "bench_common.hpp"
+
 #include "oblivrec/bench.hpp"
 #include "oblivrec/factor.hpp"
 #include "oblivrec/netprofile.hpp"
@@ -58,66 +60,8 @@ using namespace oblivrec::bench;
 namespace {
 
 constexpr int kReps = 5;              // D6: "repeated >= 5x"
-constexpr std::uint32_t kFullM = 943, kFullN = 1682;
-
-struct Ratings {
-  std::vector<std::uint64_t> u, i, r;
-  std::uint64_t nnz = 0;
-};
-
-bool LoadRatings(const std::string& path, Ratings* out) {
-  std::ifstream f(path);
-  if (!f) return false;
-  long u, it, rr, ts;
-  while (f >> u >> it >> rr >> ts) {
-    out->u.push_back(static_cast<std::uint64_t>(u));
-    out->i.push_back(static_cast<std::uint64_t>(it));
-    out->r.push_back(static_cast<std::uint64_t>(rr));
-    ++out->nnz;
-  }
-  return out->nnz > 0;
-}
-
-// Build a dense m x n matrix from the rating list, keeping only the first
-// `m` users. Subsampling USERS rather than ratings is what makes the m-axis
-// meaningful: it is the axis NUDGE says drives the ring-width requirement.
-template <typename Ring>
-std::vector<Ring> Densify(const Ratings& rt, std::uint32_t m, std::uint32_t n,
-                          std::uint64_t* nnz_out) {
-  std::vector<Ring> U(std::size_t(m) * n, Ring(0));
-  std::uint64_t nnz = 0;
-  for (std::size_t k = 0; k < rt.nnz; ++k) {
-    const std::uint64_t u = rt.u[k], i = rt.i[k];
-    if (u >= 1 && u <= m && i >= 1 && i <= n) {
-      U[std::size_t(u - 1) * n + (i - 1)] = static_cast<Ring>(rt.r[k]);
-      ++nnz;
-    }
-  }
-  *nnz_out = nnz;
-  return U;
-}
-
-// Emit the four profile projections for a row that has already been measured.
-void EmitProfiles(Writer& w, Row proto, std::uint64_t rounds,
-                  std::uint64_t bytes, const char* axis, const char* op) {
-  const NetProfile profiles[] = {kProfileLocal, kProfileLan, kProfileWanA,
-                                 kProfileWanB};
-  for (const auto& np : profiles) {
-    Row r = proto;
-    r.profile = np.name;
-    r.phase = "net";
-    r.wall_ms = PredictedMs(rounds, bytes, np);
-    r.bytes_sent = static_cast<long long>(bytes);
-    r.ExtraStr("op", op);
-    r.ExtraStr("axis", axis);
-    r.Extra("rounds", static_cast<long long>(rounds));
-    r.Extra("rtt_ms", np.rtt_ms);
-    r.Extra("mbps", np.mbps);
-    r.ExtraStr("bound_by", Bottleneck(rounds, bytes, np));
-    r.ExtraStr("emulation", "channel-level, not netem");
-    w.Emit(r);
-  }
-}
+// Ratings, LoadRatings, Densify, EmitProfiles and kFullM/kFullN moved to
+// bench_common.hpp when tasks 4.2 and 4.3 needed the same four.
 
 // ---- one training configuration, kReps times ---------------------------
 template <typename Ring>
@@ -192,7 +136,7 @@ void TrainPoint(Writer& w, const Ratings& rt, std::uint32_t m, std::uint32_t n,
       proto.stage = "S2";
       proto.m = m; proto.n = n; proto.d = d; proto.ell = ell;
       proto.b = RingTraits<Ring>::kBits; proto.t = 20;
-      EmitProfiles(w, proto, res.rounds, res.bytes, axis, "approxfactor");
+      EmitProfiles(w, proto, res.rounds, res.bytes, "axis", axis, "approxfactor");
       std::fprintf(stderr,
                    "  b=%-3d m=%-4u d=%-3u ell=%-3u  %8.2f s  %7llu rounds  "
                    "%8.1f MB  %s\n",
@@ -255,7 +199,7 @@ void DeliverySweep(Writer& w) {
         proto.n = cat.NumItems();
         proto.k = k;
         proto.b = 64;
-        EmitProfiles(w, proto, k, bytes, "k", "fetch_topk");
+        EmitProfiles(w, proto, k, bytes, "axis", "k", "fetch_topk");
         std::fprintf(stderr, "    k=%-3u  %7.3f ms  %6llu B\n", k, ms,
                      (unsigned long long)bytes);
       }
