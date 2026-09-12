@@ -35,3 +35,12 @@ graphify-out/
 **/*.out
 **/*.bbl
 **/*.blg
+
+# Browser "save page as" support directories. `docs/artifacts/` holds one saved
+# rendering of the pipeline diagram; the sibling `_files/` folder beside it is
+# minified vendor JS, a Google Fonts css2 response, and two `saved_resource`
+# stubs that are fragments of the SAME page. Indexing them gave three duplicate
+# nodes ("OblivRec Pipeline", "Nudge (USENIX Sec '26)", "PRAC") that shadowed
+# the real diagram, and `saved_resource(1).html` dispatched to the LLM on every
+# extraction only to return nothing. The page itself stays indexed.
+docs/artifacts/**/*_files/
