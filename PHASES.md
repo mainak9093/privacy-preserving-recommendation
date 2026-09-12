@@ -188,16 +188,16 @@ analysis. A rigorous partial S2 with an honest account beats a broken full one.
 
 Where two working halves become a *result*.
 
-| # | Task | Owner |
-|---|---|---|
-| 4.1 | Full sweep: `m × n × d × ℓ × b × k × network profile`, repeated ≥5× | W4 |
-| 4.2 | **The headline comparison: B1 vs B2 vs B3 vs full system** — the cost of each half, isolated | W4 |
-| 4.3 | Microbenchmark breakdown: matvec / truncate / normalize / FSS / topk / PIR / network | All |
-| 4.4 | **D9.1 ring-width study: where does `b = 64` break?** Cheap, novel, clean result | W2 |
-| 4.5 | **§9.3 leakage analysis: reconstruct `â⁽ⁱ⁾` from public `B` + `j` observed fetches** | W4 |
-| 4.6 | *(if time)* D9.2 differential privacy on `B` and its quality cost | W3 |
-| 4.7 | *(if time)* D9.3 input validation; D9.4 malicious-client DPF audit | W1 |
-| 4.8 | Reproducibility test: a member who did not build it follows the README on a clean VM | rotating |
+| # | Task | Owner | Status |
+|---|---|---|---|
+| 4.1 | Full sweep: `m × n × d × ℓ × b × k × network profile`, repeated ≥5× | W4 | **done 2026-09-13.** `bench/bench_sweep.cpp`, 153 rows, 5 reps, four profiles. **One factor at a time around a baseline, not the Cartesian product** — reasons in the file header; interaction effects are therefore not measured. Headline: rounds are linear in `d` and `ℓ` and **flat in `m`** (2686 at m=235/471/943), and quadrupling the input matrix moved traffic 62.03 → 64.75 MB, i.e. **+4.4%** — the byte delta matches the predicted `m`-dependent term exactly. That is NUDGE Thm 4.2 measured rather than quoted. Figure F7. |
+| 4.2 | **The headline comparison: B1 vs B2 vs B3 vs full system** — the cost of each half, isolated | W4 | |
+| 4.3 | Microbenchmark breakdown: matvec / truncate / normalize / FSS / topk / PIR / network | All | |
+| 4.4 | **D9.1 ring-width study: where does `b = 64` break?** Cheap, novel, clean result | W2 | **done 2026-09-12**, twice over: arithmetic headroom (b=64 survives ML-1M at t≤20 but loses the deferred schedule) and the sharper constraint, that b=64 **cannot hold the MSNZB mask at all** — it needs ~81 bits. |
+| 4.5 | **§9.3 leakage analysis: reconstruct `â⁽ⁱ⁾` from public `B` + `j` observed fetches** | W4 | **done 2026-09-09.** j=10 → cos 0.84, 56% of the next twenty predicted; the decoy defence measured and **rejected**. |
+| 4.6 | *(if time)* D9.2 differential privacy on `B` and its quality cost | W3 | |
+| 4.7 | *(if time)* D9.3 input validation; D9.4 malicious-client DPF audit | W1 | |
+| 4.8 | Reproducibility test: a member who did not build it follows the README on a clean VM | rotating | `mingw32-make reproduce` exists; the clean-VM pass is Phase 5 (2 Nov). |
 
 **Priority under time pressure:** 4.1 → 4.2 → 4.3 → 4.5 → 4.4, then stop. A complete honest
 evaluation beats a half-landed stretch goal. **Do not start 4.6/4.7 after Oct 22.**
