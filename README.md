@@ -3,7 +3,7 @@
 **CS670 · Cryptographic Techniques for Privacy Preservation · 2026-27 Semester I · IIT Kanpur**
 Course project, topic (a): *Privacy-Preserving Recommendation Systems*
 
-**Mainak Sarkar · Shrasti Dwivedi · Aditya Anand · Shravan Agrawal**
+**Mainak Sarkar · Shrasti Dwivedi ·  Shravan Agrawal**
 
 ---
 
