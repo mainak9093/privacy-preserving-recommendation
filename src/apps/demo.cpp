@@ -237,6 +237,16 @@ int RunNetworked(const std::vector<std::string>& hosts,
 int main(int argc, char** argv) {
   std::uint32_t user = 42, k = 10;
   std::string connect, transcript;
+
+  // The model defaults to the cleartext export, which is what every existing
+  // caller -- make demo, make demo-net, make reproduce -- expects. Pointing
+  // --a/--b at train.exe's output is what turns this into the COMPOSITION:
+  // private training feeding private delivery, in one run.
+  std::string a_path = "model/out/A.bin";
+  std::string b_path = "model/out/B.bin";
+  std::string expect_path = "model/out/top10_u42.txt";
+  bool a_given = false, b_given = false, expect_given = false;
+
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp(argv[i], "--user") == 0 && i + 1 < argc) {
       user = static_cast<std::uint32_t>(std::strtoul(argv[++i], nullptr, 10));
@@ -246,12 +256,37 @@ int main(int argc, char** argv) {
       connect = argv[++i];              // host:p0,host:p1,host:p2
     } else if (std::strcmp(argv[i], "--transcript") == 0 && i + 1 < argc) {
       transcript = argv[++i];
+    } else if (std::strcmp(argv[i], "--a") == 0 && i + 1 < argc) {
+      a_path = argv[++i];
+      a_given = true;
+    } else if (std::strcmp(argv[i], "--b") == 0 && i + 1 < argc) {
+      b_path = argv[++i];
+      b_given = true;
+    } else if (std::strcmp(argv[i], "--expect") == 0 && i + 1 < argc) {
+      expect_path = argv[++i];
+      expect_given = true;
     } else {
       std::fprintf(stderr,
                    "usage: demo [--user N] [--k N]\n"
+                   "            [--a A.bin] [--b B.bin] [--expect TOP10.txt]\n"
                    "            [--connect H:P,H:P,H:P] [--transcript FILE]\n");
       return 2;
     }
+  }
+  const bool default_model = !a_given && !b_given;
+
+  // A and B are HALVES OF ONE MODEL. Pairing a privately trained B with the
+  // cleartext A.bin -- or the reverse -- produces scores that are arithmetic
+  // nonsense but still rank plausibly, which is the worst failure available
+  // here: it would look like a working composition. Refuse the half-specified
+  // case rather than silently completing it from the default.
+  if (a_given != b_given) {
+    std::fprintf(stderr,
+                 "demo: --a and --b must be given together. They are two halves\n"
+                 "      of one factorisation; mixing a private B with the\n"
+                 "      cleartext A silently produces plausible-looking garbage.\n"
+                 "      Got only %s.\n", a_given ? "--a" : "--b");
+    return 2;
   }
 
   // Parse the three endpoints up front, so a typo fails before any work.
@@ -286,30 +321,65 @@ int main(int argc, char** argv) {
   }
 
   std::vector<std::int64_t> A, B;
-  if (!ReadI64("model/out/A.bin", A) || !ReadI64("model/out/B.bin", B)) {
+  if (!ReadI64(a_path.c_str(), A) || !ReadI64(b_path.c_str(), B)) {
     std::fprintf(stderr,
-                 "demo: model/out/ is missing. Run:  py -3.13 model/export.py\n");
+                 "demo: cannot read %s and/or %s.\n"
+                 "      cleartext model:  py -3.13 model/export.py\n"
+                 "      private model:    train --ell N --out model/out/B_private_ellN.bin\n"
+                 "                        then py -3.13 model/score_private.py\n",
+                 a_path.c_str(), b_path.c_str());
     return 1;
   }
 
   Catalogue cat = Catalogue::LoadMovieLens("data/ml-100k/u.item");
-  const std::uint32_t d = 16;
   const std::uint32_t n = cat.NumItems();
+
+  // d was hardcoded to 16 while the cleartext export was the only model. A
+  // model trained at another d would have failed the B shape check below with
+  // a message blaming B, so derive it from the file that actually determines
+  // it and let the A/B consistency check be the thing that speaks.
+  if (B.empty() || B.size() % n != 0) {
+    std::fprintf(stderr,
+                 "demo: %s has %zu entries, not a multiple of n = %u\n",
+                 b_path.c_str(), B.size(), n);
+    return 1;
+  }
+  const std::uint32_t d = static_cast<std::uint32_t>(B.size() / n);
+  if (A.size() % d != 0) {
+    std::fprintf(stderr,
+                 "demo: %s has %zu entries, not a multiple of d = %u implied\n"
+                 "      by %s. These are not two halves of one model.\n",
+                 a_path.c_str(), A.size(), d, b_path.c_str());
+    return 1;
+  }
   const std::uint32_t m = static_cast<std::uint32_t>(A.size() / d);
 
   if (user >= m) {
     std::fprintf(stderr, "demo: user %u out of range (m = %u)\n", user, m);
     return 2;
   }
-  if (B.size() != std::size_t(d) * n) {
-    std::fprintf(stderr, "demo: B.bin has %zu entries, expected %u\n",
-                 B.size(), d * n);
-    return 1;
-  }
+  // This check is now a tautology -- d is DERIVED as B.size()/n above, with
+  // the divisibility checked there -- so it can no longer fire. Kept, commented,
+  // because it is the guard a reader expects to find at this point and its
+  // absence would look like an oversight rather than a consequence.
+  //
+  // if (B.size() != std::size_t(d) * n) {
+  //   std::fprintf(stderr, "demo: B.bin has %zu entries, expected %u\n",
+  //                B.size(), d * n);
+  //   return 1;
+  // }
 
   std::printf("OblivRec demo. user=%u k=%u  catalogue=%u items (domain %u)\n",
               user, k, n, cat.DomainSize());
-  std::printf("Model trained IN THE CLEAR (private training is S2, after the mid-term).\n\n");
+  // Saying "trained in the clear" while serving a privately trained B would
+  // make the demo assert the opposite of what it is doing, in the artefact
+  // most likely to be shown live. So the banner reports what was loaded.
+  if (default_model) {
+    std::printf("Model trained IN THE CLEAR (%s).\n\n", b_path.c_str());
+  } else {
+    std::printf("Model: B = %s\n       A = %s\n\n", b_path.c_str(),
+                a_path.c_str());
+  }
 
   // ---- 1. Split the user embedding across three servers -----------------
   std::vector<std::vector<ReplicatedShare<u64>>> a_party(3);
@@ -398,8 +468,16 @@ int main(int argc, char** argv) {
   // the demo from a plausible-looking printout into a checked one: the titles
   // above are pleasant, but agreement with an independently computed ranking
   // is the part that would catch a regression.
-  if (user == 42 && have_seen) {
-    std::ifstream oracle("model/out/top10_u42.txt");
+  // A model other than the default ranks differently ON PURPOSE, so comparing
+  // it against the cleartext oracle's ranking would be a guaranteed failure
+  // that says nothing. Skip loudly rather than compare against the wrong file:
+  // a check that quietly passes the wrong thing is worse than no check.
+  if (!default_model && !expect_given) {
+    std::printf("\n    ranking cross-check SKIPPED: a non-default model was\n"
+                "    loaded and no --expect file was given, so there is no\n"
+                "    matching oracle to compare against.\n");
+  } else if (user == 42 && have_seen) {
+    std::ifstream oracle(expect_path);
     if (oracle) {
       std::vector<std::uint32_t> want;
       std::string line;
@@ -416,8 +494,8 @@ int main(int argc, char** argv) {
       std::size_t agree = 0;
       for (std::size_t i = 0; i < cmp; ++i) if (want[i] == top[i]) ++agree;
       if (agree == cmp && cmp > 0) {
-        std::printf("\n    ranking agrees with model/out/top10_u42.txt on all %zu\n"
-                    "    positions, in order.\n", cmp);
+        std::printf("\n    ranking agrees with %s on all %zu\n"
+                    "    positions, in order.\n", expect_path.c_str(), cmp);
       } else {
         std::fprintf(stderr,
                      "\nFAIL: ranking disagrees with the Python oracle "

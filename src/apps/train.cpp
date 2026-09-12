@@ -28,6 +28,7 @@
 #include <cstdio>
 #include <cstring>
 #include <fstream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -140,75 +141,92 @@ void HeadroomStudy(std::FILE* jsonl) {
   }
 }
 
-}  // namespace
-
-int main(int argc, char** argv) {
-  std::uint32_t d = 16, ell = 10, t = 20;
-  bool headroom_only = false;
-  std::string ratings = "data/ml-100k/u1.base";
-  std::string out_b = "model/out/B_private.bin";
-  std::string jsonl_path = "bench/results/train.jsonl";
-
-  for (int i = 1; i < argc; ++i) {
-    if (!std::strcmp(argv[i], "--d") && i + 1 < argc) d = std::atoi(argv[++i]);
-    else if (!std::strcmp(argv[i], "--ell") && i + 1 < argc) ell = std::atoi(argv[++i]);
-    else if (!std::strcmp(argv[i], "--t") && i + 1 < argc) t = std::atoi(argv[++i]);
-    else if (!std::strcmp(argv[i], "--ratings") && i + 1 < argc) ratings = argv[++i];
-    else if (!std::strcmp(argv[i], "--out") && i + 1 < argc) out_b = argv[++i];
-    else if (!std::strcmp(argv[i], "--headroom-only")) headroom_only = true;
-    else {
-      std::fprintf(stderr,
-                   "usage: train [--d N] [--ell N] [--t N] [--ratings F] "
-                   "[--out F] [--headroom-only]\n");
-      return 2;
-    }
-  }
-
-  std::FILE* jsonl = std::fopen(jsonl_path.c_str(), "a");
-
-  if (headroom_only) {
-    HeadroomStudy(jsonl);
-    if (jsonl) std::fclose(jsonl);
-    return 0;
-  }
-
-  Dataset ds;
-  if (!LoadRatings(ratings, 943, 1682, &ds)) {
-    std::fprintf(stderr,
-                 "train: cannot read %s. data/ is gitignored; run "
-                 "py -3.13 scripts/fetch_data.py\n", ratings.c_str());
-    if (jsonl) std::fclose(jsonl);
-    return 1;
-  }
-
-  FactorParams p;
-  p.m = ds.m; p.n = ds.n; p.nnz = ds.nnz;
-  p.d = d; p.ell = ell; p.t = t; p.max_rating = 5;
-
-  auto sched = TruncationSchedule::Derive(p, 64);
-  std::printf("train: %ux%u, %llu ratings, d=%u ell=%u t=%u\n", p.m, p.n,
-              (unsigned long long)p.nnz, d, ell, t);
+// --------------------------------------------------------------------------
+//  One training run, at whichever ring width main() selected.
+//
+//  This was inlined in main() while u64 + RevealNormNormalizer was the only
+//  configuration train could produce. The spec-faithful FssNormalizer REFUSES
+//  at b=64 -- its MSNZB mask needs about 81 bits -- so measuring the no-leak
+//  path at all requires u128, and the ring is a template parameter. Hence the
+//  extraction: main() parses, this runs, and the only thing that varies is
+//  Ring.
+// --------------------------------------------------------------------------
+template <typename Ring>
+int RunTraining(const Dataset& ds, const FactorParams& p, bool use_fss,
+                const std::string& out_b, std::FILE* jsonl) {
+  constexpr int kBits = RingTraits<Ring>::kBits;
+  auto sched = TruncationSchedule::Derive(p, kBits);
+  std::printf("train: %ux%u, %llu ratings, d=%u ell=%u t=%u b=%d\n", p.m, p.n,
+              (unsigned long long)p.nnz, p.d, p.ell, p.t, kBits);
   std::printf("  schedule: %s\n", sched.Explain().c_str());
   try {
     sched.AssertHeadroom();
   } catch (const std::exception& e) {
     std::fprintf(stderr, "train: %s\n", e.what());
-    if (jsonl) std::fclose(jsonl);
     return 1;
   }
 
-  SharedMatrix<u64> su;
+  std::vector<Ring> U(ds.U.begin(), ds.U.end());
+  SharedMatrix<Ring> su;
   su.rows = p.m;
   su.cols = p.n;
-  su.data = SplitVec<u64>(Span<const u64>(ds.U.data(), ds.U.size()));
+  su.data = SplitVec<Ring>(Span<const Ring>(U.data(), U.size()));
 
-  Mpc3<u64> s(20260911);
-  RevealNormNormalizer<u64> rn;
+  Mpc3<Ring> s(20260911);
+
+  // ----------------------------------------------------------------------
+  //  THE GATE'S RANGE MUST COVER WHAT ||v||^2 ACTUALLY REACHES.
+  //
+  //  This was [t-8, t+8] with 30 value bits, copied from bench_sweep.cpp.
+  //  That range is wrong, and wrong SILENTLY: MsnzbGate::Apply builds its
+  //  answer as a telescoping sum of 1[S >= 2^k] over k in [lo, hi], so a value
+  //  below lo gets table[0] and one above hi gets table[hi-lo], with no error.
+  //  The seed for Newton-Raphson is then simply the wrong power of two.
+  //
+  //  It cost 0.108 of nDCG@20 at ell=10 -- 0.3428 against 0.4513 for the same
+  //  run with the revealing normaliser -- and the subspace angle sat at 1.571
+  //  rad, i.e. exactly orthogonal to the oracle's subspace, which is what a
+  //  power iteration that never converges looks like. Widening the range to
+  //  what is below recovers 0.4493, a gap of -0.0020.
+  //
+  //  It was invisible until now because the only previous consumer of this
+  //  path (bench_sweep.cpp, task 4.1) measured COST and never quality, and the
+  //  cost is IDENTICAL either way: 11519 rounds and 143,941,376 bytes at
+  //  ell=10 for both ranges, because widening buys more DCF keys offline and
+  //  Apply stays one round. So task 4.1's published FSS numbers are unaffected.
+  //
+  //  The range below is deliberately conservative rather than tight. ||v||^2
+  //  is computed at 2t and truncated to t, and v is only unit-norm AFTER the
+  //  first normalisation -- the first call sees the raw random start. Paying
+  //  for extra thresholds is offline key material; guessing too narrow is a
+  //  silently wrong model.
+  // ----------------------------------------------------------------------
+  const std::uint32_t kMsnzbLo = 1;
+  const std::uint32_t kMsnzbHi = 2 * p.t + 8;
+  const std::uint32_t kValueBits = 2 * p.t + 8;
+
+  std::unique_ptr<Normalizer<Ring>> norm;
+  if (use_fss) {
+    try {
+      norm.reset(new FssNormalizer<Ring>(s, p.t, kMsnzbLo, kMsnzbHi, kValueBits));
+    } catch (const std::exception& e) {
+      std::fprintf(stderr,
+                   "train: the spec-faithful normaliser refuses at b=%d.\n"
+                   "       %s\n"
+                   "       Use --b 128. A gate masking with too few bits would\n"
+                   "       look like privacy while providing none, so this is a\n"
+                   "       refusal rather than a downgrade.\n", kBits, e.what());
+      return 1;
+    }
+  } else {
+    norm.reset(new RevealNormNormalizer<Ring>());
+  }
 
   const auto t0 = std::chrono::steady_clock::now();
-  auto res = ApproxFactorShared<u64>(s, su, p, sched, rn, 0);
+  auto res = ApproxFactorShared<Ring>(s, su, p, sched, *norm, 0);
   const double ms = std::chrono::duration<double, std::milli>(
                         std::chrono::steady_clock::now() - t0).count();
+  const std::uint32_t d = p.d, ell = p.ell, t = p.t;
 
   std::printf("  done in %.1f s: %llu rounds, %llu B, %llu truncations\n",
               ms / 1000.0, (unsigned long long)res.rounds,
@@ -238,12 +256,12 @@ int main(int argc, char** argv) {
                    "\"stage\": \"S2\", \"phase\": \"net\", "
                    "\"op\": \"approxfactor_projected\", "
                    "\"dataset\": \"ml-100k\", \"d\": %u, \"ell\": %u, "
-                   "\"t\": %u, \"b\": 64, \"rounds\": %llu, "
+                   "\"t\": %u, \"b\": %d, \"rounds\": %llu, "
                    "\"bytes_sent\": %llu, \"rtt_ms\": %.1f, "
                    "\"mbps\": %.1f, \"wall_ms\": %.3f, "
                    "\"bound_by\": \"%s\", \"emulation\": "
                    "\"channel-level, not netem\", \"timestamp\": \"%s\"}\n",
-                   OBLIVREC_GIT_SHA, np.name, d, ell, t,
+                   OBLIVREC_GIT_SHA, np.name, d, ell, t, kBits,
                    (unsigned long long)res.rounds,
                    (unsigned long long)res.bytes, np.rtt_ms, np.mbps, tot,
                    Bottleneck(res.rounds, res.bytes, np), Now().c_str());
@@ -251,11 +269,18 @@ int main(int argc, char** argv) {
   }
 
   // B, t-scaled, little-endian int64, the same format model/export.py writes.
+  //
+  // Always EIGHT bytes per element, even at b=128. B holds a normalised unit
+  // vector at scale t, so it fits int64 regardless of the ring the protocol
+  // ran in; the wider ring exists for the intermediate products, not for the
+  // output. Writing 16 bytes would break every reader for no gain.
   {
     std::ofstream f(out_b, std::ios::binary);
-    for (u64 x : res.B) {
+    for (Ring x : res.B) {
       std::uint8_t b8[8];
-      for (int i = 0; i < 8; ++i) b8[i] = static_cast<std::uint8_t>(x >> (8 * i));
+      for (int i = 0; i < 8; ++i) {
+        b8[i] = static_cast<std::uint8_t>(static_cast<std::uint64_t>(x) >> (8 * i));
+      }
       f.write(reinterpret_cast<const char*>(b8), 8);
     }
   }
@@ -267,18 +292,90 @@ int main(int argc, char** argv) {
                  "\"stage\": \"S2\", \"phase\": \"matvec\", "
                  "\"op\": \"approxfactor\", \"dataset\": \"ml-100k\", "
                  "\"m\": %u, \"n\": %u, \"nnz\": %llu, \"d\": %u, \"ell\": %u, "
-                 "\"t\": %u, \"b\": 64, \"deferred\": %s, "
+                 "\"t\": %u, \"b\": %d, \"deferred\": %s, "
                  "\"rounds\": %llu, \"bytes_sent\": %llu, "
                  "\"truncations\": %llu, \"normalizer\": \"%s\", "
                  "\"scalars_revealed\": %zu, \"wall_ms\": %.3f, "
                  "\"timestamp\": \"%s\"}\n",
                  OBLIVREC_GIT_SHA, p.m, p.n, (unsigned long long)p.nnz, d, ell,
-                 t, sched.Deferred() ? "true" : "false",
+                 t, kBits, sched.Deferred() ? "true" : "false",
                  (unsigned long long)res.rounds,
                  (unsigned long long)res.bytes,
                  (unsigned long long)res.truncations, res.normalizer.c_str(),
                  res.revealed_norms.size(), ms, Now().c_str());
-    std::fclose(jsonl);
   }
   return 0;
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+  std::uint32_t d = 16, ell = 10, t = 20;
+  int ring_bits = 64;
+  bool headroom_only = false, use_fss = false;
+  std::string ratings = "data/ml-100k/u1.base";
+  std::string out_b = "model/out/B_private.bin";
+  std::string jsonl_path = "bench/results/train.jsonl";
+
+  for (int i = 1; i < argc; ++i) {
+    if (!std::strcmp(argv[i], "--d") && i + 1 < argc) d = std::atoi(argv[++i]);
+    else if (!std::strcmp(argv[i], "--ell") && i + 1 < argc) ell = std::atoi(argv[++i]);
+    else if (!std::strcmp(argv[i], "--t") && i + 1 < argc) t = std::atoi(argv[++i]);
+    else if (!std::strcmp(argv[i], "--b") && i + 1 < argc) ring_bits = std::atoi(argv[++i]);
+    else if (!std::strcmp(argv[i], "--ratings") && i + 1 < argc) ratings = argv[++i];
+    else if (!std::strcmp(argv[i], "--out") && i + 1 < argc) out_b = argv[++i];
+    else if (!std::strcmp(argv[i], "--headroom-only")) headroom_only = true;
+    else if (!std::strcmp(argv[i], "--normalizer") && i + 1 < argc) {
+      const char* v = argv[++i];
+      if (!std::strcmp(v, "fss")) use_fss = true;
+      else if (!std::strcmp(v, "reveal")) use_fss = false;
+      else {
+        std::fprintf(stderr, "train: --normalizer takes reveal or fss, got %s\n", v);
+        return 2;
+      }
+    } else {
+      std::fprintf(stderr,
+                   "usage: train [--d N] [--ell N] [--t N] [--b 64|128]\n"
+                   "             [--normalizer reveal|fss] [--ratings F]\n"
+                   "             [--out F] [--headroom-only]\n"
+                   "\n"
+                   "  --normalizer reveal  opens ||v|| once per call (default,\n"
+                   "                       and what every result before\n"
+                   "                       2026-09-13 was measured with)\n"
+                   "  --normalizer fss     spec-faithful, reveals nothing,\n"
+                   "                       REQUIRES --b 128\n");
+      return 2;
+    }
+  }
+  if (ring_bits != 64 && ring_bits != 128) {
+    std::fprintf(stderr, "train: --b takes 64 or 128, got %d\n", ring_bits);
+    return 2;
+  }
+
+  std::FILE* jsonl = std::fopen(jsonl_path.c_str(), "a");
+
+  if (headroom_only) {
+    HeadroomStudy(jsonl);
+    if (jsonl) std::fclose(jsonl);
+    return 0;
+  }
+
+  Dataset ds;
+  if (!LoadRatings(ratings, 943, 1682, &ds)) {
+    std::fprintf(stderr,
+                 "train: cannot read %s. data/ is gitignored; run "
+                 "py -3.13 scripts/fetch_data.py\n", ratings.c_str());
+    if (jsonl) std::fclose(jsonl);
+    return 1;
+  }
+
+  FactorParams p;
+  p.m = ds.m; p.n = ds.n; p.nnz = ds.nnz;
+  p.d = d; p.ell = ell; p.t = t; p.max_rating = 5;
+
+  const int rc = (ring_bits == 128)
+                     ? RunTraining<u128>(ds, p, use_fss, out_b, jsonl)
+                     : RunTraining<u64>(ds, p, use_fss, out_b, jsonl);
+  if (jsonl) std::fclose(jsonl);
+  return rc;
 }
