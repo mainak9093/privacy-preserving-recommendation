@@ -1,7 +1,7 @@
 # OblivRec — threat model and leakage profile
 
-**Status:** updated 2026-09-11 (networking landed; see §5). Covers **S1 only** (private serving and delivery). Private
-training is S2 and no claim below applies to it.
+**Status:** updated 2026-09-12. Covers **S1** (serving and delivery) and, as of Phase 3,
+**S2** (private training) — see §7, which is new and includes a decision still open.
 
 This promotes `design/ARCHITECTURE-draft-v1.md §9` to a standalone document and, where §9 posed a
 question, replaces it with a measurement.
@@ -114,6 +114,91 @@ would rather state the crossover than imply there isn't one.
 - **Semi-honest only.** A deviating server is out of scope.
 - **No formal proof.** The argument is a construction-level one, not a simulation-based proof.
 
+## 7. Private training (S2) — added Phase 3
+
+Training now runs under secret sharing. Its leakage is **not** the same as
+serving's, and the differences are worth stating one at a time.
+
+### 7.1 What the substrate itself reveals
+
+Nothing beyond the shape of the computation. Multiplication is Araki-style:
+each party sends one ring element per product, re-randomised by a zero-share
+drawn from a pairwise PRF. A single party sees only uniformly random elements.
+
+**Message sizes depend only on public parameters** — `m, n, d, ell, t, b` —
+never on a value. A matrix–vector product communicates `rows` elements
+regardless of the matrix contents, which is NUDGE Thm 4.2 and is asserted by
+`tests/test_mpc.cpp` against the byte counter rather than argued in prose.
+
+### 7.2 What `B` being opened reveals — unchanged, and already measured
+
+Each converged row of `B` is revealed, exactly as in S1. That is NUDGE's
+design, it is what makes `SetOrthogonal` local, and §4 already measures what
+it costs: ten observed fetches recover a user to `cos = 0.84`. Private training
+does not change this, because it produces the same public `B`.
+
+### 7.3 The truncation protocol
+
+`Trunc_t` opens `x - r` to two of the three parties, where the third generated
+`r`. A single corrupted party holds either `r` or `x - r`, never both, so it
+learns nothing about `x`. The helper role is passed explicitly at every call
+site precisely because giving it to a party that also sees the opening would be
+a total break and an easy mistake.
+
+### 7.4 RESOLVED: the spec-faithful normaliser is built
+
+This section previously recorded an OPEN question — training ran on a
+normaliser that opened `‖v‖²` because `ApproxNormalize` needs an FSS
+comparison gate that did not exist. **The gate is now built** (`dcf.hpp`,
+`msnzb.hpp`), so there are two paths and the choice is a measured trade rather
+than a compromise:
+
+| normaliser | reveals | rounds per (d×ℓ) | ring |
+|---|---|---|---|
+| `FssNormalizer` (spec) | **nothing** | ~80 | **b=128 only** |
+| `RevealNormNormalizer` | one scalar per call | ~16 | b=64 or b=128 |
+
+**The spec-faithful path costs about 5× the rounds and requires a 128-bit
+ring.** That second constraint is not arithmetic and is worth stating on its
+own, because it is a *new* answer to D9.1:
+
+> Opening the masked value `S + r` hides `S` only if `r` is drawn from a range
+> `κ` bits wider than `S`'s. With `κ = 40` and the value ranges power
+> iteration produces, the gate's domain needs ~81 bits. **`b = 64` has no room
+> for the mask at all.** The arithmetic headroom study (§ D9.1) said `b=64`
+> survives to ML-1M but loses the deferred schedule; this says that the moment
+> you want a normaliser that reveals nothing, `b=64` stops being an option.
+> The two constraints bind for different reasons and the tighter one wins.
+
+`FssNormalizer`'s constructor refuses at `b=64` rather than using a short mask,
+because a gate that silently masked with too few bits would *look* like privacy
+while providing none.
+
+**What is claimed now.** With `b=128` and `FssNormalizer`, private training
+reveals nothing beyond `B` itself — which is public by design and whose cost is
+measured in §4. The leakage profile matches the specification.
+
+**What is still measured only at `b=64`.** The quality study in §3.7 of
+`PHASES.md` (private nDCG@20 within ±0.007 of the oracle) was run on the
+revealing path, because it is the one that fits in a 64-bit ring. Re-running it
+at `b=128` on the no-leak path is Phase 4 work; the arithmetic is the same and
+the truncation error is the same, so the quality is expected to match, but that
+is an expectation and not yet a measurement.
+
+### 7.5 Harvesting adds no new leak
+
+The PIRSONA loop (§7.3 of the architecture) accumulates the DPF expansion each
+PIR server already computes, giving shared consumption counts for the next
+training round with no upload step. Each server's accumulator is a share and
+reveals nothing on its own.
+
+It does expose **how many** queries a user made, since the accumulator is
+updated once per query — but the threat model already lists query counts as
+leaked by design, so harvesting reveals nothing that running the PIR layer did
+not. That is exactly why it is free.
+
+---
+
 ## 6. Open items
 
 | | Item | Where |
@@ -122,7 +207,10 @@ would rather state the crossover than imply there isn't one.
 | D9.4 | Sabre-style audit for malformed keys (A5 DoS) | stretch |
 | — | ~~Channel transcript + distinguisher experiment (A6)~~ | **done 2026-09-11** |
 | — | Constant rating count to close the nnz leak | evaluate against the utility cost |
-| — | Timing side channel on the wire (frame *sizes* are now shown constant; inter-frame *timing* is not analysed) | Phase 3 |
+| — | Timing side channel on the wire (frame *sizes* are now shown constant; inter-frame *timing* is not analysed) | Phase 4 |
+| — | ~~The FSS comparison gate and the spec-faithful `ApproxNormalize`~~ | **done 2026-09-12, §7.4** |
+| — | Re-run the quality study at b=128 on the no-leak path | Phase 4 |
+| — | Real/ideal simulation sketch for the composed system | Phase 4 |
 
 ---
 

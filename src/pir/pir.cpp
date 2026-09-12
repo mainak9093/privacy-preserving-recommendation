@@ -31,6 +31,12 @@ PirServer<Ring>::PirServer(const Catalogue& cat)
 
 template <typename Ring>
 void PirServer<Ring>::Answer(const DpfKey<Ring>& key, Span<Ring> out) const {
+  AnswerAndHarvest(key, out, Span<Ring>(nullptr, 0));
+}
+
+template <typename Ring>
+void PirServer<Ring>::AnswerAndHarvest(const DpfKey<Ring>& key, Span<Ring> out,
+                                       Span<Ring> harvest) const {
   const std::size_t W = RecordWords<Ring>();
   if (out.size() != W) {
     throw std::invalid_argument("PirServer::Answer: out must be RecordWords()");
@@ -39,6 +45,10 @@ void PirServer<Ring>::Answer(const DpfKey<Ring>& key, Span<Ring> out) const {
     throw std::invalid_argument(
         "PirServer::Answer: key domain_bits " + std::to_string(key.domain_bits) +
         " does not match catalogue domain_bits " + std::to_string(domain_bits_));
+  }
+  if (harvest.size() != 0 && harvest.size() != domain_size_) {
+    throw std::invalid_argument(
+        "PirServer::AnswerAndHarvest: harvest must be DomainSize() or empty");
   }
 
   // Expand the key across the whole domain.
@@ -56,6 +66,12 @@ void PirServer<Ring>::Answer(const DpfKey<Ring>& key, Span<Ring> out) const {
     for (std::size_t w = 0; w < W; ++w) {
       out[w] = static_cast<Ring>(out[w] + static_cast<Ring>(c * row[w]));
     }
+  }
+
+  // The harvest. Handing `e` over rather than dropping it is the whole of
+  // task 3.9 on the server side -- the expensive part is already paid for.
+  if (harvest.size() == domain_size_) {
+    for (std::uint32_t j = 0; j < domain_size_; ++j) harvest[j] = e[j];
   }
 }
 

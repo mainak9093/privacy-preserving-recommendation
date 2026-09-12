@@ -72,6 +72,14 @@ class PirServer {
   // catalogue. out.size() must be RecordWords<Ring>().
   void Answer(const DpfKey<Ring>& key, Span<Ring> out) const;
 
+  // The same answer, but the expanded coefficients are handed out instead of
+  // discarded -- that vector is a share of the one-hot indicator of the item
+  // fetched, and it is what closes the PIRSONA loop (harvest.hpp, task 3.9).
+  // `harvest` must be DomainSize() long. Costs nothing extra: the expansion
+  // was already computed for the inner product.
+  void AnswerAndHarvest(const DpfKey<Ring>& key, Span<Ring> out,
+                        Span<Ring> harvest) const;
+
   std::uint32_t DomainBits() const { return domain_bits_; }
   std::uint32_t DomainSize() const { return domain_size_; }
 
