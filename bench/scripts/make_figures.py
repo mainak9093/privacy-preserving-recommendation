@@ -19,6 +19,7 @@ import sys
 
 import matplotlib
 matplotlib.use("Agg")           # no display on this box; must precede pyplot
+import matplotlib.patches as mpatches   # noqa: E402
 import matplotlib.pyplot as plt         # noqa: E402
 import numpy as np                      # noqa: E402
 
@@ -488,8 +489,137 @@ def fig_sweep(rows):
                      fontsize=7.5, color="#555555")
 
     save(fig, "fig_sweep.pdf")
-    print(f"    sweep: matrix x{grow_x:.0f} -> bytes x{grow_y:.3f}, "
-          f"rounds unchanged at {m_s[0][1]}")
+    # grow_x/grow_y are defined inside `if m_s:` above, so guard the report
+    # rather than raising NameError on a run where the m axis is absent.
+    if m_s:
+        print(f"    sweep: matrix x{grow_x:.0f} -> bytes x{grow_y:.3f}, "
+              f"rounds unchanged at {m_s[0][1]}")
+    return True
+
+
+def fig_stages(rows):
+    """F9, task 4.3: where the rounds and the milliseconds actually go.
+
+    Two panels that DISAGREE, which is the result. Rounds are what a WAN
+    charges for; milliseconds are what a local run charges for; the phase that
+    dominates one does not dominate the other.
+    """
+    attrib = [r for r in rows if r.get("op") == "attrib_analytic"]
+    micro = [r for r in rows if r.get("op", "").startswith(
+        ("matvec_", "truncate_", "normalize_", "msnzb_", "topk_", "score_",
+         "pir_"))]
+    if not attrib:
+        print("  SKIP fig_stages: no attribution rows (run mingw32-make bench)")
+        return False
+
+    # ---- panel A: the rounds budget, per configuration ------------------
+    configs, seen = [], set()
+    for r in attrib:
+        key = (r["b"], r.get("normalizer"))
+        if key not in seen:
+            seen.add(key)
+            configs.append(key)
+    configs.sort()
+
+    order = ["matvec", "truncate", "normalize", "fss", "net"]
+    label = {"matvec": "matvec", "truncate": "truncate",
+             "normalize": "normalize", "fss": "FSS gate", "net": "open $B$"}
+    colour = {"matvec": C_CONTROL, "truncate": C_ATTACK, "normalize": C_ALT,
+              "fss": "#762a83", "net": C_FLOOR}
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10.4, 3.8))
+    # The right panel's op names are long and sit on its left edge, so give the
+    # two panels real space between them rather than letting them collide.
+    fig.subplots_adjust(wspace=0.42)
+
+    names = []
+    present = set()          # phases that actually appear in SOME config
+    for i, (b, norm) in enumerate(configs):
+        share = {}
+        for r in attrib:
+            if r["b"] == b and r.get("normalizer") == norm:
+                share[r["phase"]] = r["share_rounds"]
+        left = 0.0
+        for ph in order:
+            v = share.get(ph, 0.0)
+            if v <= 0:
+                continue
+            ax1.barh(i, v, left=left, color=colour[ph], edgecolor="white",
+                     linewidth=0.6)
+            present.add(ph)
+            if v >= 7:
+                ax1.text(left + v / 2, i, f"{v:.0f}%", ha="center",
+                         va="center", fontsize=7.5, color="white")
+            left += v
+        names.append(f"b={b}\n{norm}")
+
+    ax1.set_yticks(range(len(configs)))
+    ax1.set_yticklabels(names, fontsize=7.5)
+    ax1.set_xlabel("share of communication rounds (%)")
+    ax1.set_xlim(0, 100)
+    ax1.set_title("Truncation dominates, in every configuration", fontsize=9)
+    ax1.grid(axis="y", visible=False)
+    # Build the legend from every phase present across ALL configurations. The
+    # FSS gate only appears in the fss row, so labelling from the first bar
+    # alone silently dropped it from the key.
+    handles = [mpatches.Patch(color=colour[ph], label=label[ph])
+               for ph in order if ph in present]
+    ax1.legend(handles=handles, fontsize=7.5, ncol=5, loc="upper center",
+               bbox_to_anchor=(0.5, -0.22), columnspacing=1.1,
+               handlelength=1.2)
+
+    # ---- panel B: measured per-call wall time, standalone ----------------
+    if micro:
+        by_op = collections.defaultdict(list)
+        for r in micro:
+            by_op[r["op"]].append(r["wall_ms"])
+        ops = sorted(by_op, key=lambda o: -float(np.median(by_op[o])))
+        vals = [float(np.median(by_op[o])) for o in ops]
+        cols = []
+        for o in ops:
+            if o.startswith("matvec"):
+                cols.append(C_CONTROL)
+            elif o.startswith("truncate"):
+                cols.append(C_ATTACK)
+            elif o.startswith("normalize"):
+                cols.append(C_ALT)
+            elif o.startswith("msnzb"):
+                cols.append("#762a83")
+            else:
+                cols.append(C_FLOOR)
+        ax2.barh(range(len(ops)), vals, color=cols)
+        ax2.set_yticks(range(len(ops)))
+        ax2.set_yticklabels(ops, fontsize=7)
+        ax2.set_xscale("log")
+        ax2.set_xlabel("median wall time per call (ms), standalone")
+        ax2.set_title("CPU ranks them differently from rounds", fontsize=9)
+        ax2.grid(axis="y", visible=False)
+        ax2.invert_yaxis()
+
+    fig.text(0.5, -0.16,
+             "Left: rounds, which is what a WAN charges for. Right: CPU, "
+             "measured out of the training loop's cache context.",
+             ha="center", fontsize=7.5, color="#555555")
+
+    save(fig, "fig_stages.pdf")
+
+    resid = {(r["b"], r.get("normalizer")): r.get("residual_rounds")
+             for r in attrib}
+    bad = [k for k, v in resid.items() if v not in (0, None)]
+    for (b, norm) in configs:
+        tr = next((r for r in attrib
+                   if r["b"] == b and r.get("normalizer") == norm
+                   and r["phase"] == "truncate"), None)
+        fs = next((r for r in attrib
+                   if r["b"] == b and r.get("normalizer") == norm
+                   and r["phase"] == "fss"), None)
+        if tr:
+            print(f"    b={b} {norm}: truncate {tr['share_rounds']:.1f}% of "
+                  f"rounds, {tr['share_bytes']:.1f}% of bytes" +
+                  (f"; FSS gate {fs['share_rounds']:.1f}%" if fs and
+                   fs["share_rounds"] > 0 else ""))
+    print("    residual: " + ("ALL ZERO -- the breakdown is complete"
+                              if not bad else f"NON-ZERO for {bad}"))
     return True
 
 
@@ -500,6 +630,7 @@ def main():
     base = newest_sha(load("bench_baseline.jsonl"), "bench_baseline")
     dist = newest_sha(load("distinguisher_result.jsonl"), "distinguisher")
     sweep = newest_sha(load("bench_sweep.jsonl"), "bench_sweep")
+    stages = newest_sha(load("bench_stages.jsonl"), "bench_stages")
     ell = load("oracle_ell_sweep.jsonl")     # one row per ell, no sha filter
 
     made = 0
@@ -510,6 +641,7 @@ def main():
     made += bool(fig_distinguisher(dist))
     made += bool(fig_decoy(leak))
     made += bool(fig_sweep(sweep))
+    made += bool(fig_stages(stages))
 
     print(f"\n{made} figure(s) written to {FIGDIR}/")
     if made == 0:
