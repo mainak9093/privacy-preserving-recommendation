@@ -98,6 +98,49 @@ fewer bytes than B5 counting both servers. Setting the extra CPU against the sav
 the better choice on any link slower than **8.0 Gbit/s** — that is, on every real network, but we
 would rather state the crossover than imply there isn't one.
 
+### Two defences short of making the read private, and both fail
+
+Before concluding the read must be private, it is worth asking whether anything
+cheaper works. Two candidates were measured. **Neither reaches the popularity
+control**, which is the line a defence would have to reach to have worked at
+all — below it the adversary has learned nothing about *this* user that is not
+already public.
+
+**Decoys.** Fetch the `k` real recommendations plus `r` decoys drawn in
+proportion to popularity. At `r=40` — five times the real traffic — the attack
+falls only from `cos 0.843` to `0.705`, against a floor of `0.442`. The
+estimator is a centroid, and diluting it with popular items moves it toward
+what the control already knows.
+
+**Differential privacy on the model (task 4.6, D9.2).** NUDGE §9 specifies
+Gaussian noise on the Gram matrix `UᵀU`, injected as `E·v` inside power
+iteration, with row normalisation bounding each user's contribution. Measured on
+ML-100K at ε=1, δ=2⁻⁴⁰:
+
+| | nDCG@20 | attack `cos` | margin over control |
+|---|---|---|---|
+| no defence | 0.4255 | 0.8231 | +0.4324 |
+| DP, ε=1 | **0.1239** | **0.9212** | **+0.4898** |
+
+**Both axes move the wrong way.** Utility falls 71% and the attack gets
+*stronger*. The second is not a paradox: DP protects the **training data** —
+what `B` reveals about other users' ratings — whereas §4's attack recovers
+*this* user's embedding using `B` as a known basis. Adversary and user work
+against the same published matrix, so noising it does not disturb the attack's
+geometry; it only destroys the shared popularity structure that the control was
+exploiting, which *widens* the attack's margin.
+
+**Why 71% here and 17% for NUDGE.** They report 0.29 → 0.24 on Netflix. The
+mechanism is identical; the dataset is not. Analyze Gauss noise grows as
+`σ√n` while the signal grows as `m`, so the usable regime is set by `m/√n` —
+**157× more favourable for Netflix (480k × 17.7k) than for ML-100K (943 ×
+1682)**. Measured directly: `‖UᵀU‖₂ = 144.6` against `‖E‖₂ ≈ 613` at ε=1, so
+the noise dominates the signal 4.2×. DP on the Gram matrix is a large-scale
+mechanism, and our scale is the wrong one for it. That is a statement about the
+dataset, not a contradiction of the paper.
+
+This is the argument for making the read private rather than patching around it.
+
 ---
 
 ## 5. What we do **not** claim

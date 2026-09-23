@@ -14,6 +14,7 @@ Run:  mingw32-make figures        (which calls: py -3.13 bench/scripts/make_figu
 """
 import collections
 import json
+import math
 import os
 import sys
 
@@ -755,6 +756,123 @@ def fig_compose(rows, quality):
     return True
 
 
+# --------------------------------------------------------------------------
+#  F10 -- task 4.6: what Nudge section 9's DP costs, and what it does not buy.
+#
+#  Two defences against the same attack, in one frame. Decoys add traffic and
+#  leave utility alone; DP destroys utility and leaves the attack STRONGER.
+#  Neither reaches the popularity floor, which is where a defence would have to
+#  land to have actually worked.
+# --------------------------------------------------------------------------
+def fig_dp(dp_rows, leak_rows):
+    if not dp_rows:
+        print("  SKIP fig_dp: no dp rows (run py -3.13 model/dp_study.py)")
+        return False
+
+    l2 = [r for r in dp_rows if r.get("normalisation") == "l2"]
+    base = next((r for r in l2 if r.get("epsilon") is None), None)
+    noisy = sorted([r for r in l2 if r.get("epsilon") is not None],
+                   key=lambda r: -r["epsilon"])
+    if not noisy:
+        print("  SKIP fig_dp: no noised rows")
+        return False
+
+    decoy = sorted([r for r in leak_rows if r.get("op") == "decoy_defence"],
+                   key=lambda r: r.get("r", 0))
+    floor = next((r["cos_mean"] for r in leak_rows
+                  if r.get("op") == "popularity" and r.get("j") == 10), None)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10.2, 3.9))
+    fig.subplots_adjust(wspace=0.30)
+
+    # ---- panel A: the privacy-utility plane -----------------------------
+    if base:
+        ax1.scatter([base["ndcg_at_20"]], [base["cos_attack"]], s=70,
+                    color=C_FLOOR, zorder=5)
+        ax1.annotate("no defence", xy=(base["ndcg_at_20"], base["cos_attack"]),
+                     xytext=(-10, 10), textcoords="offset points",
+                     fontsize=7.5, ha="right")
+
+    ax1.plot([r["ndcg_at_20"] for r in noisy],
+             [r["cos_attack"] for r in noisy], "-o", ms=4.5, color=C_ATTACK,
+             label="DP on the Gram matrix (Nudge sec. 9)")
+    # Every epsilon lands in the same corner, so the cluster is labelled once.
+    # Annotating each point individually just stacks unreadable text.
+    lo = min(noisy, key=lambda r: r["ndcg_at_20"])
+    hi = max(noisy, key=lambda r: r["ndcg_at_20"])
+    ax1.annotate("eps " + format(min(r["epsilon"] for r in noisy), "g")
+                 + " to " + format(max(r["epsilon"] for r in noisy), "g")
+                 + "\n(all of them)",
+                 xy=(hi["ndcg_at_20"], hi["cos_attack"]),
+                 xytext=(14, -26), textcoords="offset points", fontsize=7,
+                 ha="left", color=C_ATTACK,
+                 arrowprops=dict(arrowstyle="->", lw=0.7, color=C_ATTACK))
+
+    if decoy and base:
+        ax1.plot([base["ndcg_at_20"]] * len(decoy),
+                 [r["cos_mean"] for r in decoy], "-s", ms=4, color=C_ALT,
+                 label="decoys (costs traffic, not utility)")
+        ax1.annotate("r=" + str(decoy[-1].get("r")),
+                     xy=(base["ndcg_at_20"], decoy[-1]["cos_mean"]),
+                     xytext=(7, -2), textcoords="offset points", fontsize=7)
+
+    if floor is not None:
+        ax1.axhline(floor, color=C_CONTROL, ls="--", lw=1.1)
+        ax1.text(0.02, floor + 0.015,
+                 "popularity control: a defence that worked would reach here",
+                 fontsize=7, color=C_CONTROL,
+                 transform=ax1.get_yaxis_transform())
+
+    ax1.set_xlabel("utility: nDCG@20")
+    ax1.set_ylabel(r"attack strength: $\cos(\hat{a}, a)$ at $j=10$")
+    ax1.set_title("Neither defence reaches the floor", fontsize=9)
+    ax1.set_ylim(0.35, 1.0)
+    ax1.legend(fontsize=7, loc="lower left")
+
+    # ---- panel B: why it fails at THIS scale ----------------------------
+    if noisy[0].get("signal_spectral") and noisy[0].get("noise_spectral"):
+        eps = [r["epsilon"] for r in noisy]
+        snr = [r["signal_spectral"] / r["noise_spectral"] for r in noisy]
+        # Noise grows as sigma*sqrt(n), signal as m, so for a fixed epsilon the
+        # usable regime is set by m/sqrt(n). Netflix is 157x better placed.
+        scale = (480189 / math.sqrt(17770)) / (943 / math.sqrt(1682))
+        ax2.plot(eps, snr, "-o", ms=4.5, color=C_ATTACK, label="ML-100K (ours)")
+        ax2.plot(eps, [v * scale for v in snr], "-^", ms=4.5, color=C_CONTROL,
+                 label="Netflix scaling (Nudge)")
+        ax2.axhline(1.0, color="k", lw=0.9, ls=":")
+        ax2.text(0.98, 1.3, "signal = noise", fontsize=7, ha="right",
+                 transform=ax2.get_yaxis_transform())
+        ax2.set_xscale("log")
+        ax2.set_yscale("log")
+        ax2.invert_xaxis()
+        ax2.set_xlabel("epsilon   (more privacy to the right)")
+        ax2.set_ylabel("spectral signal / noise")
+        ax2.set_title("The mechanism is built for a larger dataset", fontsize=9)
+        ax2.legend(fontsize=7.5, loc="lower left")
+
+    fig.text(0.5, -0.07,
+             "Noise scales as sigma*sqrt(n) and signal as m, so the usable "
+             "regime is set by m/sqrt(n) -- 157x larger for Netflix than for "
+             "ML-100K.",
+             ha="center", fontsize=7.5, color="#555555")
+
+    save(fig, "fig_dp.pdf")
+
+    at1 = next((r for r in noisy if r["epsilon"] == 1.0), noisy[-1])
+    if base:
+        drop = 100 * (at1["ndcg_at_20"] - base["ndcg_at_20"]) / base["ndcg_at_20"]
+        print(f"    dp: nDCG {base['ndcg_at_20']:.4f} -> "
+              f"{at1['ndcg_at_20']:.4f} ({drop:+.0f}%) at eps="
+              f"{at1['epsilon']:g}; Nudge report -17% on Netflix")
+        print(f"    dp: attack cos {base['cos_attack']:.4f} -> "
+              f"{at1['cos_attack']:.4f} -- it goes UP, not down"
+              + (f"; floor is {floor:.3f}" if floor is not None else ""))
+    ratio = at1["noise_spectral"] / at1["signal_spectral"]
+    print(f"    dp: at eps=1 the noise dominates the signal by {ratio:.1f}x -- "
+          f"the mechanism needs a dataset with a larger m/sqrt(n)")
+    return True
+
+
 def main():
     print("regenerating figures from bench/results/")
     leak = newest_sha(load("leakage_attack.jsonl"), "leakage_attack")
@@ -765,6 +883,7 @@ def main():
     stages = newest_sha(load("bench_stages.jsonl"), "bench_stages")
     comp = newest_sha(load("bench_compose.jsonl"), "bench_compose")
     qual = newest_sha(load("train_quality.jsonl"), "train_quality")
+    dp = newest_sha(load("dp_study.jsonl"), "dp_study")
     ell = load("oracle_ell_sweep.jsonl")     # one row per ell, no sha filter
 
     made = 0
@@ -777,6 +896,7 @@ def main():
     made += bool(fig_sweep(sweep))
     made += bool(fig_stages(stages))
     made += bool(fig_compose(comp, qual))
+    made += bool(fig_dp(dp, leak))
 
     print(f"\n{made} figure(s) written to {FIGDIR}/")
     if made == 0:
