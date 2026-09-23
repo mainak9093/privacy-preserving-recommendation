@@ -31,6 +31,9 @@
 #                     see the argument in bench/bench_sweep.cpp's header.
 #    reproduce        the whole pipeline end to end, including the
 #                     composition demo. Long; this is the D8 artefact.
+#    reproduce-bg     the same, detached, logging to $(BUILD)/reproduce.log
+#    watch            live bar + ETA for a reproduce-bg run. Reads the log
+#                     only, so it adds no load to an already busy machine.
 #    figures          regenerate figures (Day 6; guarded until the script exists)
 #    clean
 # ==========================================================================
@@ -72,7 +75,7 @@ BENCHBIN := $(patsubst bench/%.cpp,$(BUILD)/bench/%.exe,$(BENCHSRC))
 EXHAUSTIVE_BITS ?= 16
 CHECK_BITS      ?= 8
 
-.PHONY: all test test-exhaustive check bench figures clean check-toolchain apps demo demo-net distinguisher reproduce FORCE
+.PHONY: all test test-exhaustive check bench figures clean check-toolchain apps demo demo-net distinguisher reproduce reproduce-bg watch FORCE
 
 all: check-toolchain $(TESTBIN) $(APPBIN)
 
@@ -317,3 +320,21 @@ reproduce: check-toolchain
 
 clean:
 	rm -rf $(BUILD)
+
+# --------------------------------------------------------------------------
+#  reproduce takes tens of minutes and is SILENT for most of it -- the 18
+#  training runs redirect to /dev/null -- so a quiet log looks identical to a
+#  hung one. These two turn that into a bar and an ETA.
+#
+#      mingw32-make reproduce-bg      # start it, detached
+#      mingw32-make watch             # follow it; Ctrl-C leaves the run alone
+# --------------------------------------------------------------------------
+reproduce-bg: check-toolchain
+	@mkdir -p $(BUILD)
+	@echo "starting reproduce in the background -> $(BUILD)/reproduce.log"
+	@( $(MAKE) --no-print-directory reproduce > $(BUILD)/reproduce.log 2>&1; \n	   echo "EXIT=$$?" >> $(BUILD)/reproduce.log ) &
+	@sleep 1
+	@echo "follow it with:  mingw32-make watch"
+
+watch:
+	@$(PY) scripts/watch_progress.py $(BUILD)/reproduce.log
