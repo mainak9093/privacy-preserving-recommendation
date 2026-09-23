@@ -873,6 +873,110 @@ def fig_dp(dp_rows, leak_rows):
     return True
 
 
+# --------------------------------------------------------------------------
+#  F11 -- task 4.7: the two malicious-client results, side by side.
+#
+#  Left, D9.3: how many colluding clients it takes to own the model through the
+#  harvest path. Right, D9.4: how much server work one DPF key buys.
+#  Both are about a malicious CLIENT, which is adversary class A5 and the one
+#  class this system had measured nothing about.
+# --------------------------------------------------------------------------
+def fig_malicious(poison_rows, dos_rows):
+    if not poison_rows and not dos_rows:
+        print("  SKIP fig_malicious: no rows (run model/poison_study.py and "
+              "mingw32-make bench)")
+        return False
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10.2, 3.8))
+    fig.subplots_adjust(wspace=0.30)
+
+    # ---- left: colluders against model quality --------------------------
+    coll = sorted([r for r in poison_rows
+                   if r.get("op") == "harvest_poison_collude"],
+                  key=lambda r: r["attackers"])
+    if coll:
+        d = coll[0].get("d", 16)
+        clean = coll[0].get("ndcg_at_20_clean")
+        x = [r["attackers"] for r in coll]
+        y = [r["ndcg_at_20"] for r in coll]
+        ax1.plot(x, y, "-o", ms=5, color=C_ATTACK,
+                 label="model quality under attack")
+        if clean:
+            ax1.axhline(clean, color=C_FLOOR, ls="--", lw=1.1)
+            ax1.text(x[0], clean + 0.012, "clean model", fontsize=7,
+                     color=C_FLOOR)
+        ax1.axvline(d, color=C_CONTROL, ls=":", lw=1.2)
+        ax1.annotate(f"d = {d}", xy=(d, max(y) * 0.55),
+                     xytext=(6, 0), textcoords="offset points",
+                     fontsize=7.5, color=C_CONTROL)
+        ax1.set_xscale("log", base=2)
+        ax1.set_xticks(x)
+        ax1.set_xticklabels([str(v) for v in x])
+        ax1.set_xlabel("colluding clients, each with distinct targets")
+        ax1.set_ylabel("nDCG@20 for the HONEST users")
+        ax1.set_title("The cliff is at exactly $d$", fontsize=9)
+        ax1.legend(fontsize=7.5, loc="lower left")
+        ax1.grid(axis="x", visible=False)
+
+    # ---- right: DoS amplification ---------------------------------------
+    amp = sorted([r for r in dos_rows if r.get("op") == "dos_amplification"],
+                 key=lambda r: r["domain_bits"])
+    if amp:
+        db = [r["domain_bits"] for r in amp]
+        a = [r["amplification_time"] for r in amp]
+        kb = [r["key_bytes"] for r in amp]
+        # Both on ONE log axis, so the shapes can be compared. On a twin axis
+        # the nearly-flat key curve and the steep amplification curve happen to
+        # overlap, which reads as a single line and hides the whole point.
+        ax2.plot(db, a, "-o", ms=5, color=C_ATTACK,
+                 label="server work bought (amplification)")
+        ax2.plot(db, kb, "--s", ms=4, color=C_CONTROL,
+                 label="attacker's cost (key bytes)")
+        ax2.set_yscale("log")
+        ax2.set_xlabel("domain bits (catalogue of $2^{db}$ records)")
+        ax2.set_ylabel("log scale: bytes, and amplification factor")
+        ax2.set_title("One key: O(log N) to send, O(N) to answer", fontsize=9)
+
+        # The operating point this project actually runs at.
+        here = next((r for r in amp if r["domain_bits"] == 11), None)
+        if here:
+            ax2.plot([11], [here["amplification_time"]], marker="*", ms=14,
+                     color=C_ATTACK, ls="none", zorder=5)
+            ax2.annotate(f"ML-100K: {here['key_bytes']} B buys "
+                         f"{here['amplification_time']:.0f}x",
+                         xy=(11, here["amplification_time"]),
+                         xytext=(8, -22), textcoords="offset points",
+                         fontsize=7.5,
+                         arrowprops=dict(arrowstyle="->", lw=0.7))
+
+        ax2.legend(fontsize=7.5, loc="upper left")
+
+    fig.text(0.5, -0.07,
+             "Both concern a malicious CLIENT (adversary class A5). Left: the "
+             "weight check closes it for 1 round/query. Right: unmitigated - "
+             "closing it needs a Sabre-style audit, which we did not build.",
+             ha="center", fontsize=7.5, color="#555555")
+
+    save(fig, "fig_malicious.pdf")
+
+    if coll:
+        below = [r for r in coll if r["attackers"] < coll[0].get("d", 16)]
+        at = [r for r in coll if r["attackers"] >= coll[0].get("d", 16)]
+        if below and at:
+            print(f"    malicious: {max(r['attackers'] for r in below)} "
+                  f"colluders cost "
+                  f"{min(r['ndcg_rel_pct'] for r in below):+.1f}%, "
+                  f"{min(r['attackers'] for r in at)} colluders cost "
+                  f"{min(r['ndcg_rel_pct'] for r in at):+.1f}% -- the model is "
+                  f"gone at d")
+    if amp:
+        here = next((r for r in amp if r["domain_bits"] == 11), amp[0])
+        print(f"    malicious: at db={here['domain_bits']}, "
+              f"{here['key_bytes']} B of key buys "
+              f"{here['amplification_time']:.0f}x its own cost in server work")
+    return True
+
+
 def main():
     print("regenerating figures from bench/results/")
     leak = newest_sha(load("leakage_attack.jsonl"), "leakage_attack")
@@ -884,6 +988,8 @@ def main():
     comp = newest_sha(load("bench_compose.jsonl"), "bench_compose")
     qual = newest_sha(load("train_quality.jsonl"), "train_quality")
     dp = newest_sha(load("dp_study.jsonl"), "dp_study")
+    poison = newest_sha(load("poison_study.jsonl"), "poison_study")
+    dos = newest_sha(load("bench_dos.jsonl"), "bench_dos")
     ell = load("oracle_ell_sweep.jsonl")     # one row per ell, no sha filter
 
     made = 0
@@ -897,6 +1003,7 @@ def main():
     made += bool(fig_stages(stages))
     made += bool(fig_compose(comp, qual))
     made += bool(fig_dp(dp, leak))
+    made += bool(fig_malicious(poison, dos))
 
     print(f"\n{made} figure(s) written to {FIGDIR}/")
     if made == 0:

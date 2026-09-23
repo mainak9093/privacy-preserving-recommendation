@@ -25,10 +25,10 @@ against `P0` and `P1`.
 | | Adversary | Capability | Our guarantee |
 |---|---|---|---|
 | **A1** | One semi-honest server | Follows the protocol, reads its own view | **Full user privacy**, up to §3. The headline claim. Matches NUDGE's model exactly. |
-| **A2** | One semi-honest server + any number of malicious users | Above, plus colluding users | Honest users' ratings stay safe. Model *quality* is not protected — input validation is future work. |
+| **A2** | One semi-honest server + any number of malicious users | Above, plus colluding users | Honest users' ratings stay safe. Model *quality* is protected against weight inflation as of 2026-09-24 (§9.1), **but `d` colluding clients can still destroy the model** by forging keys that redistribute rather than inflate. See §9. |
 | **A3** | **Two or more colluding servers** | Pool their views | **NO GUARANTEE. The shares reconstruct.** This is the assumption the entire system rests on, and it is stated in bold wherever the system is described. |
 | **A4** | A malicious (deviating) server | Arbitrary deviation | **Out of scope**, as in NUDGE §3.1. It can corrupt correctness and availability. |
-| **A5** | A malicious user | Malformed DPF keys | Corrupts only its own output. But a flood of invalid keys is an **unmitigated DoS** on `EvalFull`, which is linear in the domain. A Sabre-style logarithmic audit is the known mitigation; we have not built it. |
+| **A5** | A malicious user | Malformed DPF keys | **Measured in §9, and it was worse than this row said.** Retrieval corrupts only its own output, but the HARVEST path accepted an unbounded weight until 2026-09-24 — one query at `beta=10⁶` cast a million-weight vote in the next model. Closed by a 1-round check (§9.2). Still open: `d` colluders forging redistribution keys destroy the model (nDCG 0.4536 → 0.0021), and the DoS on `EvalFull` is **unmitigated and measured at 121× at our catalogue size** (§9.3). A Sabre-style audit closes both; we have not built it. |
 | **A6** | A network observer | Message sizes and timing | Sees public parameters and timing only. All message sizes are input-independent by construction — and, as of 2026-09-11, **measured**: over 1800 recorded queries every frame is 228 bytes whatever the record index, and a classifier on the raw wire bytes scores 0.490–0.500 against a 0.5 chance line. See §5. |
 
 ## 3. Leakage profile
@@ -454,15 +454,110 @@ invoked and no UC claim is made.
 
 ---
 
+## 9. The malicious client (A5), measured — added Phase 4
+
+Adversary class A5 had one sentence and no numbers. It now has two results,
+one of which is a hole in **our** system rather than an inherited limitation.
+
+### 9.1 The harvest path accepts an unbounded vote (D9.3)
+
+**D9.3 as written does not apply here.** It asks for a well-formedness check on
+user *submissions*, so one malicious user cannot skew the model. OblivRec has no
+rating-upload path: training reads MovieLens off local disk, and §7.5's harvest
+loop deliberately removed the upload. So there is no rating vector to validate.
+
+**But there is a submission, and it was unchecked.** An honest client goes
+through `PirClient::Query`, which fixes `beta = 1` so the difference of the two
+expansions is the selector vector exactly. Nothing stops a client calling
+`Gen(alpha, beta, domain_bits)` directly with any `beta`. Retrieval still works
+— the record returns scaled by `beta`, which the attacker divides out — and the
+servers fold `beta`, not 1, into the consumption accumulator that becomes the
+next round's training input. **Every pre-existing check passes**: the keys
+deserialise, the domain matches, the expansion is the right length.
+`tests/test_harvest.cpp` demonstrates it: one query at `beta = 10⁶` puts
+1,000,000 into the consumption vector.
+
+**What it buys is not what we first assumed.** Measured with
+`model/poison_study.py`:
+
+| | nDCG@20 for honest users | vs clean |
+|---|---|---|
+| clean model | 0.4536 | — |
+| 1 attacker, weight 10⁶ | 0.4493 | −1.0% |
+| 8 colluders, distinct targets | 0.4351 | −4.1% |
+| **16 colluders = `d`** | **0.0021** | **−99.5%** |
+
+One attacker can do almost nothing, and **the reason is the normalisation**:
+power iteration normalises every step, so past a point extra weight only fixes
+a *direction*. A single attacker captures one of the `d` components and the
+other `d−1` still carry the honest signal. It also cannot *aim* — the targets it
+promotes do not rise (mean rank 901 → 977 of 1682).
+
+**The cliff is at exactly `d`.** Sixteen colluders with distinct target sets
+capture all sixteen components and nothing honest is left. This is model
+destruction, not promotion, and it costs the attacker sixteen clients.
+
+### 9.2 The check, and what it does not cover
+
+Summation is linear, so each server can sum its own expansion locally, and
+
+    Σⱼ e₀[j] − Σⱼ e₁[j]  =  beta
+
+exactly, for any `alpha`. The two servers open that single scalar and require
+it to be 1. **One round, two ring elements per query.**
+
+**Opening it leaks nothing.** The secret is `alpha` — *which* item was fetched.
+`beta` is a payload that is supposed to be the public constant 1, and the sum is
+independent of `alpha` by construction. Each server's own sum is pseudorandom;
+their difference is `beta` and nothing else.
+
+**It closes weight inflation, not weight redistribution.** The sum bounds the
+total, not its distribution. A client that forged correction words directly,
+rather than calling `Gen`, could produce a difference vector of `+2` at one
+index and `−1` at another — summing to 1, passing this check, still skewing two
+items. `tests/test_harvest.cpp` constructs exactly that forgery and shows it
+passes. Proving a key encodes a genuine one-point function is what a
+Sabre-style audit does, and that is §9.3's stretch half, unbuilt.
+
+### 9.3 The DoS amplification is now a number (D9.4)
+
+A5 said a flood of invalid keys is an unmitigated DoS on `EvalFull`, "which is
+linear in the domain". Measured, `bench/bench_dos.cpp`:
+
+| domain bits | key bytes | amplification |
+|---|---|---|
+| 8 | 173 | 15× |
+| **11 (ours)** | **227** | **121×** |
+| 14 | 281 | 909× |
+| 16 | 317 | 3495× |
+
+The key is `O(log N)` and the answer is `O(N)`, so **the amplification grows
+with the catalogue** — the opposite of the direction a defender wants. At our
+operating point, 227 bytes buys 121× its own cost in server work.
+
+**The expensive attack is the one that looks legitimate.** A *malformed* key is
+cheap for the server: `DpfKey::Deserialize` rejects it before any expansion, and
+`tests/test_dpf_serialize.cpp` covers the party byte, the `domain_bits` range
+and the exact length. So parsing hardening does not address this, and the
+mitigation really is the audit we did not build.
+
+That the server touches every index is not inefficiency — it is the privacy
+property. Any data-dependent shortcut would leak which record was wanted. The
+DoS exposure is therefore **intrinsic to the design**, not a bug in it, and it
+is the clearest example in this project of a privacy mechanism whose cost is
+paid in availability.
+
+---
+
 ## 6. Open items
 
 | | Item | Where |
 |---|---|---|
-| D9.3 | Input validation against malicious users poisoning model quality | Phase 3+ |
-| D9.4 | Sabre-style audit for malformed keys (A5 DoS) | stretch |
+| D9.3 | ~~Input validation against malicious users poisoning model quality~~ | **done 2026-09-24, §9.1-9.2** — weight inflation closed; redistribution open |
+| D9.4 | Sabre-style audit for malformed keys (A5 DoS) | **DoS measured 2026-09-24, §9.3**; the audit itself remains out of scope, with reasons |
 | — | ~~Channel transcript + distinguisher experiment (A6)~~ | **done 2026-09-11** |
 | — | Constant rating count to close the nnz leak | evaluate against the utility cost |
-| — | Timing side channel on the wire (frame *sizes* are now shown constant; inter-frame *timing* is not analysed) | Phase 4 |
+| — | Timing side channel on the wire (frame *sizes* are now shown constant; inter-frame *timing* is not analysed) | **NOT DONE.** `src/net/transcript.cpp` timestamps at second resolution, far too coarse for inter-frame analysis; doing it properly needs microsecond stamps and a re-run of the probe. Carried to Phase 5 as a stated limitation rather than silently dropped. |
 | — | ~~The FSS comparison gate and the spec-faithful `ApproxNormalize`~~ | **done 2026-09-12, §7.4** |
 | — | ~~Re-run the quality study at b=128 on the no-leak path~~ | **done 2026-09-13, §7.6** |
 | — | ~~Real/ideal simulation sketch for the composed system~~ | **done 2026-09-24, §8** |

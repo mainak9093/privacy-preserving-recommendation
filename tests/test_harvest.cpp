@@ -126,6 +126,90 @@ void TestHarvestFeedsTraining() {
               "(survives multiplication), counts 3->2, 7->1, 20->1\n");
 }
 
+// ---------------------------------------------------------------------------
+//  D9.3: a malicious client can buy an arbitrarily large vote, and the weight
+//  check takes it away again.
+//
+//  The honest path fixes beta = 1 inside PirClient::Query. Nothing stops a
+//  client calling Gen directly with another beta, and until 2026-09-24 nothing
+//  server-side looked.
+// ---------------------------------------------------------------------------
+void TestMaliciousHarvestWeight() {
+  const std::uint32_t domain_bits = 8;
+  const std::uint32_t domain = 1u << domain_bits;
+  const std::uint32_t target = 42;
+
+  auto expand = [&](u64 beta, std::vector<u64>* e0, std::vector<u64>* e1) {
+    auto keys = Gen<u64>(target, beta, domain_bits);
+    e0->assign(domain, 0);
+    e1->assign(domain, 0);
+    EvalFull<u64>(keys.first, Span<u64>(e0->data(), domain));
+    EvalFull<u64>(keys.second, Span<u64>(e1->data(), domain));
+  };
+
+  // 1. The honest query carries weight exactly 1.
+  std::vector<u64> h0, h1;
+  expand(u64(1), &h0, &h1);
+  CHECK(HarvestWeight<u64>(Span<const u64>(h0.data(), domain),
+                           Span<const u64>(h1.data(), domain)) == 1);
+
+  // 2. The attack. A million-weight vote, and every pre-existing check passes:
+  //    the keys deserialise, the domain matches, the expansion is the right
+  //    length, and the record still reconstructs (scaled, which the attacker
+  //    simply divides out).
+  const u64 kBigBeta = 1000000;
+  std::vector<u64> m0, m1;
+  expand(kBigBeta, &m0, &m1);
+
+  ConsumptionAccumulator<u64> a0(domain), a1(domain);
+  a0.Add(Span<const u64>(m0.data(), domain));
+  a1.Add(Span<const u64>(m1.data(), domain));
+
+  Mpc3<u64> s(4242);
+  auto shared = HarvestToReplicated<u64>(s, a0.Shares(), a1.Shares());
+  auto counts = OpenVec<u64>(shared);
+  const std::int64_t got = static_cast<std::int64_t>(counts[target]);
+  CHECK_MSG(got == static_cast<std::int64_t>(kBigBeta),
+            "one malicious query should land " + std::to_string(kBigBeta) +
+                " in the consumption vector, got " + std::to_string(got));
+  std::printf("  D9.3: one query with beta=10^6 puts %lld in the next round's "
+              "training input\n       (honest queries put 1) -- every "
+              "pre-existing check passes\n",
+              static_cast<long long>(got));
+
+  // 3. The check catches it, and costs one round.
+  Mpc3<u64> c(7);
+  c.ResetCounters();
+  const bool honest_ok =
+      HarvestWeightOk<u64>(c, Span<const u64>(h0.data(), domain),
+                           Span<const u64>(h1.data(), domain));
+  const std::uint64_t after_one = c.Rounds();
+  const bool evil_ok =
+      HarvestWeightOk<u64>(c, Span<const u64>(m0.data(), domain),
+                           Span<const u64>(m1.data(), domain));
+  CHECK_MSG(honest_ok, "the honest query must pass the weight check");
+  CHECK_MSG(!evil_ok, "the beta=10^6 query must FAIL the weight check");
+  CHECK_MSG(after_one == 1, "the check must cost exactly one round per query");
+  std::printf("  D9.3: the weight check accepts beta=1, rejects beta=10^6, "
+              "and costs 1 round / 2 elements\n");
+
+  // 4. The boundary. Weight is bounded; its DISTRIBUTION is not. A forged key
+  //    pair summing to 1 passes, which is what a Sabre-style audit would
+  //    catch and what we have NOT built. Demonstrated directly by forging the
+  //    expansions rather than going through Gen.
+  std::vector<u64> f0(domain, 0), f1(domain, 0);
+  f0[target] = 2;            //  +2 here
+  f0[target + 1] = u64(0) - 1;   //  -1 there; the two sum to 1
+  const auto forged =
+      HarvestWeight<u64>(Span<const u64>(f0.data(), domain),
+                         Span<const u64>(f1.data(), domain));
+  CHECK_MSG(forged == 1,
+            "the redistribution forgery is constructed to sum to 1");
+  std::printf("  D9.3: NOT closed -- a forged pair summing to 1 (+2 / -1) "
+              "passes; that needs\n       the Sabre-style audit (D9.4), which "
+              "is out of scope and said so\n");
+}
+
 }  // namespace
 
 int main() {
@@ -133,6 +217,7 @@ int main() {
   try {
     TestHarvestRoundTrip();
     TestHarvestFeedsTraining();
+    TestMaliciousHarvestWeight();
   } catch (const std::exception& e) {
     std::printf("  FAIL: unexpected exception: %s\n", e.what());
     return 1;
