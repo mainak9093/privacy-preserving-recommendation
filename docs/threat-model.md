@@ -150,8 +150,9 @@ This is the argument for making the read private rather than patching around it.
   and the transcript and distinguisher experiment the exit criterion asks for have both been run:
   over 1800 recorded queries across three record indices, every frame is 228 bytes regardless of
   the index, and an adversary trained on the raw wire bytes scores 0.490–0.500 with chance inside
-  every 95% confidence interval. What we still do **not** claim is anything about a *timing* side
-  channel, or about an adversary who can see both server links at once — with both keys the record
+  every 95% confidence interval. What we still do **not** fully claim is the *timing*
+  channel — §9.4 now bounds the server-side half of it at under 2% of a call, with
+  the wire half left to the OS and unanalysed — or anything about an adversary who can see both server links at once — with both keys the record
   reconstructs by design, and no two-server PIR scheme claims otherwise.
 - **~~No claim about private training. The model is factorised in the clear.~~** Retracted
   2026-09-12: private training is built and runs end to end, and §7 is its leakage analysis. The
@@ -547,6 +548,37 @@ DoS exposure is therefore **intrinsic to the design**, not a bug in it, and it
 is the clearest example in this project of a privacy mechanism whose cost is
 paid in availability.
 
+### 9.4 The timing side channel, bounded (A6)
+
+§5 has said since Phase 2 that frame *sizes* are measured constant but *timing*
+is not analysed. The wire's inter-frame timing is dominated by the OS scheduler
+and the loopback stack — measuring it would mostly measure Windows. What this
+project controls, and what a timing attack would have to exploit, is whether
+**the server's work depends on `alpha`**.
+
+`bench/bench_timing.cpp` times `PirServer::Answer` 200 times each across eight
+indices spanning the domain, **interleaved** rather than in blocks so that
+thermal drift cannot align with index identity — the same reasoning as
+`bench_compose.cpp`'s rep-major loop.
+
+| | |
+|---|---|
+| mean call | 87 µs |
+| spread between the per-`alpha` means | **1.7 µs** |
+| median within-`alpha` standard deviation | **6.0 µs** |
+| permutation test, shuffled `alpha` labels | **p = 0.60** |
+
+The variation between indices is **smaller than the noise within a single
+index**, and the observed spread sits in the middle of the null distribution.
+
+**This is a bound, not a proof of constant time**, and the distinction is not
+pedantry: no finite sample shows a difference is exactly zero. What it shows is
+that any `alpha`-dependent signal is **below 2.0% of the mean call** at this
+sample size. That is the honest claim, and it is consistent with the
+construction — `EvalFull` walks every node and the answer takes an
+unconditional inner product over every record, so there is no data-dependent
+branch to find.
+
 ---
 
 ## 6. Open items
@@ -557,7 +589,7 @@ paid in availability.
 | D9.4 | Sabre-style audit for malformed keys (A5 DoS) | **DoS measured 2026-09-24, §9.3**; the audit itself remains out of scope, with reasons |
 | — | ~~Channel transcript + distinguisher experiment (A6)~~ | **done 2026-09-11** |
 | — | Constant rating count to close the nnz leak | evaluate against the utility cost |
-| — | Timing side channel on the wire (frame *sizes* are now shown constant; inter-frame *timing* is not analysed) | **NOT DONE.** `src/net/transcript.cpp` timestamps at second resolution, far too coarse for inter-frame analysis; doing it properly needs microsecond stamps and a re-run of the probe. Carried to Phase 5 as a stated limitation rather than silently dropped. |
+| — | ~~Timing side channel (frame *sizes* shown constant; *timing* not analysed)~~ | **PARTLY done 2026-09-24, §9.4.** The half we control is measured: `Answer`'s runtime shows no dependence on `alpha` (p = 0.60), bounding any signal below 2.0% of the mean call. Inter-frame timing ON THE WIRE remains unanalysed and is dominated by the OS and loopback stack rather than by the protocol; stated as a limitation rather than claimed. |
 | — | ~~The FSS comparison gate and the spec-faithful `ApproxNormalize`~~ | **done 2026-09-12, §7.4** |
 | — | ~~Re-run the quality study at b=128 on the no-leak path~~ | **done 2026-09-13, §7.6** |
 | — | ~~Real/ideal simulation sketch for the composed system~~ | **done 2026-09-24, §8** |

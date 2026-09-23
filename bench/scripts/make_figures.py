@@ -977,6 +977,98 @@ def fig_malicious(poison_rows, dos_rows):
     return True
 
 
+# --------------------------------------------------------------------------
+#  F12 -- the timing side channel, bounded rather than dismissed.
+#
+#  The threat model has carried "inter-frame timing is not analysed" as an open
+#  item since Phase 2. This tests the half the project controls: does
+#  PirServer::Answer take a different amount of time depending on WHICH record
+#  was asked for?
+#
+#  The honest output is a BOUND. No finite sample shows a difference is exactly
+#  zero; what it can show is how large a difference could hide under the noise.
+#  So this compares the spread BETWEEN alphas against the spread WITHIN one
+#  alpha, and runs a permutation test with shuffled alpha labels as the control
+#  -- the same shape as the distinguisher's shuffled-label control.
+# --------------------------------------------------------------------------
+def fig_timing(rows):
+    rows = [r for r in rows if r.get("op") == "answer_timing"]
+    if not rows:
+        print("  SKIP fig_timing: no timing rows (run mingw32-make bench)")
+        return False
+
+    by_alpha = collections.defaultdict(list)
+    for r in rows:
+        by_alpha[r["alpha"]].append(r["wall_ms"])
+    alphas = sorted(by_alpha)
+    if len(alphas) < 2:
+        print("  SKIP fig_timing: need at least two alphas")
+        return False
+
+    samples = [np.asarray(by_alpha[a], dtype=float) for a in alphas]
+    means = np.array([s.mean() for s in samples])
+    grand = float(np.concatenate(samples).mean())
+
+    # Between-alpha spread: how far apart the per-alpha means are.
+    between = float(means.max() - means.min())
+    # Within-alpha spread: the typical scatter of one alpha's own samples.
+    within = float(np.median([s.std(ddof=1) for s in samples]))
+
+    # Permutation control. If alpha carries no timing information, shuffling
+    # the labels should produce a between-group spread just as large.
+    allv = np.concatenate(samples)
+    sizes = [len(s) for s in samples]
+    rng = np.random.default_rng(0)
+    null = []
+    for _ in range(2000):
+        perm = rng.permutation(allv)
+        idx, gm = 0, []
+        for sz in sizes:
+            gm.append(perm[idx:idx + sz].mean())
+            idx += sz
+        gm = np.asarray(gm)
+        null.append(gm.max() - gm.min())
+    null = np.asarray(null)
+    pval = float((null >= between).mean())
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10.2, 3.8))
+    fig.subplots_adjust(wspace=0.28)
+
+    bp = ax1.boxplot(samples, showfliers=False, patch_artist=True,
+                     medianprops=dict(color="black", lw=1.2))
+    for patch in bp["boxes"]:
+        patch.set_facecolor(C_CONTROL)
+        patch.set_alpha(0.55)
+    ax1.set_xticklabels([str(a) for a in alphas], fontsize=7.5)
+    ax1.set_xlabel(r"record index $\alpha$ requested")
+    ax1.set_ylabel("PirServer::Answer, ms per call")
+    ax1.set_title("Server time against which record was asked for", fontsize=9)
+    ax1.grid(axis="x", visible=False)
+
+    ax2.hist(null, bins=40, color=C_FLOOR, alpha=0.75,
+             label="shuffled alpha labels (null)")
+    ax2.axvline(between, color=C_ATTACK, lw=1.8,
+                label="observed spread between alphas")
+    ax2.set_xlabel("max - min of the per-alpha mean (ms)")
+    ax2.set_ylabel("permutations")
+    ax2.set_title(f"Observed sits at p = {pval:.2f}", fontsize=9)
+    ax2.legend(fontsize=7.5, loc="upper right")
+
+    pct = 100.0 * between / grand if grand else 0.0
+    fig.text(0.5, -0.07,
+             f"Any data-dependent timing is bounded by {pct:.1f}% of the mean "
+             f"call ({grand*1000:.0f} us) at this sample size. That is a "
+             f"bound, not a proof of constant time.",
+             ha="center", fontsize=7.5, color="#555555")
+
+    save(fig, "fig_timing.pdf")
+    print(f"    timing: between-alpha spread {between*1000:.1f} us vs "
+          f"within-alpha sd {within*1000:.1f} us, p = {pval:.2f}")
+    print(f"    timing: bounds any alpha-dependent signal at {pct:.1f}% of the "
+          f"{grand*1000:.0f} us mean call")
+    return True
+
+
 def main():
     print("regenerating figures from bench/results/")
     leak = newest_sha(load("leakage_attack.jsonl"), "leakage_attack")
@@ -990,6 +1082,7 @@ def main():
     dp = newest_sha(load("dp_study.jsonl"), "dp_study")
     poison = newest_sha(load("poison_study.jsonl"), "poison_study")
     dos = newest_sha(load("bench_dos.jsonl"), "bench_dos")
+    timing = newest_sha(load("bench_timing.jsonl"), "bench_timing")
     ell = load("oracle_ell_sweep.jsonl")     # one row per ell, no sha filter
 
     made = 0
@@ -1004,6 +1097,7 @@ def main():
     made += bool(fig_compose(comp, qual))
     made += bool(fig_dp(dp, leak))
     made += bool(fig_malicious(poison, dos))
+    made += bool(fig_timing(timing))
 
     print(f"\n{made} figure(s) written to {FIGDIR}/")
     if made == 0:
