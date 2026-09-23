@@ -41,6 +41,7 @@ bench/figures/
 # what is bulk.
 bench/results/distinguisher.jsonl
 bench/results/transcript.jsonl
+bench/results/transcript.*.jsonl
 *.pdf
 !docs/**/*.pdf
 # The two instructor-recommended papers are open access and shared with the team,

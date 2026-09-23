@@ -6,9 +6,14 @@
 //
 //  This file implements the CLEARTEXT fixed-point reference for
 //  ApproxNormalize, structured line for line the way the secret-shared
-//  protocol must be. It is NOT the protocol. The protocol is not built yet,
-//  and pretending otherwise would be the exact failure this project keeps
-//  catching in other people's designs.
+//  protocol is. It is NOT the protocol.
+//
+//  This paragraph said "the protocol is not built yet" until 2026-09-24. It
+//  was built on 2026-09-12 -- msnzb.cpp's gate and InvSqrtShared, driven by
+//  FssNormalizer. What this file is FOR is unchanged and is the reason it
+//  still exists: it is the oracle the protocol is checked against. A protocol
+//  with no cleartext twin is a protocol whose errors look like bugs and whose
+//  bugs look like errors.
 //
 //  It is written first, deliberately. ARCHITECTURE section 4 requires both
 //  non-linear protocols to be measured against a cleartext oracle with the

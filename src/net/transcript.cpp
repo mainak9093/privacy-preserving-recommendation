@@ -21,6 +21,10 @@
 #include <cstdio>
 #include <ctime>
 #include <fstream>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <string>
 
 namespace oblivrec {
 namespace {
@@ -50,17 +54,58 @@ std::string NowStamp() {
   return buf;
 }
 
+// --------------------------------------------------------------------------
+//  ONE SINK PER PATH, PROCESS-WIDE, AND THAT IS A CORRECTNESS FIX.
+//
+//  Each TranscriptChannel used to own its own std::ofstream. demo.cpp wraps
+//  THREE channels -- one per party -- at the same path in one process, so
+//  three independently buffered streams appended to one file. A record here is
+//  the base64 of a whole frame, up to ~36 KB, which is far larger than a
+//  stream buffer, so a single record spanned several flushes and the flushes
+//  interleaved. The result was lines like
+//
+//      {"tag": "P0", ..., "b64": "b64": "ApIG...
+//
+//  i.e. invalid JSON. Seven such lines were in the committed-adjacent local
+//  transcript before this was found.
+//
+//  The distinguisher's own data was never affected: probe.cpp wraps ONE
+//  channel per process and `make distinguisher` runs the three alphas
+//  sequentially, so there is only ever one writer. That file parses clean at
+//  3603 rows, and the distinguisher result stands.
+//
+//  Fix: a process-wide registry keyed by path. Every wrapper on the same file
+//  shares one stream and one mutex, and a record is written under the lock, so
+//  records cannot interleave. Keyed by path rather than global because two
+//  different transcripts are genuinely independent.
+// --------------------------------------------------------------------------
+struct Sink {
+  std::mutex mu;
+  std::ofstream out;
+};
+
+Sink& SinkFor(const std::string& path) {
+  static std::mutex registry_mu;
+  static std::map<std::string, std::unique_ptr<Sink>> registry;
+  std::lock_guard<std::mutex> g(registry_mu);
+  auto it = registry.find(path);
+  if (it == registry.end()) {
+    auto s = std::unique_ptr<Sink>(new Sink());
+    s->out.open(path, std::ios::app);
+    if (!s->out) {
+      throw ChannelError("cannot open transcript file " + path);
+    }
+    it = registry.emplace(path, std::move(s)).first;
+  }
+  return *it->second;
+}
+
 // A channel that forwards everything and writes down what it forwarded.
 class TranscriptChannel final : public Channel {
  public:
   TranscriptChannel(std::unique_ptr<Channel> inner, const std::string& path,
                     std::string tag)
-      : inner_(std::move(inner)), tag_(std::move(tag)) {
-    out_.open(path, std::ios::app);
-    if (!out_) {
-      throw ChannelError("cannot open transcript file " + path);
-    }
-  }
+      : inner_(std::move(inner)), tag_(std::move(tag)), sink_(SinkFor(path)) {}
 
   void Send(Span<const std::uint8_t> payload) override {
     inner_->Send(payload);
@@ -74,12 +119,16 @@ class TranscriptChannel final : public Channel {
 
   void Flush() override {
     inner_->Flush();
-    out_.flush();
+    std::lock_guard<std::mutex> g(sink_.mu);
+    sink_.out.flush();
   }
 
   void Close() override {
     inner_->Close();
-    if (out_.is_open()) out_.close();
+    // The sink is shared and outlives this wrapper -- another party may still
+    // be writing to it -- so flush, never close.
+    std::lock_guard<std::mutex> g(sink_.mu);
+    sink_.out.flush();
   }
 
   std::uint64_t BytesSent() const override { return inner_->BytesSent(); }
@@ -87,15 +136,29 @@ class TranscriptChannel final : public Channel {
 
  private:
   void Record(const char* dir, Span<const std::uint8_t> payload) {
-    out_ << "{\"tag\": \"" << tag_ << "\", \"dir\": \"" << dir
-         << "\", \"len\": " << payload.size()
-         << ", \"b64\": \"" << Base64Encode(payload)
-         << "\", \"timestamp\": \"" << NowStamp() << "\"}\n";
+    // Build the whole line first, then write it under the lock in one go.
+    // Streaming the pieces straight to the stream is what let two writers
+    // interleave inside a single record, and it would also hold the lock
+    // across a 36 KB base64 encode.
+    std::string line = "{\"tag\": \"";
+    line += tag_;
+    line += "\", \"dir\": \"";
+    line += dir;
+    line += "\", \"len\": ";
+    line += std::to_string(payload.size());
+    line += ", \"b64\": \"";
+    line += Base64Encode(payload);
+    line += "\", \"timestamp\": \"";
+    line += NowStamp();
+    line += "\"}\n";
+
+    std::lock_guard<std::mutex> g(sink_.mu);
+    sink_.out << line;
   }
 
   std::unique_ptr<Channel> inner_;
   std::string tag_;
-  std::ofstream out_;
+  Sink& sink_;
 };
 
 }  // namespace

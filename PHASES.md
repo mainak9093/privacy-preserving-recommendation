@@ -215,7 +215,7 @@ evaluation beats a half-landed stretch goal. **Do not start 4.6/4.7 after Oct 22
 |---|---|---|---|
 | 5.1 | Final report draft, full structure (below) | All | Oct 30 |
 | 5.2 | **Code freeze.** Bug fixes and documentation only after this | All | **Nov 1** |
-| 5.3 | README audited by a stranger-simulating teammate; Docker build from scratch verified | W4 | Nov 2 |
+| 5.3 | README audited by a stranger-simulating teammate; **`mingw32-make reproduce` from a clean checkout** verified (Docker substituted 2026-09-12 -- absent on the dev box, needs WSL2 or Hyper-V) | W4 | Nov 2 |
 | 5.4 | Review pass: every claim traced to a figure, a measurement, or a proof sketch | All | Nov 3 |
 | 5.5 | Live demo rehearsed **with a recorded fallback video** | W1 + W3 | Nov 4 |
 | 5.6 | **Viva prep: each member explains every layer, not only their own** | All | Nov 4 |
@@ -233,7 +233,14 @@ evaluation beats a half-landed stretch goal. **Do not start 4.6/4.7 after Oct 22
 9. Limitations ← *semi-honest, one compromised server, our actual scale, plainly*
 10. Conclusion
 
-**Exit criterion:** a stranger with Docker can clone the repo and reproduce Figure 1.
+**Exit criterion, AMENDED 2026-09-12 and restated here because it is a graded line.**
+Originally: *"a stranger with Docker can clone the repo and reproduce Figure 1."* Docker is
+not installable on the development machine -- it needs WSL2 or Hyper-V and `wsl` resolves to
+the launcher stub only -- so the criterion is now: **a stranger with the documented toolchain
+(MSYS2 mingw64 g++, `py -3.13`) can clone the repo and run `mingw32-make reproduce` to
+regenerate every figure.** The amendment is recorded in the Decisions Log rather than quietly
+reinterpreted, because weakening a graded criterion silently is the thing this project most
+wants not to do.
 
 ---
 

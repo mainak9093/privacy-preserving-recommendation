@@ -29,7 +29,18 @@ cd "$(dirname "$0")/.." || exit 1
 BUILD=build
 RUNDIR=build/run
 PORTS=(7000 7001 7002)
-TRANSCRIPT=bench/results/transcript.jsonl
+# ONE TRANSCRIPT FILE PER PROCESS.
+# All four processes -- three servers and the client -- used to append to a
+# single file. A record is the base64 of a whole frame, up to ~36 KB, far
+# larger than any stream buffer, so records interleaved and the file held
+# invalid JSON. The IN-PROCESS case (the client wraps three channels at
+# once) is fixed in src/net/transcript.cpp by a shared, locked sink. ACROSS
+# processes there is no lock to share, so the files are simply kept apart.
+# Nothing reads these programmatically -- they are for inspection -- and the
+# distinguisher writes its own file from a single writer, which is why its
+# data was never affected.
+TRANSCRIPT_DIR=bench/results
+TRANSCRIPT_PREFIX="$TRANSCRIPT_DIR/transcript"
 READY_TIMEOUT=15
 
 start_servers() {
@@ -37,7 +48,7 @@ start_servers() {
     echo "server.exe not built. Run: mingw32-make apps" >&2
     exit 1
   fi
-  mkdir -p "$RUNDIR" "$(dirname "$TRANSCRIPT")"
+  mkdir -p "$RUNDIR" "$TRANSCRIPT_DIR"
   : > "$RUNDIR/pids"
 
   for p in 0 1 2; do
@@ -45,7 +56,7 @@ start_servers() {
     log="$RUNDIR/p$p.log"
     : > "$log"
     ./"$BUILD"/server.exe --party "$p" --port "$port" \
-        --transcript "$TRANSCRIPT" > "$log" 2>&1 &
+        --transcript "$TRANSCRIPT_PREFIX.P$p.jsonl" > "$log" 2>&1 &
     echo $! >> "$RUNDIR/pids"
     echo "  launched P$p on port $port (pid $!)"
   done
@@ -99,12 +110,12 @@ case "${1:-start}" in
     ;;
   demo)
     # The transcript is truncated per run so an analysis never mixes runs.
-    : > "$TRANSCRIPT"
+    rm -f "$TRANSCRIPT_PREFIX".*.jsonl
     start_servers
     echo
     ./"$BUILD"/demo.exe --user 42 --k 10 \
         --connect 127.0.0.1:7000,127.0.0.1:7001,127.0.0.1:7002 \
-        --transcript "$TRANSCRIPT"
+        --transcript "$TRANSCRIPT_PREFIX.client.jsonl"
     rc=$?
     echo
     stop_servers
