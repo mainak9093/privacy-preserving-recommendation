@@ -31,6 +31,9 @@
 #                     see the argument in bench/bench_sweep.cpp's header.
 #    reproduce        the whole pipeline end to end, including the
 #                     composition demo. Long; this is the D8 artefact.
+#    reproduce-bg     the same, detached, logging to $(BUILD)/reproduce.log
+#    watch            live bar + ETA for a reproduce-bg run. Reads the log
+#                     only, so it adds no load to an already busy machine.
 #    figures          regenerate figures (Day 6; guarded until the script exists)
 #    clean
 # ==========================================================================
@@ -72,7 +75,7 @@ BENCHBIN := $(patsubst bench/%.cpp,$(BUILD)/bench/%.exe,$(BENCHSRC))
 EXHAUSTIVE_BITS ?= 16
 CHECK_BITS      ?= 8
 
-.PHONY: all test test-exhaustive check bench figures clean check-toolchain apps demo demo-net distinguisher reproduce FORCE
+.PHONY: all test test-exhaustive check bench figures clean check-toolchain apps demo demo-net distinguisher reproduce reproduce-bg watch FORCE
 
 all: check-toolchain $(TESTBIN) $(APPBIN)
 
@@ -286,27 +289,30 @@ distinguisher: apps
 #  check that a fresh clone can get everything it needs.
 # --------------------------------------------------------------------------
 reproduce: check-toolchain
-	@echo "== 1/7 fetching data (skipped if present)"
+	@echo "== 1/9 fetching data (skipped if present)"
 	@test -f data/ml-100k/u.item || $(PY) scripts/fetch_data.py
-	@echo "== 2/7 building"
+	@echo "== 2/9 building"
 	@$(MAKE) --no-print-directory all
-	@echo "== 3/7 tests"
+	@echo "== 3/9 tests"
 	@$(MAKE) --no-print-directory test
-	@echo "== 4/7 cleartext oracle and the float-to-ring export"
+	@echo "== 4/9 cleartext oracle and the float-to-ring export"
 	$(PY) model/export.py
-	@echo "== 5/8 private training (S2), all three configurations"
+	@echo "== 5/9 private training (S2), all three configurations"
 	./$(BUILD)/train.exe --headroom-only
 	@for L in 1 2 5 10 25 50; do 	  ./$(BUILD)/train.exe --d 16 --ell $$L 	      --out model/out/B_private_ell$$L.bin > /dev/null || exit 1; 	done
 	@for L in 1 2 5 10 25 50; do 	  ./$(BUILD)/train.exe --d 16 --ell $$L --b 128 --normalizer reveal 	      --out model/out/B_private_reveal_b128_ell$$L.bin > /dev/null || exit 1; 	done
 	@for L in 1 2 5 10 25 50; do 	  ./$(BUILD)/train.exe --d 16 --ell $$L --b 128 --normalizer fss 	      --out model/out/B_private_fss_b128_ell$$L.bin > /dev/null || exit 1; 	done
 	$(PY) model/score_private.py
-	@echo "== 6/8 the composition: private training feeding private delivery"
+	@echo "== 6/9 the composition: private training feeding private delivery"
 	./$(BUILD)/demo.exe --user 42 --k 10 	    --a model/out/A_private_ell10.bin 	    --b model/out/B_private_ell10.bin 	    --expect model/out/top10_u42_private_ell10.txt
 	$(PY) model/attack.py
-	@echo "== 7/8 benchmarks and baselines"
+	@echo "== 7/9 the two malicious-client studies (tasks 4.6 and 4.7)"
+	$(PY) model/dp_study.py
+	$(PY) model/poison_study.py
+	@echo "== 8/9 benchmarks and baselines"
 	@$(MAKE) --no-print-directory bench
 	$(PY) bench/scripts/baselines.py
-	@echo "== 8/8 figures"
+	@echo "== 9/9 figures"
 	@$(MAKE) --no-print-directory figures
 	@echo ""
 	@echo "reproduce: every figure and table in the report has been rebuilt"
@@ -314,3 +320,21 @@ reproduce: check-toolchain
 
 clean:
 	rm -rf $(BUILD)
+
+# --------------------------------------------------------------------------
+#  reproduce takes tens of minutes and is SILENT for most of it -- the 18
+#  training runs redirect to /dev/null -- so a quiet log looks identical to a
+#  hung one. These two turn that into a bar and an ETA.
+#
+#      mingw32-make reproduce-bg      # start it, detached
+#      mingw32-make watch             # follow it; Ctrl-C leaves the run alone
+# --------------------------------------------------------------------------
+reproduce-bg: check-toolchain
+	@mkdir -p $(BUILD)
+	@echo "starting reproduce in the background -> $(BUILD)/reproduce.log"
+	@( $(MAKE) --no-print-directory reproduce > $(BUILD)/reproduce.log 2>&1; \n	   echo "EXIT=$$?" >> $(BUILD)/reproduce.log ) &
+	@sleep 1
+	@echo "follow it with:  mingw32-make watch"
+
+watch:
+	@$(PY) scripts/watch_progress.py $(BUILD)/reproduce.log

@@ -79,6 +79,55 @@ class ConsumptionAccumulator {
   std::uint64_t queries_ = 0;
 };
 
+// ---------------------------------------------------------------------------
+//  THE WEIGHT CHECK (D9.3). Added 2026-09-24, after finding the hole.
+//
+//  THE HOLE. An honest client goes through PirClient::Query, which fixes
+//  beta = 1 so the difference of the two expansions is the selector vector
+//  exactly. A malicious client does not have to: it can call Gen(alpha, beta,
+//  domain_bits) directly with ANY beta. Retrieval still works for it -- the
+//  record comes back scaled by beta and it divides that out -- and the servers
+//  fold beta, not 1, into the consumption accumulator that becomes the next
+//  round's training input. Every existing check passes. Gen(alpha, 10^6, 11)
+//  buys a million-weight vote in the next model.
+//
+//  THE CHECK. Sum the expansion over the whole domain. Summing is LINEAR, so
+//  each server can do it locally on its own share, and
+//
+//      sum_j e0[j] - sum_j e1[j]  ==  beta
+//
+//  exactly, for any alpha. So the two servers open that single scalar and
+//  require it to be 1. One round, two ring elements per query.
+//
+//  OPENING IT LEAKS NOTHING. The secret this system protects is alpha -- WHICH
+//  item was fetched. beta is a payload that is supposed to be the public
+//  constant 1, and the sum is independent of alpha by construction. Each
+//  server's own sum is pseudorandom; their difference is beta and nothing else.
+//
+//  WHAT IT DOES NOT CLOSE, stated because the boundary matters. The sum bounds
+//  the TOTAL weight, not its distribution. A client that forged correction
+//  words directly -- rather than calling Gen -- could produce a difference
+//  vector of +2 at one index and -1 at another, summing to 1 and passing this
+//  check while still skewing two items. Proving a key encodes a genuine
+//  one-point function is what a Sabre-style audit does, and that is D9.4's
+//  stretch half, which we have not built. This check closes weight INFLATION,
+//  which is the cheap and total version of the attack; it does not close
+//  weight REDISTRIBUTION.
+// ---------------------------------------------------------------------------
+
+// The weight a single query actually carried. `e0` and `e1` are one query's
+// two expansions. Returns beta as a signed value: 1 for an honest query.
+template <typename Ring>
+typename RingTraits<Ring>::Signed HarvestWeight(Span<const Ring> e0,
+                                                Span<const Ring> e1);
+
+// The check itself, charged one round. Returns true iff the query carried
+// weight exactly 1. A rejected query must be dropped BEFORE it reaches the
+// accumulator, which is why this takes the raw expansions rather than the
+// accumulated state -- once it is folded in, it cannot be taken out.
+template <typename Ring>
+bool HarvestWeightOk(Mpc3<Ring>& s, Span<const Ring> e0, Span<const Ring> e1);
+
 // Convert the two PIR servers' accumulators into a 2-of-3 replicated sharing
 // the training pipeline can consume.
 //

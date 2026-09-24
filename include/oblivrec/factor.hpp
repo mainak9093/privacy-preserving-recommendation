@@ -17,27 +17,36 @@
 //  THE NORMALIZER IS PLUGGABLE, AND THAT IS NOT A CONVENIENCE.
 //
 //  ApproxNormalize as specified needs b+1 simultaneous FSS comparisons, i.e.
-//  the comparison gate that S1 cut because its only consumers are here. It is
-//  not built. Rather than block all of ApproxFactor on it, or quietly
-//  substitute something weaker, the normalisation step is an interface with
-//  two implementations whose names state what they cost:
+//  the comparison gate that S1 cut because its only consumers are here. The
+//  normalisation step is an interface with two implementations whose names
+//  state what they cost:
 //
-//    FssNormalizer         spec-faithful. NOT BUILT -- throws, with the
-//                          reason. This is the one that belongs in the final
-//                          system.
+//    FssNormalizer         spec-faithful, reveals NOTHING. Built and verified
+//                          2026-09-12; this paragraph said "NOT BUILT --
+//                          throws" until 2026-09-24, which was three weeks
+//                          stale. It REQUIRES b=128: the MSNZB mask needs ~71
+//                          bits at these ranges and a 64-bit ring has no room,
+//                          so its constructor REFUSES at b=64 rather than
+//                          masking with too few bits, which would look like
+//                          privacy while providing none.
 //
 //    RevealNormNormalizer  opens ||v||^2 and rescales by a public constant.
-//                          Works today, costs 2 rounds instead of ~57, and
-//                          **CHANGES THE LEAKAGE PROFILE**: it reveals one
-//                          scalar per normalisation, which across a run is
-//                          the trajectory of the singular values of U.
+//                          Cheaper -- 2191 rounds against 11519 at d=16
+//                          ell=10 -- and **CHANGES THE LEAKAGE PROFILE**: it
+//                          reveals one scalar per normalisation, which across
+//                          a run is the trajectory of the singular values of U.
 //
 //  THE SECOND IS NOT THE DEFAULT AND MUST BE PASSED EXPLICITLY. Section 5's
 //  pseudocode normalises BEFORE revealing B[i], so the unit vector is public
-//  and the norm is not; using RevealNorm departs from that. Whether the
-//  departure is acceptable is a threat-model question -- d aggregate spectral
-//  values over all users, against ~57 rounds per normalisation -- and it is
-//  recorded as an open decision rather than settled here.
+//  and the norm is not; using RevealNorm departs from that.
+//
+//  WHAT THE DEPARTURE COSTS IS NOW MEASURED, not an open question. Quality:
+//  0.002 to 0.005 of nDCG@20 for every ell >= 2 (threat-model.md section 7.6).
+//  Security: the revealing path is NOT simulable against F_train at all and
+//  needs a weaker functionality to be described honestly (section 8.4). So the
+//  trade is a few thousandths of nDCG against a strictly weaker security
+//  statement -- which is an argument for the FSS path, and it is only sayable
+//  because both halves were measured.
 //
 //  ------------------------------------------------------------------------
 //  SCALES, and why U is kept at scale ZERO.

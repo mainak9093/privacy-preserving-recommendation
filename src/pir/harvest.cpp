@@ -70,8 +70,48 @@ SharedVec<Ring> HarvestToReplicated(Mpc3<Ring>& s, Span<const Ring> h0,
   return out;
 }
 
+// ---------------------------------------------------------------------------
+//  The weight check. See the long note in harvest.hpp for why this is safe to
+//  open and what it does not cover.
+// ---------------------------------------------------------------------------
+template <typename Ring>
+typename RingTraits<Ring>::Signed HarvestWeight(Span<const Ring> e0,
+                                                Span<const Ring> e1) {
+  if (e0.size() != e1.size()) {
+    throw std::invalid_argument("HarvestWeight: expansions differ in length");
+  }
+  // Each side sums its OWN share locally -- summation is linear, so this needs
+  // no communication and no coordination.
+  Ring s0 = Ring(0), s1 = Ring(0);
+  for (std::size_t j = 0; j < e0.size(); ++j) {
+    s0 = static_cast<Ring>(s0 + e0[j]);
+    s1 = static_cast<Ring>(s1 + e1[j]);
+  }
+  // Difference convention, as everywhere else in this project.
+  return static_cast<typename RingTraits<Ring>::Signed>(
+      static_cast<Ring>(s0 - s1));
+}
+
+template <typename Ring>
+bool HarvestWeightOk(Mpc3<Ring>& s, Span<const Ring> e0, Span<const Ring> e1) {
+  const auto w = HarvestWeight<Ring>(e0, e1);
+  // One round, two ring elements: each server sends its scalar sum to the
+  // other. Charged here rather than in the caller so the cost cannot go
+  // unreported -- the same discipline every other protocol in this tree uses.
+  s.AccountRound(2);
+  return w == 1;
+}
+
 template class ConsumptionAccumulator<u64>;
 template class ConsumptionAccumulator<u128>;
+template RingTraits<u64>::Signed HarvestWeight<u64>(Span<const u64>,
+                                                    Span<const u64>);
+template RingTraits<u128>::Signed HarvestWeight<u128>(Span<const u128>,
+                                                      Span<const u128>);
+template bool HarvestWeightOk<u64>(Mpc3<u64>&, Span<const u64>,
+                                   Span<const u64>);
+template bool HarvestWeightOk<u128>(Mpc3<u128>&, Span<const u128>,
+                                    Span<const u128>);
 template SharedVec<u64> HarvestToReplicated<u64>(Mpc3<u64>&, Span<const u64>,
                                                  Span<const u64>);
 template SharedVec<u128> HarvestToReplicated<u128>(Mpc3<u128>&, Span<const u128>,

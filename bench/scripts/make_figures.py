@@ -14,6 +14,7 @@ Run:  mingw32-make figures        (which calls: py -3.13 bench/scripts/make_figu
 """
 import collections
 import json
+import math
 import os
 import sys
 
@@ -755,6 +756,319 @@ def fig_compose(rows, quality):
     return True
 
 
+# --------------------------------------------------------------------------
+#  F10 -- task 4.6: what Nudge section 9's DP costs, and what it does not buy.
+#
+#  Two defences against the same attack, in one frame. Decoys add traffic and
+#  leave utility alone; DP destroys utility and leaves the attack STRONGER.
+#  Neither reaches the popularity floor, which is where a defence would have to
+#  land to have actually worked.
+# --------------------------------------------------------------------------
+def fig_dp(dp_rows, leak_rows):
+    if not dp_rows:
+        print("  SKIP fig_dp: no dp rows (run py -3.13 model/dp_study.py)")
+        return False
+
+    l2 = [r for r in dp_rows if r.get("normalisation") == "l2"]
+    base = next((r for r in l2 if r.get("epsilon") is None), None)
+    noisy = sorted([r for r in l2 if r.get("epsilon") is not None],
+                   key=lambda r: -r["epsilon"])
+    if not noisy:
+        print("  SKIP fig_dp: no noised rows")
+        return False
+
+    decoy = sorted([r for r in leak_rows if r.get("op") == "decoy_defence"],
+                   key=lambda r: r.get("r", 0))
+    floor = next((r["cos_mean"] for r in leak_rows
+                  if r.get("op") == "popularity" and r.get("j") == 10), None)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10.2, 3.9))
+    fig.subplots_adjust(wspace=0.30)
+
+    # ---- panel A: the privacy-utility plane -----------------------------
+    if base:
+        ax1.scatter([base["ndcg_at_20"]], [base["cos_attack"]], s=70,
+                    color=C_FLOOR, zorder=5)
+        ax1.annotate("no defence", xy=(base["ndcg_at_20"], base["cos_attack"]),
+                     xytext=(-10, 10), textcoords="offset points",
+                     fontsize=7.5, ha="right")
+
+    ax1.plot([r["ndcg_at_20"] for r in noisy],
+             [r["cos_attack"] for r in noisy], "-o", ms=4.5, color=C_ATTACK,
+             label="DP on the Gram matrix (Nudge sec. 9)")
+    # Every epsilon lands in the same corner, so the cluster is labelled once.
+    # Annotating each point individually just stacks unreadable text.
+    lo = min(noisy, key=lambda r: r["ndcg_at_20"])
+    hi = max(noisy, key=lambda r: r["ndcg_at_20"])
+    ax1.annotate("eps " + format(min(r["epsilon"] for r in noisy), "g")
+                 + " to " + format(max(r["epsilon"] for r in noisy), "g")
+                 + "\n(all of them)",
+                 xy=(hi["ndcg_at_20"], hi["cos_attack"]),
+                 xytext=(14, -26), textcoords="offset points", fontsize=7,
+                 ha="left", color=C_ATTACK,
+                 arrowprops=dict(arrowstyle="->", lw=0.7, color=C_ATTACK))
+
+    if decoy and base:
+        ax1.plot([base["ndcg_at_20"]] * len(decoy),
+                 [r["cos_mean"] for r in decoy], "-s", ms=4, color=C_ALT,
+                 label="decoys (costs traffic, not utility)")
+        ax1.annotate("r=" + str(decoy[-1].get("r")),
+                     xy=(base["ndcg_at_20"], decoy[-1]["cos_mean"]),
+                     xytext=(7, -2), textcoords="offset points", fontsize=7)
+
+    if floor is not None:
+        ax1.axhline(floor, color=C_CONTROL, ls="--", lw=1.1)
+        ax1.text(0.02, floor + 0.015,
+                 "popularity control: a defence that worked would reach here",
+                 fontsize=7, color=C_CONTROL,
+                 transform=ax1.get_yaxis_transform())
+
+    ax1.set_xlabel("utility: nDCG@20")
+    ax1.set_ylabel(r"attack strength: $\cos(\hat{a}, a)$ at $j=10$")
+    ax1.set_title("Neither defence reaches the floor", fontsize=9)
+    ax1.set_ylim(0.35, 1.0)
+    ax1.legend(fontsize=7, loc="lower left")
+
+    # ---- panel B: why it fails at THIS scale ----------------------------
+    if noisy[0].get("signal_spectral") and noisy[0].get("noise_spectral"):
+        eps = [r["epsilon"] for r in noisy]
+        snr = [r["signal_spectral"] / r["noise_spectral"] for r in noisy]
+        # Noise grows as sigma*sqrt(n), signal as m, so for a fixed epsilon the
+        # usable regime is set by m/sqrt(n). Netflix is 157x better placed.
+        scale = (480189 / math.sqrt(17770)) / (943 / math.sqrt(1682))
+        ax2.plot(eps, snr, "-o", ms=4.5, color=C_ATTACK, label="ML-100K (ours)")
+        ax2.plot(eps, [v * scale for v in snr], "-^", ms=4.5, color=C_CONTROL,
+                 label="Netflix scaling (Nudge)")
+        ax2.axhline(1.0, color="k", lw=0.9, ls=":")
+        ax2.text(0.98, 1.3, "signal = noise", fontsize=7, ha="right",
+                 transform=ax2.get_yaxis_transform())
+        ax2.set_xscale("log")
+        ax2.set_yscale("log")
+        ax2.invert_xaxis()
+        ax2.set_xlabel("epsilon   (more privacy to the right)")
+        ax2.set_ylabel("spectral signal / noise")
+        ax2.set_title("The mechanism is built for a larger dataset", fontsize=9)
+        ax2.legend(fontsize=7.5, loc="lower left")
+
+    fig.text(0.5, -0.07,
+             "Noise scales as sigma*sqrt(n) and signal as m, so the usable "
+             "regime is set by m/sqrt(n) -- 157x larger for Netflix than for "
+             "ML-100K.",
+             ha="center", fontsize=7.5, color="#555555")
+
+    save(fig, "fig_dp.pdf")
+
+    at1 = next((r for r in noisy if r["epsilon"] == 1.0), noisy[-1])
+    if base:
+        drop = 100 * (at1["ndcg_at_20"] - base["ndcg_at_20"]) / base["ndcg_at_20"]
+        print(f"    dp: nDCG {base['ndcg_at_20']:.4f} -> "
+              f"{at1['ndcg_at_20']:.4f} ({drop:+.0f}%) at eps="
+              f"{at1['epsilon']:g}; Nudge report -17% on Netflix")
+        print(f"    dp: attack cos {base['cos_attack']:.4f} -> "
+              f"{at1['cos_attack']:.4f} -- it goes UP, not down"
+              + (f"; floor is {floor:.3f}" if floor is not None else ""))
+    ratio = at1["noise_spectral"] / at1["signal_spectral"]
+    print(f"    dp: at eps=1 the noise dominates the signal by {ratio:.1f}x -- "
+          f"the mechanism needs a dataset with a larger m/sqrt(n)")
+    return True
+
+
+# --------------------------------------------------------------------------
+#  F11 -- task 4.7: the two malicious-client results, side by side.
+#
+#  Left, D9.3: how many colluding clients it takes to own the model through the
+#  harvest path. Right, D9.4: how much server work one DPF key buys.
+#  Both are about a malicious CLIENT, which is adversary class A5 and the one
+#  class this system had measured nothing about.
+# --------------------------------------------------------------------------
+def fig_malicious(poison_rows, dos_rows):
+    if not poison_rows and not dos_rows:
+        print("  SKIP fig_malicious: no rows (run model/poison_study.py and "
+              "mingw32-make bench)")
+        return False
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10.2, 3.8))
+    fig.subplots_adjust(wspace=0.30)
+
+    # ---- left: colluders against model quality --------------------------
+    coll = sorted([r for r in poison_rows
+                   if r.get("op") == "harvest_poison_collude"],
+                  key=lambda r: r["attackers"])
+    if coll:
+        d = coll[0].get("d", 16)
+        clean = coll[0].get("ndcg_at_20_clean")
+        x = [r["attackers"] for r in coll]
+        y = [r["ndcg_at_20"] for r in coll]
+        ax1.plot(x, y, "-o", ms=5, color=C_ATTACK,
+                 label="model quality under attack")
+        if clean:
+            ax1.axhline(clean, color=C_FLOOR, ls="--", lw=1.1)
+            ax1.text(x[0], clean + 0.012, "clean model", fontsize=7,
+                     color=C_FLOOR)
+        ax1.axvline(d, color=C_CONTROL, ls=":", lw=1.2)
+        ax1.annotate(f"d = {d}", xy=(d, max(y) * 0.55),
+                     xytext=(6, 0), textcoords="offset points",
+                     fontsize=7.5, color=C_CONTROL)
+        ax1.set_xscale("log", base=2)
+        ax1.set_xticks(x)
+        ax1.set_xticklabels([str(v) for v in x])
+        ax1.set_xlabel("colluding clients, each with distinct targets")
+        ax1.set_ylabel("nDCG@20 for the HONEST users")
+        ax1.set_title("The cliff is at exactly $d$", fontsize=9)
+        ax1.legend(fontsize=7.5, loc="lower left")
+        ax1.grid(axis="x", visible=False)
+
+    # ---- right: DoS amplification ---------------------------------------
+    amp = sorted([r for r in dos_rows if r.get("op") == "dos_amplification"],
+                 key=lambda r: r["domain_bits"])
+    if amp:
+        db = [r["domain_bits"] for r in amp]
+        a = [r["amplification_time"] for r in amp]
+        kb = [r["key_bytes"] for r in amp]
+        # Both on ONE log axis, so the shapes can be compared. On a twin axis
+        # the nearly-flat key curve and the steep amplification curve happen to
+        # overlap, which reads as a single line and hides the whole point.
+        ax2.plot(db, a, "-o", ms=5, color=C_ATTACK,
+                 label="server work bought (amplification)")
+        ax2.plot(db, kb, "--s", ms=4, color=C_CONTROL,
+                 label="attacker's cost (key bytes)")
+        ax2.set_yscale("log")
+        ax2.set_xlabel("domain bits (catalogue of $2^{db}$ records)")
+        ax2.set_ylabel("log scale: bytes, and amplification factor")
+        ax2.set_title("One key: O(log N) to send, O(N) to answer", fontsize=9)
+
+        # The operating point this project actually runs at.
+        here = next((r for r in amp if r["domain_bits"] == 11), None)
+        if here:
+            ax2.plot([11], [here["amplification_time"]], marker="*", ms=14,
+                     color=C_ATTACK, ls="none", zorder=5)
+            ax2.annotate(f"ML-100K: {here['key_bytes']} B buys "
+                         f"{here['amplification_time']:.0f}x",
+                         xy=(11, here["amplification_time"]),
+                         xytext=(8, -22), textcoords="offset points",
+                         fontsize=7.5,
+                         arrowprops=dict(arrowstyle="->", lw=0.7))
+
+        ax2.legend(fontsize=7.5, loc="upper left")
+
+    fig.text(0.5, -0.07,
+             "Both concern a malicious CLIENT (adversary class A5). Left: the "
+             "weight check closes it for 1 round/query. Right: unmitigated - "
+             "closing it needs a Sabre-style audit, which we did not build.",
+             ha="center", fontsize=7.5, color="#555555")
+
+    save(fig, "fig_malicious.pdf")
+
+    if coll:
+        below = [r for r in coll if r["attackers"] < coll[0].get("d", 16)]
+        at = [r for r in coll if r["attackers"] >= coll[0].get("d", 16)]
+        if below and at:
+            print(f"    malicious: {max(r['attackers'] for r in below)} "
+                  f"colluders cost "
+                  f"{min(r['ndcg_rel_pct'] for r in below):+.1f}%, "
+                  f"{min(r['attackers'] for r in at)} colluders cost "
+                  f"{min(r['ndcg_rel_pct'] for r in at):+.1f}% -- the model is "
+                  f"gone at d")
+    if amp:
+        here = next((r for r in amp if r["domain_bits"] == 11), amp[0])
+        print(f"    malicious: at db={here['domain_bits']}, "
+              f"{here['key_bytes']} B of key buys "
+              f"{here['amplification_time']:.0f}x its own cost in server work")
+    return True
+
+
+# --------------------------------------------------------------------------
+#  F12 -- the timing side channel, bounded rather than dismissed.
+#
+#  The threat model has carried "inter-frame timing is not analysed" as an open
+#  item since Phase 2. This tests the half the project controls: does
+#  PirServer::Answer take a different amount of time depending on WHICH record
+#  was asked for?
+#
+#  The honest output is a BOUND. No finite sample shows a difference is exactly
+#  zero; what it can show is how large a difference could hide under the noise.
+#  So this compares the spread BETWEEN alphas against the spread WITHIN one
+#  alpha, and runs a permutation test with shuffled alpha labels as the control
+#  -- the same shape as the distinguisher's shuffled-label control.
+# --------------------------------------------------------------------------
+def fig_timing(rows):
+    rows = [r for r in rows if r.get("op") == "answer_timing"]
+    if not rows:
+        print("  SKIP fig_timing: no timing rows (run mingw32-make bench)")
+        return False
+
+    by_alpha = collections.defaultdict(list)
+    for r in rows:
+        by_alpha[r["alpha"]].append(r["wall_ms"])
+    alphas = sorted(by_alpha)
+    if len(alphas) < 2:
+        print("  SKIP fig_timing: need at least two alphas")
+        return False
+
+    samples = [np.asarray(by_alpha[a], dtype=float) for a in alphas]
+    means = np.array([s.mean() for s in samples])
+    grand = float(np.concatenate(samples).mean())
+
+    # Between-alpha spread: how far apart the per-alpha means are.
+    between = float(means.max() - means.min())
+    # Within-alpha spread: the typical scatter of one alpha's own samples.
+    within = float(np.median([s.std(ddof=1) for s in samples]))
+
+    # Permutation control. If alpha carries no timing information, shuffling
+    # the labels should produce a between-group spread just as large.
+    allv = np.concatenate(samples)
+    sizes = [len(s) for s in samples]
+    rng = np.random.default_rng(0)
+    null = []
+    for _ in range(2000):
+        perm = rng.permutation(allv)
+        idx, gm = 0, []
+        for sz in sizes:
+            gm.append(perm[idx:idx + sz].mean())
+            idx += sz
+        gm = np.asarray(gm)
+        null.append(gm.max() - gm.min())
+    null = np.asarray(null)
+    pval = float((null >= between).mean())
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10.2, 3.8))
+    fig.subplots_adjust(wspace=0.28)
+
+    bp = ax1.boxplot(samples, showfliers=False, patch_artist=True,
+                     medianprops=dict(color="black", lw=1.2))
+    for patch in bp["boxes"]:
+        patch.set_facecolor(C_CONTROL)
+        patch.set_alpha(0.55)
+    ax1.set_xticklabels([str(a) for a in alphas], fontsize=7.5)
+    ax1.set_xlabel(r"record index $\alpha$ requested")
+    ax1.set_ylabel("PirServer::Answer, ms per call")
+    ax1.set_title("Server time against which record was asked for", fontsize=9)
+    ax1.grid(axis="x", visible=False)
+
+    ax2.hist(null, bins=40, color=C_FLOOR, alpha=0.75,
+             label="shuffled alpha labels (null)")
+    ax2.axvline(between, color=C_ATTACK, lw=1.8,
+                label="observed spread between alphas")
+    ax2.set_xlabel("max - min of the per-alpha mean (ms)")
+    ax2.set_ylabel("permutations")
+    ax2.set_title(f"Observed sits at p = {pval:.2f}", fontsize=9)
+    ax2.legend(fontsize=7.5, loc="upper right")
+
+    pct = 100.0 * between / grand if grand else 0.0
+    fig.text(0.5, -0.07,
+             f"Any data-dependent timing is bounded by {pct:.1f}% of the mean "
+             f"call ({grand*1000:.0f} us) at this sample size. That is a "
+             f"bound, not a proof of constant time.",
+             ha="center", fontsize=7.5, color="#555555")
+
+    save(fig, "fig_timing.pdf")
+    print(f"    timing: between-alpha spread {between*1000:.1f} us vs "
+          f"within-alpha sd {within*1000:.1f} us, p = {pval:.2f}")
+    print(f"    timing: bounds any alpha-dependent signal at {pct:.1f}% of the "
+          f"{grand*1000:.0f} us mean call")
+    return True
+
+
 def main():
     print("regenerating figures from bench/results/")
     leak = newest_sha(load("leakage_attack.jsonl"), "leakage_attack")
@@ -765,6 +1079,10 @@ def main():
     stages = newest_sha(load("bench_stages.jsonl"), "bench_stages")
     comp = newest_sha(load("bench_compose.jsonl"), "bench_compose")
     qual = newest_sha(load("train_quality.jsonl"), "train_quality")
+    dp = newest_sha(load("dp_study.jsonl"), "dp_study")
+    poison = newest_sha(load("poison_study.jsonl"), "poison_study")
+    dos = newest_sha(load("bench_dos.jsonl"), "bench_dos")
+    timing = newest_sha(load("bench_timing.jsonl"), "bench_timing")
     ell = load("oracle_ell_sweep.jsonl")     # one row per ell, no sha filter
 
     made = 0
@@ -777,6 +1095,9 @@ def main():
     made += bool(fig_sweep(sweep))
     made += bool(fig_stages(stages))
     made += bool(fig_compose(comp, qual))
+    made += bool(fig_dp(dp, leak))
+    made += bool(fig_malicious(poison, dos))
+    made += bool(fig_timing(timing))
 
     print(f"\n{made} figure(s) written to {FIGDIR}/")
     if made == 0:

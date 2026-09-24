@@ -95,12 +95,16 @@ SharedVec<Ring> TruncatePair(Mpc3<Ring>& s, const SharedVec<Ring>& x,
                              std::uint32_t t, int helper = 2);
 
 // --------------------------------------------------------------------------
-//  ApproxNormalize -- CLEARTEXT REFERENCE ONLY, so far.
+//  ApproxNormalize -- the CLEARTEXT REFERENCE. The protocol now exists too.
 //
-//  ARCHITECTURE section 4.2. The secret-shared protocol is NOT implemented:
-//  its seeding step needs b+1 simultaneous FSS integer comparisons, i.e. the
-//  comparison gate (old task 2.2) that S1 correctly cut because its only
-//  consumers are here. Building that gate is the next piece of work.
+//  ARCHITECTURE section 4.2. This header said "the secret-shared protocol is
+//  NOT implemented ... building that gate is the next piece of work" until
+//  2026-09-24. That gate was built on 2026-09-12: see msnzb.hpp for the FSS
+//  comparison gate and InvSqrtShared, and factor.hpp for FssNormalizer, which
+//  wires them into power iteration and reveals nothing.
+//
+//  What remains true is this file's PURPOSE. It is the oracle the protocol is
+//  checked against, not a stand-in for it.
 //
 //  What exists is the cleartext fixed-point reference, written first on
 //  purpose: the risk register names ApproxNormalize as the highest-likelihood

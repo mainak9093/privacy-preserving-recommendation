@@ -195,9 +195,9 @@ Where two working halves become a *result*.
 | 4.3 | Microbenchmark breakdown: matvec / truncate / normalize / FSS / topk / PIR / network | All | **done 2026-09-13.** `bench/bench_stages.cpp`. Attribution is a **closed form validated against a real run** -- residual **zero rounds and zero bytes** in all three configurations, so these are shares of a complete budget rather than a sample; a non-zero residual exits non-zero. Cross-checked a second way by a `CountingNormalizer` decorating the existing `Normalizer` interface (zero edits to `src/`). **Truncation is 68.6-74.4% of rounds and 75-83% of bytes; matvec is 2.8-14.6%; the FSS gate is 3.1%.** Optimise truncation -- the gate is not the problem. First `topk` rows the project has emitted. Figure F9. |
 | 4.4 | **D9.1 ring-width study: where does `b = 64` break?** Cheap, novel, clean result | W2 | **done 2026-09-12**, twice over: arithmetic headroom (b=64 survives ML-1M at t≤20 but loses the deferred schedule) and the sharper constraint, that b=64 **cannot hold the MSNZB mask at all** — it needs ~81 bits. |
 | 4.5 | **§9.3 leakage analysis: reconstruct `â⁽ⁱ⁾` from public `B` + `j` observed fetches** | W4 | **done 2026-09-09.** j=10 → cos 0.84, 56% of the next twenty predicted; the decoy defence measured and **rejected**. |
-| 4.6 | *(if time)* D9.2 differential privacy on `B` and its quality cost | W3 | |
-| 4.7 | *(if time)* D9.3 input validation; D9.4 malicious-client DPF audit | W1 | |
-| 4.8 | Reproducibility test: a member who did not build it follows the README on a clean VM | rotating | `mingw32-make reproduce` exists; the clean-VM pass is Phase 5 (2 Nov). |
+| 4.6 | *(if time)* D9.2 differential privacy on `B` and its quality cost | W3 | **done 2026-09-24.** `model/dp_study.py`, figure F10. Implements **NUDGE section 9's actual mechanism** -- Gaussian noise on the Gram matrix `UᵀU` injected as `E·v` inside power iteration, not noise on `B` -- with σ from the Analyze Gauss calibration the paper cites but does not state. **Both axes move the wrong way**: at ε=1 nDCG falls 0.4255 → 0.1239 (−71%) while the attack's cosine *rises* 0.8231 → 0.9212. DP protects the training data, not this user's embedding, so it does not defend against §9.3. **Our −71% and NUDGE's −17% are consistent**: noise grows as σ√n and signal as m, so the usable regime is `m/√n`, 157× more favourable at Netflix scale. Measured: ‖UᵀU‖=144.6 against ‖E‖≈613. |
+| 4.7 | *(if time)* D9.3 input validation; D9.4 malicious-client DPF audit | W1 | **done 2026-09-24.** Figure F11, threat-model §9. **D9.3 as written did not apply** — there is no rating-upload path to validate — so the real unchecked submission was found instead: the harvest path accepted **any** `beta`, so one query at 10⁶ cast a million-weight vote in the next model (`tests/test_harvest.cpp`). Measured impact (`model/poison_study.py`): one attacker costs only −1.0% nDCG because power iteration normalises, but **16 colluders = `d` destroy it entirely, 0.4536 → 0.0021**. Closed by a 1-round, 2-element check on the opened weight; it closes inflation, **not** redistribution, and the test constructs a forgery showing the gap. **D9.4**: the DoS is now a number — `bench/bench_dos.cpp`, **121× at our catalogue, 3495× at 2¹⁶**, growing because the key is O(log N) and the answer O(N). The Sabre-style audit stays out of scope with reasons. |
+| 4.8 | Reproducibility test: a member who did not build it follows the README on a clean VM | rotating | **done 2026-09-24.** A fresh `git clone` into a scratch directory ran `mingw32-make reproduce` to completion: **exit 0, 762 s, all 11 figures regenerated** from nothing but the checkout and the documented toolchain. It found a real defect: on a network-restricted machine the run died at step 1/9 with a raw `CERTIFICATE_VERIFY_FAILED` traceback, so `scripts/fetch_data.py` now honours a pre-placed archive and explains what to do. Also added `make reproduce-bg` + `make watch` — the pipeline is silent for most of its 13 minutes, and a silent log is indistinguishable from a hung one. A true clean *VM* remains impossible here (no Docker/WSL); this is the substitution the Decisions Log records. |
 
 **Priority under time pressure:** 4.1 → 4.2 → 4.3 → 4.5 → 4.4, then stop. A complete honest
 evaluation beats a half-landed stretch goal. **Do not start 4.6/4.7 after Oct 22.**
@@ -215,7 +215,7 @@ evaluation beats a half-landed stretch goal. **Do not start 4.6/4.7 after Oct 22
 |---|---|---|---|
 | 5.1 | Final report draft, full structure (below) | All | Oct 30 |
 | 5.2 | **Code freeze.** Bug fixes and documentation only after this | All | **Nov 1** |
-| 5.3 | README audited by a stranger-simulating teammate; Docker build from scratch verified | W4 | Nov 2 |
+| 5.3 | README audited by a stranger-simulating teammate; **`mingw32-make reproduce` from a clean checkout** verified (Docker substituted 2026-09-12 -- absent on the dev box, needs WSL2 or Hyper-V) | W4 | Nov 2 |
 | 5.4 | Review pass: every claim traced to a figure, a measurement, or a proof sketch | All | Nov 3 |
 | 5.5 | Live demo rehearsed **with a recorded fallback video** | W1 + W3 | Nov 4 |
 | 5.6 | **Viva prep: each member explains every layer, not only their own** | All | Nov 4 |
@@ -233,7 +233,14 @@ evaluation beats a half-landed stretch goal. **Do not start 4.6/4.7 after Oct 22
 9. Limitations ← *semi-honest, one compromised server, our actual scale, plainly*
 10. Conclusion
 
-**Exit criterion:** a stranger with Docker can clone the repo and reproduce Figure 1.
+**Exit criterion, AMENDED 2026-09-12 and restated here because it is a graded line.**
+Originally: *"a stranger with Docker can clone the repo and reproduce Figure 1."* Docker is
+not installable on the development machine -- it needs WSL2 or Hyper-V and `wsl` resolves to
+the launcher stub only -- so the criterion is now: **a stranger with the documented toolchain
+(MSYS2 mingw64 g++, `py -3.13`) can clone the repo and run `mingw32-make reproduce` to
+regenerate every figure.** The amendment is recorded in the Decisions Log rather than quietly
+reinterpreted, because weakening a graded criterion silently is the thing this project most
+wants not to do.
 
 ---
 

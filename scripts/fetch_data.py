@@ -60,9 +60,37 @@ def fetch(name: str, force: bool = False) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     archive = DATA_DIR / f"{name}.zip"
 
-    print(f"[get]   {name} <- {url}")
-    with urllib.request.urlopen(url) as response, archive.open("wb") as out:
-        shutil.copyfileobj(response, out)
+    # A PRE-PLACED ARCHIVE IS HONOURED, and that is the escape hatch for a
+    # machine that cannot reach the internet. Found during the task 4.8
+    # reproducibility pass: on a network-restricted box this script died with a
+    # raw urllib traceback ending in CERTIFICATE_VERIFY_FAILED, which tells a
+    # stranger nothing about what to do next. The md5 below is checked either
+    # way, so a hand-downloaded file is no less trustworthy than a fetched one.
+    if archive.exists() and not force:
+        print(f"[local] {name}: using the archive already at {archive}")
+    else:
+        print(f"[get]   {name} <- {url}")
+        try:
+            with urllib.request.urlopen(url) as response, \
+                    archive.open("wb") as out:
+                shutil.copyfileobj(response, out)
+        except Exception as e:                      # noqa: BLE001
+            archive.unlink(missing_ok=True)
+            raise SystemExit(
+                f"[fail]  {name}: could not download.\n"
+                f"        {type(e).__name__}: {e}\n"
+                f"\n"
+                f"        This is usually no network access, a proxy, or a\n"
+                f"        corporate TLS certificate this Python does not trust.\n"
+                f"        It is not a problem with the repository.\n"
+                f"\n"
+                f"        TO CONTINUE WITHOUT NETWORK ACCESS, download\n"
+                f"            {url}\n"
+                f"        on any machine, copy it to\n"
+                f"            {archive}\n"
+                f"        and run this script again. The md5 is verified either\n"
+                f"        way, so a hand-placed file is checked exactly as a\n"
+                f"        fetched one is. Expected md5: {expected}\n")
 
     digest = md5(archive)
     if digest != expected:
