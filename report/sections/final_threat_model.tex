@@ -1,0 +1,224 @@
+%% ==========================================================================
+%%  FINAL REPORT --- SECTION 2, THREAT MODEL AND SECURITY
+%%  Source: docs/threat-model.md sections 1-3, 5, 7 and 8, and
+%%  REQUIREMENTS.md section 3.2 for the ideal functionalities.
+%% ==========================================================================
+\section{Threat model and security}
+\label{sec:threat}
+
+This section says what \sys{} protects, against whom, and how far the argument
+for it goes. It comes before the design on purpose: every later section is read
+against it, and the most important sentences in this report are the ones that
+say what is \emph{not} protected.
+
+\subsection{Setting}
+\label{sec:threat:setting}
+
+There are three servers $\party{0}, \party{1}, \party{2}$, run by independent
+operators, and $\users$ users. The rating matrix $\ratings \in \R^{\users \times
+\items}$ is held in 2-of-3 replicated secret shares, so no single server holds
+it. Training produces an item-embedding matrix $\itemembed \in \R^{\dime \times
+\items}$, which is opened to everyone, and user embeddings $\userembed \in
+\R^{\users \times \dime}$, which stay shared. Opening $\itemembed$ is
+\nudgeplain{}'s design and not an oversight: each converged row is revealed
+before the next is computed, which is what keeps orthogonalisation cheap.
+
+To be served, user $i$ asks each server for its share of the score vector
+$\avec{i}\itemembed$, reconstructs it, and selects the top $\topk$ items
+\emph{on the user's own machine}. The user then fetches each of the $\topk$
+records by two-server DPF-PIR against $\party{0}$ and $\party{1}$. The catalogue
+of records is public, and all three servers hold it.
+
+\subsection{Ideal functionalities}
+\label{sec:threat:ideal}
+
+Two functionalities describe what the system is meant to compute and to whom
+each output goes. They are taken from the project's requirements document.
+%
+\begin{align*}
+  \Ftrain(\shr{\ratings}, \dime, \iters)\colon\quad
+    & (\userembed, \itemembed) \gets \ApproxFactor(\ratings) \text{ by $\iters$
+      power iterations per component,}\\
+    & \text{every server receives $\itemembed$ in the clear and its shares of
+      $\shr{\userembed}$.}\\[4pt]
+  \Fserve(\shr{\avec{i}}, \itemembed, \topk)\colon\quad
+    & \mathbf{s} \gets \avec{i}\itemembed, \quad
+      \mathbf{s}[j] \gets -\infty \text{ for every item $j$ user $i$ has
+      rated},\\
+    & T \gets \text{the top-$\topk$ indices of } \mathbf{s},\\
+    & \text{the user receives $T$ and the records $D[T]$, and the servers
+      receive nothing.}
+\end{align*}
+%
+The second line of $\Fserve$'s output is what \sys{} adds to \nudgeplain{}. A
+third functionality is needed because of one of our two normalisers, and
+Section~\ref{sec:threat:gaps} explains why: $\Fleaky$ is $\Ftrain$ with the
+sequence of norms $\{\norm{\mathbf{v}}\}$ from every normalisation added to the
+servers' output.
+
+\subsection{Adversary classes}
+\label{sec:threat:classes}
+
+Table~\ref{tab:adversaries} lists six classes. The headline guarantee is against
+\textbf{A1}, one semi-honest server, which is exactly \nudgeplain{}'s model.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Adversary classes and what \sys{} guarantees against each. A3 is the
+assumption the whole system rests on.}
+\label{tab:adversaries}
+\begin{tabular}{@{}l p{3.6cm} p{9.2cm}@{}}
+\toprule
+ & Adversary & Guarantee \\
+\midrule
+A1 & One semi-honest server & Nothing is learned beyond the leakage profile of
+  Section~\ref{sec:threat:leakage}. Argued by the sketch in
+  Section~\ref{sec:threat:sketch}. \\
+A2 & One semi-honest server and colluding users & Honest users' ratings stay
+  hidden. Model \emph{quality} is not protected: colluding clients can distort
+  the harvested training input (Section~\ref{sec:leak:malicious}). \\
+A3 & Two or more colluding servers & \textbf{No guarantee.} Any two servers hold
+  all three shares and reconstruct everything, and the two PIR servers together
+  reconstruct every fetched index. \\
+A4 & A malicious (deviating) server & Out of scope, as in \nudgeplain{}. A
+  deviating server can corrupt correctness and availability. \\
+A5 & A malicious user & Retrieval corrupts only that user's own output. The
+  harvest path accepted a vote of any weight, which we close for inflation but
+  not for redistribution, and full-domain evaluation is an unmitigated
+  denial-of-service lever (Section~\ref{sec:leak:malicious}). \\
+A6 & A network observer & Sees message sizes and timing. Sizes depend only on
+  public parameters, measured in Section~\ref{sec:eval:wire}. Server-side timing
+  is bounded in Section~\ref{sec:eval:timing}, and wire timing is not
+  analysed. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Leakage profile}
+\label{sec:threat:leakage}
+
+\paragraph{Hidden from any single server.} Individual ratings, and which items a
+user rated. The user embeddings $\userembed$. Each score vector, and the top-$k$
+indices chosen from it. Which records a user fetches.
+
+\paragraph{Leaked by design.} The parameters $\users, \items, \dime, \iters,
+\topk, \bits, \fracbits$. The item-embedding matrix $\itemembed$, in the clear.
+The number of non-zero ratings, which the truncation schedule uses as a public
+bound and which \nudgeplain{} also leaks, unless every user is made to submit a
+fixed number of ratings at a cost in quality. How many queries each user makes,
+and when.
+
+\paragraph{Outside the protocol's protection.} Correlation between when a user
+queries and external events. Anything an adversary can infer from $\itemembed$
+together with an observed fetch, which is precisely why the fetch has to be
+private and is the subject of Section~\ref{sec:leak}.
+
+\subsection{A real/ideal simulation sketch}
+\label{sec:threat:sketch}
+
+The claim, for class A1, is that for each corrupted server $\party{c}$ there is
+a simulator $\Sim_c$ which, given only $\party{c}$'s input shares and the output
+the functionality declares for it, produces a transcript computationally
+indistinguishable from $\party{c}$'s real view. That view is its input shares,
+its pseudorandom-function keys, its local randomness, and every ring element it
+receives. We argue it step by step against the code. This is a \emph{sketch}.
+There is no formal security parameter, no reduction, and no written hybrid
+argument, and the three servers are not symmetric, since only $\party{0}$ and
+$\party{1}$ hold DPF keys and the truncation protocol rotates a helper role. So
+``by symmetry'' is never used.
+
+\paragraph{The substrate.} A value is shared as $x = x_0 + x_1 + x_2$ with party
+$i$ holding $(x_i, x_{i+1})$. Any two of three shares of a 3-out-of-3 additive
+sharing are uniform and independent of $x$, so $\Sim_c$ samples two uniform ring
+elements per value and never needs $\ratings$. Correlated randomness comes from
+pairwise PRF keys. Party $i$ derives $\alpha_i = F(k_i, \mathit{ctr}) - F(k_{i-1},
+\mathit{ctr})$, and the three sum to zero with no communication. $\party{c}$ can
+compute its own $\alpha_c$ but no other party's, because each needs a key it
+does not hold. That asymmetry is what makes every incoming element below
+uniform.
+
+\paragraph{Matrix--vector products.} Each party computes its share of the product
+locally, masks it with $\alpha_i$, and sends one ring element per output entry.
+$\party{c}$ receives $z_{c+1}$, masked by $\alpha_{c+1}$, which uses a key
+$\party{c}$ lacks, so $\Sim_c$ samples it uniformly. The message size is set by
+the public output length alone.
+
+\paragraph{Truncation.} A helper $h$ supplies a correlated pair $(r, r \gg t)$
+and the other two parties open $c = x - r$ and reshare. There are two cases. If
+$\party{c}$ is an opener, it sees $x - r$ with $r$ uniform and known only to
+$h$, so $\Sim_c$ samples $c$ uniformly. If $\party{c}$ is the helper, it sees
+only the pair it generated, and the reshare is masked with a pairwise secret it
+does not hold, so $\Sim_c$ replays its own randomness and samples the rest. A
+party that held $r$ and also saw $x - r$ would recover $x$, which is why the
+helper is passed explicitly at every call site.
+
+\paragraph{Normalisation.} For the spec-faithful \texttt{FssNormalizer}, the
+comparison gate opens $S + r$ where $r$ is drawn from a range $\kappa = 40$ bits
+wider than $S$, so the opening is statistically close to uniform and $\Sim_c$
+samples it. The DCF evaluations are local, and the Newton iterations are
+multiplications and truncations already covered.
+
+\paragraph{Orthogonalisation.} Entirely local, because every product is a share
+times a public row of $\itemembed$. Nothing is sent.
+
+\paragraph{Opening each row of $\itemembed$.} $\itemembed$ is $\Ftrain$'s
+declared output, so $\Sim_c$ is given it and replays it. This step is free in the
+simulation and is also the largest leakage surface in the system. That is not a
+contradiction. It is leakage by design, and Section~\ref{sec:leak:attack} is the
+measurement of what it costs.
+
+\paragraph{Serving.} Scores are a public matrix applied to a shared vector, so
+every server computes its share locally and sends it to the user, not to another
+server. The seen-item mask arrives from the user as a share, which $\Sim_c$
+samples.
+
+\paragraph{Delivery.} $\party{c} \in \{\party{0}, \party{1}\}$ receives one DPF
+key per fetch. A single key is pseudorandom and independent of the index by the
+DPF's security, so $\Sim_c$ samples a key of the right length, 227 bytes at 11
+domain bits. The server then expands the key over the whole domain and takes an
+inner product with every record, so the work does not depend on the index.
+$\party{2}$ receives nothing in this step.
+
+\paragraph{Harvesting.} The difference $h_0 - h_1$ of the two PIR servers'
+accumulated expansions is a 2-of-2 sharing of the consumption counts. It is
+converted to 2-of-3 replicated form after re-randomising with a pairwise secret
+that $\party{2}$ does not hold, so $\Sim_c$ samples uniformly. Without that
+re-randomisation, $\party{2}$ would be sent $h_0$ in the clear alongside a zero
+share and could subtract its way to the counts.
+
+\subsection{Where the argument does not close}
+\label{sec:threat:gaps}
+
+\paragraph{1. The revealing normaliser is not simulable against $\Ftrain$.} The
+cheaper normaliser opens $\norm{\mathbf{v}}^2$ at every normalisation, which is
+$\dime(\iters + 1)$ scalars per run: the
+trajectory of the power iteration's norms, which depend on the singular values of
+$\ratings$. No simulator given only $\itemembed$ can produce them, because they
+are not a function of $\itemembed$. We could exclude this path and claim
+security only for the spec-faithful one. We instead claim security for it
+against the weaker $\Fleaky$, because that is what we ran: \textbf{every
+$\bits = 64$ quality number in this report comes from the revealing path}.
+Claiming the strong statement while reporting numbers from the weak one would be
+the dishonest version of this section. Section~\ref{sec:eval:quality} gives the
+price of the path that does close.
+
+\paragraph{2. Repeated training is argued, not proven.} Each round is covered
+above, and harvesting adds no leak per round. What an adversary learns from many
+successive openings of $\itemembed$, each trained on consumption that the
+previous round's recommendations influenced, is not answered here.
+
+\paragraph{3. Composition is sequential and assumed.} The protocols run one after
+another with fresh correlated randomness, the standard setting for this kind of
+argument, but no composition theorem is invoked and no universal-composability
+claim is made.
+
+\subsection{What we do not claim}
+\label{sec:threat:notclaimed}
+
+We claim nothing against two colluding servers, against a deviating server, or
+against an observer who sees both PIR links at once, who reconstructs the record
+by the definition of two-server PIR. We do not claim constant-time execution,
+only a bound on index-dependent server time. We do not claim a proof. And we do
+not claim that hiding the fetch hides the recommendation itself from anyone who
+later sees what the user does with it.

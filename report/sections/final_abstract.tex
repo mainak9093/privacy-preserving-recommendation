@@ -1,0 +1,37 @@
+%% ==========================================================================
+%%  FINAL REPORT --- ABSTRACT
+%%
+%%  House style for every final_* file and every file final.tex inputs: no em
+%%  dashes and no semicolons in prose. Quotations, table cells, TikZ and
+%%  citation ranges are exempt. Written with the Write/Edit tools only.
+%% ==========================================================================
+\begin{abstract}
+\noindent
+A recommender learns from what its users consume, so a private recommender has
+to protect two things: the ratings the model is trained on, and the items a
+user fetches once the recommendations arrive. \nudgeplain{}, the strongest
+recent system for the first, trains a matrix factorisation across three servers
+under replicated secret sharing, publishes the item embeddings in the clear, and
+leaves the fetch to ``other means''. \pirsonaplain{} fetches privately but
+trains with four parties over a Boolean circuit.
+
+We build \sys{}, the composition of the two: \nudgeplain{}'s power-iteration
+training under 2-of-3 replicated sharing, followed by two-server private
+information retrieval from a distributed point function, with one implementation
+of that function serving both the training protocol's comparison gate and the
+read. On MovieLens-100K, composing costs exactly the sum of the two halves, to
+the byte. The spec-faithful normaliser, which reveals nothing, costs between
+0.0018 and 0.0041 of nDCG@20 against one that reveals a norm, and 5.3 times the
+rounds. Truncation, not the comparison gate, is where the rounds go. Without the
+private read, ten observed fetches recover a user's private embedding to a cosine
+of 0.84, and neither decoy traffic nor \nudgeplain{}'s own differential privacy
+brings the attack down to what popularity alone achieves.
+
+We also report where the composition is weaker than its parts. On a wide-area
+link, downloading the whole catalogue beats our unbatched private read by a
+factor of 4.6. Until we added a one-round check, a malicious client could cast a
+vote of arbitrary weight in the next model, and sixteen such clients destroyed
+it. The check stops inflated weight but not a forged key that redistributes it.
+Security is semi-honest with at most one corrupted server, and it is argued by a
+simulation sketch, not proven.
+\end{abstract}

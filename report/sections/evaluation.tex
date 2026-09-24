@@ -1,0 +1,393 @@
+%% ==========================================================================
+%%  FINAL REPORT --- SECTION 6, EVALUATION
+%%  Every number below is recomputable from the newest-sha rows of the named
+%%  bench/results/*.jsonl file, the same filter make_figures.py applies.
+%%  Figures F3 F4 F5 F7 F8 F9 F12 live here, each exactly once.
+%% ==========================================================================
+\section{Evaluation}
+\label{sec:eval}
+
+This section asks what private training and private delivery each cost, what
+they cost together, where the cost goes, and what it does to recommendation
+quality. It reports two results that go against the system in the body rather
+than in a footnote.
+
+\subsection{Setup}
+\label{sec:eval:setup}
+
+All measurements use MovieLens-100K's \texttt{u1} split (943 users, 1{,}682
+items, 80{,}000 training ratings) at $\dime = 16$, $\iters = 10$ and $\fracbits =
+20$, with $\bits = 64$ and the revealing normaliser unless stated. Delivery
+fetches $\topk = 10$ records per session, and quality is nDCG@20. The machine is
+a Windows~11 laptop, and the code is built by MSYS2's g++.
+
+\paragraph{Network profiles.} We use four: \texttt{local}, \texttt{lan} (1\,ms
+round trip, 1\,Gbit/s), \texttt{wan\_a} (30\,ms, 100\,Mbit/s) and \texttt{wan\_b}
+(100\,ms, 10\,Mbit/s). The development machine has neither Docker nor kernel
+network emulation, so the profiles are applied at the channel level. Delivery
+runs over real sockets wrapped in a channel that delays each frame. Training runs
+its three parties in one process, so its time on a profile is computed from the
+exactly counted rounds and bytes as rounds times round-trip time plus bytes over
+bandwidth. We call this channel-level emulation throughout and never kernel
+emulation.
+
+\paragraph{What to trust.} Round and byte counts are exact and deterministic.
+Absolute timings on this laptop vary by up to a factor of four between
+back-to-back runs, while repetitions within one run agree closely, which is the
+pattern of thermal throttling. So we quote ratios taken within one run, and where
+a number derived from absolute times moves between runs we give the range we
+observed. Every figure is drawn by \texttt{mingw32-make figures} from the newest
+commit's rows in the named data file, and Appendix~\ref{app:reproduce} maps each
+one to the command that produces it.
+
+\subsection{Recommendation quality}
+\label{sec:eval:quality}
+
+Table~\ref{tab:quality} compares private training with the cleartext oracle, which
+runs the same power iteration in floating point. The revealing path at
+$\bits = 64$ stays within 0.007 of the oracle at every $\iters$. Fixed-point
+arithmetic and a real truncation protocol cost essentially nothing in quality.
+
+\begin{table}[t]
+\centering
+\small
+\caption{nDCG@20 against the number of power iterations $\iters$, at $\dime = 16$.
+The $\bits = 128$ revealing column is the control that isolates the normaliser:
+it shares the spec-faithful path's ring and truncation schedule and differs only
+in revealing the norm. The last column is the no-leak path's loss against that
+control. Data: \texttt{bench/results/train\_quality.jsonl}.}
+\label{tab:quality}
+\begin{tabular}{@{}rccccc@{}}
+\toprule
+$\iters$ & reveal, $\bits = 64$ & reveal, $\bits = 128$ & \textbf{no leak},
+  $\bits = 128$ & oracle & no-leak cost \\
+\midrule
+1  & 0.3729 & 0.3727 & \textbf{0.1651} & 0.3664 & 0.2076 \\
+2  & 0.4251 & 0.4248 & 0.4230 & 0.4220 & 0.0019 \\
+5  & 0.4485 & 0.4490 & 0.4448 & 0.4455 & 0.0041 \\
+10 & 0.4511 & 0.4513 & 0.4493 & 0.4536 & 0.0020 \\
+25 & 0.4532 & 0.4531 & 0.4499 & 0.4545 & 0.0031 \\
+50 & 0.4531 & 0.4532 & 0.4502 & 0.4525 & 0.0030 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Revealing nothing costs little quality.} For every $\iters \ge 2$ the
+spec-faithful normaliser loses between 0.0018 and 0.0041 of nDCG@20 against
+either revealing column. The $\bits = 128$ revealing column is what makes that
+claim defensible. Without it, the comparison would confound the normaliser with
+the ring width and the deferred truncation schedule that $\bits = 128$ allows.
+The two revealing columns differ by at most 0.0005, so the normaliser accounts
+for the whole gap. What revealing nothing costs instead is rounds: 11{,}519
+against 2{,}191 at $\iters = 10$ and $\bits = 128$, a factor of 5.3.
+
+\paragraph{The exception at $\iters = 1$.} With a single power iteration the
+no-leak path scores 0.1651 against 0.3729. The first normalisation acts on the
+raw random start vector, and a single iteration leaves nothing downstream to
+recover from whatever error it introduces. We have not isolated the mechanism
+further. From $\iters = 2$ the gap closes. Nobody would choose $\iters = 1$, but
+the cliff is sharp and we report it.
+
+\paragraph{Quality is flat in $\iters$.} The oracle's own sweep settles how many
+iterations are worth paying for (Figure~\ref{fig:ell}). Across a fortyfold
+increase in $\iters$ the subspace angle to the true singular subspace falls by
+five orders of magnitude, from 0.97 radians to $6.7 \times 10^{-6}$, while
+nDCG@20 stays between 0.4523 and 0.4545. Ranking needs a subspace good enough to
+order the scores stably, not the singular vectors themselves. The slow
+convergence has a visible cause: the sixteenth and seventeenth squared singular
+values differ by only 3\%. Since rounds grow linearly in $\iters$
+(Section~\ref{sec:eval:sweep}), this flatness is what makes $\iters = 10$ the
+right operating point.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.62\linewidth]{fig_ell}
+\caption{The cleartext oracle at $\iters$ from 10 to 400. nDCG@20 spans 0.002
+while the subspace angle spans five orders of magnitude. Data:
+\texttt{bench/results/oracle\_ell\_sweep.jsonl}.}
+\label{fig:ell}
+\end{figure}
+
+\subsection{The cost of each half, isolated}
+\label{sec:eval:compose}
+
+The central comparison runs five arms in one process, interleaved repetition by
+repetition so that thermal drift cannot line up with arm identity
+(Table~\ref{tab:compose} and Figure~\ref{fig:compose}). B1 trains in the clear
+and fetches in the clear. B2 swaps in DPF-PIR. B3 swaps in private training
+instead. FULL is \sys{}. B5 trains in the clear and downloads the whole catalogue.
+Training is amortised over the 943 users one training run serves.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Per-session cost of each arm, with training amortised over 943 users.
+Bytes and rounds are exact. Times are channel-level emulation. Data:
+\texttt{bench/results/bench\_compose.jsonl}.}
+\label{tab:compose}
+\begin{tabular}{@{}llrrrrc@{}}
+\toprule
+Arm & training, delivery & bytes & rounds & \texttt{local} (ms) &
+  \texttt{wan\_a} (ms) & nDCG@20 \\
+\midrule
+B1   & clear, clear         & 2{,}600   & 10 & 1.19 & 301.4 & 0.454 \\
+B2   & clear, DPF-PIR       & 9{,}660   & 10 & 3.11 & 303.9 & 0.454 \\
+B3   & private, clear       & 71{,}264  & 13 & 2.02 & 397.7 & 0.451 \\
+FULL & private, DPF-PIR     & 78{,}324  & 13 & 3.96 & 400.2 & 0.451 \\
+B5   & clear, full download & 430{,}592 & 1  & 1.16 & 65.6  & 0.454 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Composing costs exactly the sum of the halves.} $\mathrm{FULL} =
+\mathrm{B2} + \mathrm{B3} - \mathrm{B1}$ holds to the byte. Over a whole training
+run plus one session it is 64{,}760{,}124 bytes, and the benchmark asserts the
+identity before it writes a single row, so a regression that broke additivity
+could not produce a figure. On \texttt{wan\_a}, private delivery adds 2.5\,ms per
+session and private training adds 96\,ms, and quality moves from 0.454 to 0.451.
+
+\paragraph{The result that goes against us.} On \texttt{wan\_a}, B5 is 4.6 times
+\emph{faster} than B2, although it sends 45 times as many bytes. Delivery as
+built costs one round trip per recommendation, ten in all, while B5 pays one. At
+30\,ms per trip, round trips decide the outcome and bytes barely matter.
+Sending all ten key pairs in one round trip reverses it: the model puts batched
+B2 at 33.9\,ms against B5's 65.6\,ms. We did not implement batching, and the
+benchmark marks those rows as not implemented. The honest summary is that
+private delivery as built is cheap in bytes and expensive in round trips, and the
+fix is known and unbuilt.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig_compose}
+\caption{Left: what each arm adds over B1, per session, on \texttt{local} and
+\texttt{wan\_a}. Right: the \texttt{wan\_a} session time as built, against the
+modelled time with the $\topk$ queries batched into one round trip, which is not
+implemented. Data: \texttt{bench/results/bench\_compose.jsonl}.}
+\label{fig:compose}
+\end{figure}
+
+\subsection{The private read against its alternatives}
+\label{sec:eval:pir}
+
+Figure~\ref{fig:pircost} compares one private read with a cleartext lookup (B1)
+and with downloading the whole catalogue (B5), the first alternative a reader
+proposes because 430\,KB does not sound large. DPF-PIR sends 483 bytes to each
+server, so it moves 446 times fewer bytes than B5 counting both servers. It is
+also the slowest of the three in server CPU, about five times slower than B5's
+local copy in both committed runs (5.3 and 5.6), and four orders of magnitude
+slower than a cleartext lookup. Its advantage is entirely in communication.
+
+Setting the extra server time against the saved bytes gives the link speed below
+which the private read wins. That crossover is derived from absolute times, so it
+moves with the machine's thermal state: 8.0\,Gbit/s in one committed run and
+22.9\,Gbit/s in the run the figure shows. Either way it is far above any
+wide-area link, and we would rather state the crossover than imply there is none.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.9\linewidth]{fig_pir_cost}
+\caption{One read at the MovieLens-100K operating point: 1{,}682 records of
+256\,B in an 11-bit domain. Bytes are per server. Both panels must be read
+together, since the left alone would be advocacy. Data:
+\texttt{bench/results/bench\_baseline.jsonl}.}
+\label{fig:pircost}
+\end{figure}
+
+\subsection{Scaling, and Theorem~4.2 measured}
+\label{sec:eval:sweep}
+
+The sweep varies one parameter at a time around the baseline, five repetitions
+each, on all four profiles (Figure~\ref{fig:sweep}). It is not the Cartesian
+product, so interactions between parameters are not measured.
+
+\paragraph{Rounds.} Rounds are linear in $\dime$ (1{,}310, 2{,}686 and 5{,}438
+at $\dime = 8, 16, 32$) and in $\iters$ (436 at $\iters = 1$, 6{,}436 at
+$\iters = 25$), and flat in $\users$: 2{,}686 at 235, 471 and 943 users.
+
+\paragraph{Bytes.} This is \nudgeplain{}'s Theorem~4.2 measured rather than
+quoted. Quadrupling the input matrix, from 235 to 943 users, moves traffic from
+62.03 to 64.75\,MB, an increase of 4.4\%. The increase is exactly linear at
+3{,}840 bytes per added user, which is the one term in the cost that depends on
+$\users$: each of the $\dime\iters = 160$ iterations computes
+$\ratings\mathbf{v}$, an $\users$-vector, and resharing it costs three parties
+one 8-byte element per entry, so $160 \times 3 \times 8 = 3{,}840$ bytes per
+user. Communication tracks the largest intermediate vector, not the input matrix.
+
+\paragraph{Training is round-bound.} On \texttt{wan\_a} one training run takes
+85.8\,s, of which 80.6\,s is round-trip latency and 5.2\,s is transfer. Anything
+that removes rounds matters far more than anything that removes bytes, which is
+why the next subsection counts rounds.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig_sweep}
+\caption{Left: rounds against $\dime$, $\iters$ and $\users$. Right: traffic
+against the size of the input matrix. The matrix grows fourfold and traffic by
+4.4\%. Data: \texttt{bench/results/bench\_sweep.jsonl}.}
+\label{fig:sweep}
+\end{figure}
+
+\subsection{Where the rounds go}
+\label{sec:eval:stages}
+
+Table~\ref{tab:stages} attributes every round and byte of one training run to
+the stage that spent it, in the three configurations. The attribution is a closed
+form derived from each protocol's structure, then validated against a real run:
+the residual is zero rounds and zero bytes in all three configurations, and the
+benchmark exits with an error if it is not. So these are shares of a complete
+budget, not a sample. A zero residual alone would not catch rounds attributed to
+the wrong stage, so a second, independent count checks that too. A wrapper around
+the normaliser meters every round spent inside it, and the model must predict
+that count exactly, including the truncations the normaliser makes internally.
+It does in all three configurations: 880 rounds for each revealing path and
+10{,}208 for the path that reveals nothing.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Rounds per training run by stage, with each stage's share of rounds and
+of bytes. ``Open $\itemembed$'' is the sixteen row openings. Data:
+\texttt{bench/results/bench\_stages.jsonl}.}
+\label{tab:stages}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+ & \multicolumn{2}{c}{reveal, $\bits = 64$} & \multicolumn{2}{c}{reveal,
+ $\bits = 128$} & \multicolumn{2}{c}{no leak, $\bits = 128$} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(l){6-7}
+Stage & rounds & \% rounds / bytes & rounds & \% rounds / bytes & rounds &
+  \% rounds / bytes \\
+\midrule
+matrix--vector & 320 & 11.9 / 15.6 & 320 & 14.6 / 15.6 & 320 & 2.8 / 14.0 \\
+truncation & 1{,}998 & \textbf{74.4} / \textbf{83.4} & 1{,}503 & \textbf{68.6} /
+  \textbf{83.4} & 8{,}367 & \textbf{72.6} / \textbf{75.1} \\
+normalisation & 352 & 13.1 / 0.0 & 352 & 16.1 / 0.0 & 2{,}464 & 21.4 / 9.9 \\
+FSS gate & 0 & 0 / 0 & 0 & 0 / 0 & 352 & 3.1 / 0.0 \\
+open $\itemembed$ & 16 & 0.6 / 1.0 & 16 & 0.7 / 1.0 & 16 & 0.1 / 0.9 \\
+\midrule
+total & 2{,}686 & & 2{,}191 & & 11{,}519 & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Truncation dominates, in every configuration.} It is 68.6 to 74.4\%
+of rounds and 75.1 to 83.4\% of bytes. The FSS comparison gate, in the one
+configuration that has it, is 3.1\% of rounds. The shared matrix--vector products
+cost 320 rounds, one per product, and between 2.8 and 14.6\% of rounds.
+Anyone optimising this system should start with truncation, whose three rounds
+recur after every rescaling, every orthogonalisation and every Newton step. The
+gate, which looks like the exotic part, is not the problem.
+
+\paragraph{CPU ranks the stages differently.} Figure~\ref{fig:stages} also times
+each operation on its own. The shared matrix--vector product over the full rating
+matrix is the most expensive operation in CPU by a wide margin, while being cheap
+in rounds. On a wide-area link the round count governs, and locally the CPU time
+does, so which stage matters depends on where the servers are.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig_stages}
+\caption{Left: each stage's share of the rounds in one training run, per
+configuration. Right: median CPU time per call, each operation timed on its own.
+Data: \texttt{bench/results/bench\_stages.jsonl}.}
+\label{fig:stages}
+\end{figure}
+
+\subsection{How wide the ring must be}
+\label{sec:eval:ring}
+
+Whether a 64-bit ring suffices at MovieLens scale, or \nudgeplain{}'s 128 bits are
+needed, was an open question in our design. It has two answers, for two different
+reasons, and the tighter one wins.
+
+\paragraph{Arithmetic headroom.} The truncation schedule is derived from public
+parameters, and deriving it at larger scales answers the question without running
+them. At $\fracbits = 20$ and $\bits = 64$, the deferred schedule does not fit at
+any of the three scales we evaluated, MovieLens-100K, MovieLens-1M and a
+Netflix-sized matrix, so training truncates immediately, with 21, 18 and 11 bits
+to spare. At $\fracbits = 24$ and Netflix size there is no safe schedule at all.
+At $\bits = 128$ the deferred schedule fits everywhere with at least 55 spare
+bits, and at MovieLens-100K it needs fewer rounds (2{,}191 against 2{,}686) for
+twice the bytes (129.3\,MB against 64.75\,MB).
+
+\paragraph{The mask.} The spec-faithful normaliser's gate needs an 81-bit domain
+to hide its input (Section~\ref{sec:impl:norm}). So a 64-bit ring is enough
+arithmetically at MovieLens-1M, and not enough at any scale for a normaliser that
+reveals nothing. That second constraint is not arithmetic, and it is the one that
+decides the ring width.
+
+\subsection{On the wire}
+\label{sec:eval:wire}
+
+An argument that message sizes do not depend on the fetched index, and a
+measurement that they do not, are different claims. We recorded every frame at
+the channel boundary while a probe issued 1{,}800 queries across three record
+indices, 0, 777 and 1234, generating fresh keys for every query. Every query frame
+is 228 bytes and every reply is 265 bytes, whatever the index.
+
+We then trained a logistic-regression classifier on the raw frame bytes to tell
+each pair of indices apart and scored it on 480 held-out queries per pair
+(Table~\ref{tab:distinguisher} and Figure~\ref{fig:distinguisher}). Chance lies
+inside every 95\% interval. The same pipeline run on deliberately shuffled labels
+agrees with the real runs, which shows the harness measures what it claims to.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Telling fetched indices apart from the wire bytes alone, with 480
+held-out queries per pair and the same pipeline run on shuffled labels as a
+control. Data: \texttt{bench/results/distinguisher\_result.jsonl}.}
+\label{tab:distinguisher}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Adversary & accuracy & 95\% interval \\
+\midrule
+index 0 against 1234   & 0.490 & 0.445 to 0.534 \\
+index 0 against 777    & 0.494 & 0.449 to 0.538 \\
+index 1234 against 777 & 0.500 & 0.455 to 0.545 \\
+\midrule
+shuffled labels        & 0.483 & 0.439 to 0.528 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.62\linewidth]{fig_distinguisher}
+\caption{The distinguisher at chance. What matters is that 0.5 lies inside
+every interval, not that the points sit near it. Data:
+\texttt{bench/results/distinguisher\_result.jsonl}.}
+\label{fig:distinguisher}
+\end{figure}
+
+This is not a proof. It says that one adversary, with one feature representation,
+did not beat chance on this data. What it rules out is the failure that actually
+occurs in practice, a length or byte pattern that correlates with the query.
+
+\subsection{Server-side timing}
+\label{sec:eval:timing}
+
+Frame sizes are fixed, but a server whose running time depended on the index
+would leak it to anyone who can time the reply. We timed the PIR answer routine
+200 times at each of eight indices spread across the domain, interleaved rather
+than in blocks so that thermal drift could not line up with the index
+(Figure~\ref{fig:timing}). The mean call takes 87\,$\mu$s. The spread between
+the eight per-index means is 1.7\,$\mu$s, smaller than the median standard
+deviation of 6.0\,$\mu$s within a single index, and a permutation test on
+shuffled index labels puts the observed spread at $p = 0.60$, in the middle of
+the null distribution.
+
+This is a bound, not a proof of constant time, because no finite sample shows a
+difference is exactly zero. What it shows is that any index-dependent signal is
+below 2.0\% of the mean call at this sample size. That is consistent with the
+construction, which expands every node and takes an unconditional inner product
+over every record. Timing on the wire itself is dominated by the operating
+system's scheduler and network stack, and we did not analyse it.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig_timing}
+\caption{Left: server time per call at eight record indices. Right: the spread
+between index means, against its distribution under shuffled labels. Data:
+\texttt{bench/results/bench\_timing.jsonl}.}
+\label{fig:timing}
+\end{figure}

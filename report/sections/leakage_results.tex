@@ -1,0 +1,273 @@
+%% ==========================================================================
+%%  FINAL REPORT --- SECTION 7, LEAKAGE OF THE COMPOSITION
+%%  Sources: tech_leakage.tex (mid-term, rewritten), docs/threat-model.md
+%%  sections 4 and 9, model/attack.py, model/dp_study.py,
+%%  model/poison_study.py, bench/bench_dos.cpp, tests/test_harvest.cpp.
+%%  Figures F1 F6 F10 F11 live here, each exactly once.
+%% ==========================================================================
+\section{Leakage of the composition}
+\label{sec:leak}
+
+Section~\ref{sec:eval} priced the private read. This section asks what it buys:
+what an observer learns when the fetch is \emph{not} private, whether anything
+cheaper than a private read closes the gap, and what a malicious client can do
+to the composed system. Neither base paper can answer these, because neither
+implements both halves.
+
+\subsection{Why a fetch is a projection}
+\label{sec:leak:why}
+
+$\itemembed$ is published, so every observer holds a complete latent-factor model
+of the catalogue. The items recommended to user $i$ are the ones whose columns of
+$\itemembed$ score highest against the private embedding $\avec{i}$. An observer
+who sees \emph{which} items the user fetched therefore learns $\topk$ vectors
+that all point roughly where $\avec{i}$ points. Each fetch is a constraint on the
+private embedding, expressed in a basis the observer already has. The question is
+how quickly those constraints give it away.
+
+\subsection{The attack, and the control that makes it a result}
+\label{sec:leak:attack}
+
+The adversary is given $\itemembed$ and the indices of the first $j$ records a
+user fetched, and nothing else: no scores, no ratings, no part of $\userembed$.
+It estimates $\hat{\mathbf{a}}$ as the mean of the fetched items' unit-normalised
+embeddings. We report the cosine between $\hat{\mathbf{a}}$ and the true
+$\avec{i}$, and the share of the user's \emph{next} twenty recommendations that
+the ranking induced by $\hat{\mathbf{a}}$ predicts, excluding the $j$ items
+already seen. All 943 users are attacked, against the same model the demo serves.
+
+\paragraph{The control.} Popular items sit near the top of almost everyone's
+ranking, so an estimator can look strong while having learned only what is
+public. The control therefore runs the identical estimator on the $j$ globally
+most popular items, ignoring the user entirely, and the attack may claim only what
+it achieves above that line. A random direction is also reported, to show where
+the floor of pure guessing lies.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Recovering a user's private embedding from observed fetches alone,
+averaged over all 943 users. Data: \texttt{bench/results/leakage\_attack.jsonl}.}
+\label{tab:attack}
+\begin{tabular}{@{}rcccc@{}}
+\toprule
+Fetches $j$ & $\cos(\hat{\mathbf{a}}, \mathbf{a})$ & popularity control &
+  margin & next-20 overlap \\
+\midrule
+1  & 0.55 & 0.26 & 0.28 & 39\% \\
+2  & 0.66 & 0.26 & 0.40 & 47\% \\
+5  & 0.77 & 0.39 & 0.38 & 53\% \\
+10 & \textbf{0.84} & 0.44 & 0.40 & \textbf{56\%} \\
+20 & 0.89 & 0.47 & 0.42 & 55\% \\
+50 & 0.91 & 0.53 & 0.39 & 46\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig_attack}
+\caption{Left: cosine between the estimate and the true embedding, with the
+interquartile band of the attack. Right: the share of the user's next twenty
+recommendations the adversary names. The gap between the attack and the
+popularity control is the part that is about the individual. The second attack
+curve is a stronger-looking estimator that uses the ranking constraints, and it
+does worse. Data: \texttt{bench/results/leakage\_attack.jsonl}.}
+\label{fig:attack}
+\end{figure}
+
+\textbf{One observed fetch gives a cosine of 0.55, twice the popularity control.
+Ten give 0.84, enough to name 56\% of the user's next twenty recommendations}
+(Table~\ref{tab:attack}, Figure~\ref{fig:attack}). The margin over the control is
+0.28 at one fetch and between 0.38 and 0.42 from two fetches on. The random
+direction averages 0.003.
+
+We raise three caveats ourselves. First, one user's cosine is not evidence. The
+random control's interquartile range runs from $-0.17$ to $0.18$, which is what a
+random direction in sixteen dimensions gives, so a single user at 0.2 is inside
+the noise of guessing. Only population means and the margin over the control
+carry a claim. Second, the overlap column rises and then falls, peaking near ten
+fetches. That is the metric, not the attack: the observed items are removed from
+the candidates, so the easy head of the ranking is progressively taken away,
+while the cosine keeps rising. Third, a second estimator that uses the fact that
+every fetched item outranks every unfetched one, strictly more information than
+the mean uses, does \emph{worse} from two fetches on, 0.81 against 0.91 at fifty.
+That sharpens the conclusion. The cheap, obvious attack is already enough, and an
+adversary needs no sophistication.
+
+\subsection{Defence one: decoys}
+\label{sec:leak:decoys}
+
+The obvious cheap alternative to a private read is to fetch the $\topk$ real
+recommendations together with $r$ decoys. The decoys must be drawn in proportion
+to popularity, because real recommendations are popular and uniformly drawn
+decoys would come from the long tail, where an observer could discard them by
+inspection and attack what remained.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig_decoy}
+\caption{The attack at ten real fetches plus $r$ popularity-weighted decoys,
+against decoys per query (left) and against traffic per query (right). The
+dashed line is the popularity control. Data:
+\texttt{bench/results/leakage\_attack.jsonl}.}
+\label{fig:decoy}
+\end{figure}
+
+It does not work (Figure~\ref{fig:decoy}). Forty decoys, five times the real
+traffic, lower the attack's cosine only from 0.843 to 0.705, against a
+popularity control at 0.442. The reason is the same fact that made the control
+necessary. Popularity-weighted decoys point along the popularity direction, which
+is exactly what the control already recovers, so decoys drag the estimate
+\emph{towards} the control and no further. The defence has a floor built into
+it, and the floor is where an adversary who watched nobody already stands.
+
+\subsection{Defence two: \nudgeplain{}'s differential privacy}
+\label{sec:leak:dp}
+
+\nudgeplain{}'s Section~9 extends the system with differential privacy. The
+servers normalise each user's row of $\ratings$, share a symmetric Gaussian
+matrix $E$ once through their PRF keys, and add $E\mathbf{v}$ at every step of
+power iteration, so the iteration runs on $\ratings^{\top}\ratings + E$ at no extra
+communication. The paper does not state the noise scale. We take it from the
+Gaussian mechanism of Dwork, Talwar, Thakurta and Zhang that it
+cites~\cite{analyzegauss2014}: with every row of unit norm, one user changes
+$\ratings^{\top}\ratings$ by at most one in Frobenius norm, and $\sigma =
+\sqrt{2 \ln (1.25/\delta)}/\varepsilon$ gives $(\varepsilon, \delta)$-differential
+privacy~\cite{dwork2014}. We use $\delta = 2^{-40}$, as \nudgeplain{} does.
+
+We deviate from the paper in one place, deliberately. \nudgeplain{} normalises
+row $i$ by dividing by the user's number of ratings $c_i$. With ratings up to
+five, that bounds the row's norm by $5/\sqrt{c_i}$, which exceeds one whenever
+$c_i < 25$, and MovieLens-100K has users with as few as twenty ratings. For them
+the privacy bound would not hold, so we normalise each row to unit $\ell_2$ norm
+instead. The count-normalised arm was run too and is in the data. It behaves the
+same way.
+
+\begin{table}[t]
+\centering
+\small
+\caption{\nudgeplain{}'s mechanism on MovieLens-100K at $\delta = 2^{-40}$,
+with the attack at ten fetches. Data: \texttt{bench/results/dp\_study.jsonl}.}
+\label{tab:dp}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+ & nDCG@20 & attack cosine & margin over control \\
+\midrule
+no noise (rows normalised) & 0.4255 & 0.8231 & 0.4324 \\
+$\varepsilon = 8$ & 0.1361 & 0.9167 & 0.5044 \\
+$\varepsilon = 1$ & \textbf{0.1239} & \textbf{0.9212} & \textbf{0.4898} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Both axes move the wrong way.} At $\varepsilon = 1$, quality falls by
+71\% and the attack gets \emph{stronger} (Table~\ref{tab:dp}). Even at
+$\varepsilon = 8$ quality falls to 0.136. The second result is not a paradox.
+Differential privacy here protects the \emph{training data}: it bounds what
+$\itemembed$ reveals about any user's ratings. The attack recovers \emph{this}
+user's embedding using $\itemembed$ as a basis, and the user and the adversary
+work against the same published, noisy matrix, so the noise does not disturb the
+attack's geometry. What the noise does destroy is the shared popularity structure
+the control exploits, which widens the attack's margin.
+
+\paragraph{Why we lose 71\% where \nudgeplain{} loses 17\%.} \nudgeplain{}
+reports nDCG@20 falling from 0.29 to 0.24 on Netflix~\cite{nudge2026}. The
+mechanism is the same, and the dataset is not. The noise matrix's spectral norm
+grows as $\sigma\sqrt{\items}$ while the signal, the spectral norm of
+$\ratings^{\top}\ratings$, grows with the number of users $\users$. The usable
+regime is set by $\users/\sqrt{\items}$, which is 157 times larger for Netflix,
+with 480{,}189 users and 17{,}770 items, than for MovieLens-100K. Measured
+directly, $\norm{\ratings^{\top}\ratings}_2 = 144.6$ against $\norm{E}_2 \approx
+613$ at $\varepsilon = 1$, so the noise dominates the signal by a factor of 4.2
+(Figure~\ref{fig:dp}). This is a statement about our dataset's scale, not a
+contradiction of the paper.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig_dp}
+\caption{Left: both cheaper defences in one plane, attack strength against
+recommendation quality. A defence that worked would reach the popularity
+control. Right: the spectral signal-to-noise ratio against $\varepsilon$ for our
+dataset and for Netflix's dimensions. Data:
+\texttt{bench/results/dp\_study.jsonl} and
+\texttt{bench/results/leakage\_attack.jsonl}.}
+\label{fig:dp}
+\end{figure}
+
+Neither cheaper defence reaches the popularity control. Decoys cost bandwidth and
+stay far above it, and differential privacy costs most of the model's quality and
+moves the attack further away from it. That is the argument for making the read
+itself private, and it is the gap \nudgeplain{} leaves to ``other means''.
+
+\subsection{The malicious client}
+\label{sec:leak:malicious}
+
+The last adversary class the composition creates is a client who does not follow
+the protocol. For retrieval alone, a malformed query only corrupts that client's
+own answer. The harvest changes that, because a query now also writes into the
+next model.
+
+\paragraph{The hole.} An honest client generates its keys with $\beta = 1$, so
+the two expansions differ by exactly the indicator of the fetched item. Nothing
+stopped a client from generating keys with any other $\beta$. Retrieval still
+works, since the record comes back scaled by $\beta$ and the client divides it
+out, and the servers add $\beta$, not one, into the consumption counts. Every
+existing check passes: the keys parse, the domain matches, the expansion has the
+right length. Our test shows one query at $\beta = 10^6$ placing 1{,}000{,}000
+into the next round's training input.
+
+\paragraph{What it buys.} Less than we first assumed, and for an instructive
+reason (Figure~\ref{fig:malicious}, left). A single attacker at weight $10^6$
+lowers honest users' nDCG@20 by between 0.7 and 1.0\%, depending on its targets,
+and the items it promotes do not rise. Their mean rank worsens, from 901 to 973
+of 1{,}682. Power iteration normalises at every step,
+so beyond some point extra weight only fixes a direction, and one attacker
+captures one of the $\dime = 16$ components while the other fifteen still carry
+the honest signal. Colluders with distinct targets are another matter. Eight cost
+4.1\%, and sixteen take nDCG@20 from 0.4536 to 0.0021. We ran only powers of two,
+so the data place the collapse somewhere between eight and sixteen colluders,
+and it is consistent with the attackers capturing all $\dime$ components. This is
+destruction of the model, not promotion of items.
+
+\paragraph{The check.} Summation is linear, so each PIR server can sum its own
+expansion locally, and the two sums differ by exactly $\beta$, whatever the index.
+The servers open that one scalar and require it to equal one: one round and two
+ring elements per query. Opening it reveals nothing about the index, because
+$\beta$ is meant to be the public constant one and each server's own sum is
+pseudorandom. Our test confirms the check accepts $\beta = 1$ and rejects
+$\beta = 10^6$ at that cost.
+
+\paragraph{What the check does not close.} It bounds the total weight of a query,
+not how the weight is distributed. A client that forges the expansion directly,
+rather than calling the key generator, can place $+2$ at one item and $-1$ at
+another, which sums to one and passes. Our test constructs exactly that forgery
+and shows it passes. A forgery of the same shape with large opposite weights would
+give colluders the same power as before, and we have not measured it. Closing it
+requires proving that a key encodes a genuine point function, which is what the
+audit of \textsc{Sabre}~\cite{sabre2022} does, and we did not build it.
+
+\paragraph{Denial of service.} Answering any query means expanding the key over
+the whole domain, while the key is only logarithmic in the domain. So a query
+buys server work out of proportion to its size (Figure~\ref{fig:malicious},
+right). At our 11-bit domain, a 227-byte key buys 142 times its own cost in
+server time in the run the figure shows, and 121 times in an earlier committed
+run. At 16 bits the same run measures 4{,}323 times. The amplification grows with
+the catalogue, the wrong direction for a defender. Malformed keys are cheap to reject,
+since parsing validates them before any expansion, so the expensive attack is the
+one that looks legitimate. The linear work is not an inefficiency. It is the
+privacy property, since any shortcut that depended on the index would reveal it.
+This is the clearest example in the project of privacy paid for in availability,
+and the same unbuilt audit is what would address it.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig_malicious}
+\caption{Left: honest users' nDCG@20 against the number of colluding clients,
+each voting at weight $10^6$ for distinct targets, before the weight check. Only
+powers of two were run. Right: server work bought by one key, and the key's size,
+against the domain. The star is our operating point. Data:
+\texttt{bench/results/poison\_study.jsonl} and
+\texttt{bench/results/bench\_dos.jsonl}.}
+\label{fig:malicious}
+\end{figure}

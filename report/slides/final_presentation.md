@@ -7,7 +7,7 @@ figure or the demo sit on screen, not only speech. *On screen* is what the deck 
 paragraph under it is what the speaker says. Stage directions are in italics. A **[TRANSITION]**
 line marks each handoff.
 
-The narration is about 3,260 words, which is roughly 23 minutes of speech at 140 words a minute.
+The narration is about 3,310 words, which is roughly 24 minutes of speech at 140 words a minute.
 The slide targets add up to about 28 minutes, and the difference is time spent on figures and the
 demo. That leaves a margin under the 30-minute limit. If a rehearsal runs long, cut dwell time
 before cutting words.
@@ -21,10 +21,10 @@ where each one comes from. If a benchmark is ever re-run, re-check that table be
 
 | Arc | Speaker | Topic | Slides | Spoken | Target with figures |
 |---|---|---|---|---|---|
-| 1 | Shravan Agrawal | Two halves of a private recommender | 1 to 8 | ~7:40 | 8:20 |
+| 1 | Shravan Agrawal | Two halves of a private recommender | 1 to 8 | ~8:00 | 8:40 |
 | 2 | Shrasti Dwivedi | Why the fetch has to be private | 9 to 16 | ~6:50 | 9:00 |
 | 3 | Mainak Sarkar | What it costs, and where it breaks | 17 to 26 | ~8:50 | 10:35 |
-| | | | **Total** | **~23:20** | **27:55** |
+| | | | **Total** | **~23:40** | **28:15** |
 
 The speakers follow the attribution in the mid-term report the team submitted, so the two
 submissions tell the same story. The team can reassign, but the course handout allows a viva at
@@ -50,7 +50,7 @@ All figures come from `mingw32-make figures` and live in `report/figures/`.
 
 ## ARC 1 · Two halves of a private recommender
 
-**Shravan Agrawal · target 8:20**
+**Shravan Agrawal · target 8:40**
 
 ### Slide 1: OblivRec [0:20]
 
@@ -138,7 +138,7 @@ combination, and when you put the two answers together you get exactly the recor
 Neither server learns which one. We wrote this distributed point function ourselves, and Mainak
 will show you how we checked it.
 
-### Slide 7: Closing the loop [1:00]
+### Slide 7: Closing the loop [1:20]
 
 *On screen:* a circle. Private fetch, then the harvested shares, then the next round of private
 training, then back to delivery.
@@ -149,7 +149,11 @@ vector with a one at the item you fetched. Pirsona's trick is to keep that share
 throwing it away. Summed over all your fetches, those shares become a secret-shared record of
 what you consumed, which is exactly the input the next round of training needs. So the servers
 collect the next round's training data straight out of this round's private fetches, with no
-separate upload and no extra communication. Delivery feeds training, and training feeds delivery.
+separate upload. Turning those shares into training input costs one round per training refresh.
+Delivery feeds training, and training feeds delivery. To be precise about how far this goes: the
+harvest is built and tested, and a test drives real private fetches through it into the training
+code. Our running servers do not yet retrain from it, and every model we show was trained on
+ratings read from disk.
 
 ### Slide 8: It runs end to end [0:45]
 

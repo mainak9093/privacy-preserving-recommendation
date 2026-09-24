@@ -75,7 +75,7 @@ BENCHBIN := $(patsubst bench/%.cpp,$(BUILD)/bench/%.exe,$(BENCHSRC))
 EXHAUSTIVE_BITS ?= 16
 CHECK_BITS      ?= 8
 
-.PHONY: all test test-exhaustive check bench figures clean check-toolchain apps demo demo-net distinguisher reproduce reproduce-bg watch FORCE
+.PHONY: all test test-exhaustive check bench figures report clean check-toolchain apps demo demo-net distinguisher reproduce reproduce-bg watch FORCE
 
 all: check-toolchain $(TESTBIN) $(APPBIN)
 
@@ -235,6 +235,21 @@ figures:
 	$(PY) bench/scripts/make_figures.py
 
 # --------------------------------------------------------------------------
+#  The final report, built from report/final.tex. It \includegraphics the
+#  twelve PDFs `figures` writes, so run that first on a fresh clone (reproduce
+#  does). Needs a TeX distribution with latexmk; TinyTeX is what this was
+#  built with. -halt-on-error so a broken build fails loudly instead of leaving
+#  a stale final.pdf that looks current.
+# --------------------------------------------------------------------------
+report:
+	@command -v latexmk >/dev/null 2>&1 || { \
+	  echo "report: latexmk not found. Install a TeX distribution (TinyTeX works)"; \
+	  echo "        to build report/final.pdf. Every figure is still buildable"; \
+	  echo "        with 'mingw32-make figures'."; \
+	  exit 1; }
+	cd report && latexmk -pdf -interaction=nonstopmode -halt-on-error final.tex
+
+# --------------------------------------------------------------------------
 #  The Phase 2 exit criterion. Needs data/ml-100k/ and model/out/, so it is a
 #  separate target rather than part of `test`: the suite must stay green on a
 #  fresh clone that has neither.
@@ -297,6 +312,7 @@ reproduce: check-toolchain
 	@$(MAKE) --no-print-directory test
 	@echo "== 4/9 cleartext oracle and the float-to-ring export"
 	$(PY) model/export.py
+	$(PY) model/ell_sweep.py
 	@echo "== 5/9 private training (S2), all three configurations"
 	./$(BUILD)/train.exe --headroom-only
 	@for L in 1 2 5 10 25 50; do 	  ./$(BUILD)/train.exe --d 16 --ell $$L 	      --out model/out/B_private_ell$$L.bin > /dev/null || exit 1; 	done
@@ -305,6 +321,12 @@ reproduce: check-toolchain
 	$(PY) model/score_private.py
 	@echo "== 6/9 the composition: private training feeding private delivery"
 	./$(BUILD)/demo.exe --user 42 --k 10 	    --a model/out/A_private_ell10.bin 	    --b model/out/B_private_ell10.bin 	    --expect model/out/top10_u42_private_ell10.txt
+	@# The run the final report describes (section 5.6): the spec-faithful,
+	@# no-leak model at b=128, served and fetched end to end.
+	./$(BUILD)/demo.exe --user 42 --k 10 \
+	    --a model/out/A_private_fss_b128_ell10.bin \
+	    --b model/out/B_private_fss_b128_ell10.bin \
+	    --expect model/out/top10_u42_private_fss_b128_ell10.txt
 	$(PY) model/attack.py
 	@echo "== 7/9 the two malicious-client studies (tasks 4.6 and 4.7)"
 	$(PY) model/dp_study.py
@@ -312,8 +334,15 @@ reproduce: check-toolchain
 	@echo "== 8/9 benchmarks and baselines"
 	@$(MAKE) --no-print-directory bench
 	$(PY) bench/scripts/baselines.py
-	@echo "== 9/9 figures"
+	@echo "== 9/9 figures and the report"
 	@$(MAKE) --no-print-directory figures
+	@# The report is the one step a machine without TeX cannot do, and that is
+	@# not a reason to fail a run that rebuilt every figure. Skip it, loudly.
+	@if command -v latexmk >/dev/null 2>&1; then \
+	  $(MAKE) --no-print-directory report; \
+	else \
+	  echo "reproduce: latexmk not found, so report/final.pdf was NOT rebuilt"; \
+	fi
 	@echo ""
 	@echo "reproduce: every figure and table in the report has been rebuilt"
 	@echo "from source and committed raw data on this machine."
@@ -329,10 +358,16 @@ clean:
 #      mingw32-make reproduce-bg      # start it, detached
 #      mingw32-make watch             # follow it; Ctrl-C leaves the run alone
 # --------------------------------------------------------------------------
+#  FIXED 2026-09-24. The line below used to carry a literal "\n" where a line
+#  continuation belonged (a heredoc mangled it), so the shell ran a command
+#  named "n", the EXIT= line was never written, and `watch` could never report
+#  DONE. The old line, kept for the record:
+#	@( $(MAKE) --no-print-directory reproduce > $(BUILD)/reproduce.log 2>&1; \n	   echo "EXIT=$$?" >> $(BUILD)/reproduce.log ) &
 reproduce-bg: check-toolchain
 	@mkdir -p $(BUILD)
 	@echo "starting reproduce in the background -> $(BUILD)/reproduce.log"
-	@( $(MAKE) --no-print-directory reproduce > $(BUILD)/reproduce.log 2>&1; \n	   echo "EXIT=$$?" >> $(BUILD)/reproduce.log ) &
+	@( $(MAKE) --no-print-directory reproduce > $(BUILD)/reproduce.log 2>&1; \
+	   echo "EXIT=$$?" >> $(BUILD)/reproduce.log ) &
 	@sleep 1
 	@echo "follow it with:  mingw32-make watch"
 

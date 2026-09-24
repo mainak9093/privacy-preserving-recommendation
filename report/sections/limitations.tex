@@ -1,0 +1,88 @@
+%% ==========================================================================
+%%  FINAL REPORT --- SECTION 9, LIMITATIONS
+%%  Each item is stated once, plainly, with where the evidence for it lives.
+%% ==========================================================================
+\section{Limitations}
+\label{sec:limits}
+
+We collect here everything a reader should discount the results by. Most of it
+has been said at the point of use. It is repeated because a limitation stated
+once, in the middle of a paragraph about something else, is easy to miss.
+
+\paragraph{Semi-honest, with at most one corrupted server.} Every guarantee
+assumes the servers follow the protocol. A deviating server can corrupt the
+model and the answers, and nothing detects it. \textbf{Two colluding servers
+learn everything}: any two hold all three shares of every value, and the two PIR
+servers together reconstruct every fetched index. This is the assumption the
+whole system rests on, and it is \nudgeplain{}'s own.
+
+\paragraph{A sketch, not a proof.} Section~\ref{sec:threat:sketch} walks every
+message and names a simulator, but there is no reduction and no hybrid argument.
+The revealing normaliser is secure only against the weaker $\Fleaky$, and every
+$\bits = 64$ quality number comes from it. What repeated training rounds reveal
+about a user whose consumption feeds them is open.
+
+\paragraph{Scale.} Every measurement is on MovieLens-100K. We derived the
+truncation schedule at MovieLens-1M and Netflix scale, but did not run private
+training there. A dense shared $6{,}040 \times 3{,}706$ matrix and its transpose,
+for three parties in one process, need about 2.1\,GB, more than the development
+machine could spare. The ring-width conclusions at larger scale are therefore
+analytic.
+
+\paragraph{Emulated networks, and one machine.} Wide-area results come from
+channel-level emulation on a single laptop, not from servers in separate
+locations or from kernel network emulation, neither of which the machine
+supports. Training's wide-area times are computed from exact round and byte
+counts, which is faithful for a round-bound protocol but ignores congestion and
+jitter.
+
+\paragraph{Absolute times are unreliable.} Thermal throttling moves absolute
+timings by up to a factor of four between runs. We quote ratios, and where a
+derived number moved between committed runs we give both values: the PIR
+crossover link speed (8.0 and 22.9\,Gbit/s) and the denial-of-service
+amplification (121 and 142 times). Anyone needing absolute numbers should rerun
+on a machine that holds its clock.
+
+\paragraph{One factor at a time.} The sweep varies each parameter around one
+baseline. Interactions between parameters, for instance between $\dime$ and
+$\bits$, are not measured.
+
+\paragraph{Delivery is not batched.} Each recommendation costs a round trip, so
+on a wide-area link the full catalogue download is 4.6 times faster than our
+private read. Batching the $\topk$ queries into one trip is straightforward and
+would reverse the result by our model, but it is not built.
+
+\paragraph{The harvest runs as a library path, not in the deployed loop.} The
+harvest, its conversion and the weight check are implemented and tested, but the
+networked servers do not yet accumulate consumption across sessions or retrain
+from it. Training in every experiment reads MovieLens ratings from disk. The
+loop is closed in code and in tests, not in a long-running deployment.
+
+\paragraph{Malicious clients are only partly handled.} The weight check stops a
+client from inflating its vote. It does not stop a forged key from redistributing
+weight, and it does nothing about the denial of service that full-domain
+evaluation invites. Both need an audit in the style of \textsc{Sabre}, which we
+did not build. The poisoning study places the collapse between eight and sixteen
+colluders because only powers of two were run.
+
+\paragraph{Leakage we do not analyse.} Timing on the wire, as opposed to server
+compute time, is dominated by the operating system and was not studied. Query
+counts and timing are leaked by design. The number of ratings each user
+contributes is leaked unless every user submits the same number. And hiding the
+fetch does nothing about what the recommendation reveals to anyone who later
+observes the user act on it.
+
+\paragraph{The server download of scores.} Because the user selects the top
+$\topk$ locally, each server sends the user a share of all $\items$ scores. That
+is cheap at 1{,}682 items and grows linearly with the catalogue, where an
+oblivious selector run by the servers would send only $\topk$ indices at a large
+cost in rounds.
+
+\paragraph{No generic-MPC baseline.} The evaluation plan included running the
+same factorisation in a general MPC framework. That needs Linux or Docker, which
+the development machine lacks, so the comparison with generic MPC is absent.
+
+\paragraph{Evaluation choices.} One dataset split, one seed for the attack, and
+$\dime = 16$ throughout the leakage study. Our nDCG uses binary relevance at a
+rating of four or more, so absolute values are comparable within this report and
+not with \nudgeplain{}'s numbers.
