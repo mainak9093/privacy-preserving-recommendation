@@ -19,8 +19,15 @@ USENIX Security 2026. Full version: <https://eprint.iacr.org/2026/179>
 **License:** MIT (see `nudge/LICENSE`) — permits use and redistribution with the notice retained.
 **Size:** ~658 KB, ~10.7 K lines of Go plus CGo/assembly.
 
-This is the artifact-evaluated implementation of the private-training half of our system. **We use
-it; we do not claim it.** Every report, README, and resume bullet must say so.
+~~This is the artifact-evaluated implementation of the private-training half of our system. **We use
+it; we do not claim it.** Every report, README, and resume bullet must say so.~~
+
+> **Corrected 2026-10-15.** The paragraph above was written on 2026-08-20, when the plan was to run
+> Nudge's training code. That plan changed: OblivRec's private training is our own C++
+> (`src/mpc/`, `src/mf/`), written from the paper, and **no build target compiles or links anything
+> under `third_party/`**. This snapshot stays in the repository for the reason it was useful in
+> practice, as a reference to read alongside the paper, and the final report says so (Section 5).
+> The rule that follows still holds: it is not ours, and nothing here is claimed.
 
 ### What is in it
 

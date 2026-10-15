@@ -139,9 +139,9 @@ privacy~\cite{dwork2014}. We use $\delta = 2^{-40}$, as \nudgeplain{} does.
 We deviate from the paper in one place, deliberately. \nudgeplain{} normalises
 row $i$ by dividing by the user's number of ratings $c_i$. With ratings up to
 five, that bounds the row's norm by $5/\sqrt{c_i}$, which exceeds one whenever
-$c_i < 25$, and MovieLens-100K has users with as few as twenty ratings. For them
-the privacy bound would not hold, so we normalise each row to unit $\ell_2$ norm
-instead. The count-normalised arm was run too and is in the data. It behaves the
+$c_i < 25$, and in the training split we use, 200 of the 943 users have fewer than
+25 ratings. For them the privacy bound would not hold, so we normalise each row to
+unit $\ell_2$ norm instead. The count-normalised arm was run too and is in the data. It behaves the
 same way.
 
 \begin{table}[t]

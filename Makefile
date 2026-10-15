@@ -34,7 +34,11 @@
 #    reproduce-bg     the same, detached, logging to $(BUILD)/reproduce.log
 #    watch            live bar + ETA for a reproduce-bg run. Reads the log
 #                     only, so it adds no load to an already busy machine.
-#    figures          regenerate figures (Day 6; guarded until the script exists)
+#    figures          redraw all 12 figures from the committed bench/results rows
+#    report           build report/final.pdf (needs latexmk; run figures first)
+#    demo             serve the cleartext-trained model to user 42 (in-process)
+#    demo-net         the same protocol across three server processes over TCP
+#    distinguisher    record 1,800 queries and test the wire bytes at chance
 #    clean
 # ==========================================================================
 

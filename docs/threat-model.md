@@ -1,6 +1,7 @@
 # OblivRec — threat model and leakage profile
 
-**Status:** updated 2026-09-12. Covers **S1** (serving and delivery) and, as of Phase 3,
+**Status:** updated 2026-10-15 (numbers re-checked against the committed data by
+`bench/scripts/check_claims.py`; see the dated notes where a figure changed). First written 2026-09-12. Covers **S1** (serving and delivery) and, as of Phase 3,
 **S2** (private training) — see §7, which is new and includes a decision still open.
 
 This promotes `design/ARCHITECTURE-draft-v1.md §9` to a standalone document and, where §9 posed a
@@ -28,8 +29,8 @@ against `P0` and `P1`.
 | **A2** | One semi-honest server + any number of malicious users | Above, plus colluding users | Honest users' ratings stay safe. Model *quality* is protected against weight inflation as of 2026-09-24 (§9.1), **but `d` colluding clients can still destroy the model** by forging keys that redistribute rather than inflate. See §9. |
 | **A3** | **Two or more colluding servers** | Pool their views | **NO GUARANTEE. The shares reconstruct.** This is the assumption the entire system rests on, and it is stated in bold wherever the system is described. |
 | **A4** | A malicious (deviating) server | Arbitrary deviation | **Out of scope**, as in NUDGE §3.1. It can corrupt correctness and availability. |
-| **A5** | A malicious user | Malformed DPF keys | **Measured in §9, and it was worse than this row said.** Retrieval corrupts only its own output, but the HARVEST path accepted an unbounded weight until 2026-09-24 — one query at `beta=10⁶` cast a million-weight vote in the next model. Closed by a 1-round check (§9.2). Still open: `d` colluders forging redistribution keys destroy the model (nDCG 0.4536 → 0.0021), and the DoS on `EvalFull` is **unmitigated and measured at 121× at our catalogue size** (§9.3). A Sabre-style audit closes both; we have not built it. |
-| **A6** | A network observer | Message sizes and timing | Sees public parameters and timing only. All message sizes are input-independent by construction — and, as of 2026-09-11, **measured**: over 1800 recorded queries every frame is 228 bytes whatever the record index, and a classifier on the raw wire bytes scores 0.490–0.500 against a 0.5 chance line. See §5. |
+| **A5** | A malicious user | Malformed DPF keys | **Measured in §9, and it was worse than this row said.** Retrieval corrupts only its own output, but the HARVEST path accepted an unbounded weight until 2026-09-24 — one query at `beta=10⁶` cast a million-weight vote in the next model. Closed by a 1-round check (§9.2). Still open: `d` colluders forging redistribution keys destroy the model (nDCG 0.4536 → 0.0021), and the DoS on `EvalFull` is **unmitigated and measured at 121× and 142× at our catalogue size in two runs** (§9.3). A Sabre-style audit closes both; we have not built it. |
+| **A6** | A network observer | Message sizes and timing | Sees public parameters and timing only. All message sizes are input-independent by construction — and, as of 2026-09-11, **measured**: over 1800 recorded queries every query frame is 228 bytes and every reply 265 bytes, whatever the record index, and a classifier on the raw wire bytes scores 0.490–0.500 against a 0.5 chance line. See §5. |
 
 ## 3. Leakage profile
 
@@ -60,19 +61,21 @@ reconstruct that user's private embedding:
 | 2 | 0.66 | 47% |
 | 5 | 0.77 | 53% |
 | 10 | **0.84** | **56%** |
-| 50 | 0.92 | 46% |
+| 50 | 0.91 | 46% |
 
 **The control is what makes this a result rather than an artefact.** Popular items sit near the
 top of nearly everyone's ranking, so an estimator can look strong having learned only what is
 public. So the identical estimator is run on the `j` globally most-popular items, ignoring the
 user entirely — it reaches only 0.26 to 0.53, and **the attack's margin above it is a stable
-+0.39 to +0.42 at every `j`**. That margin is the part that is genuinely about the individual. A
++0.38 to +0.42 for every `j` from 2 to 50, and +0.28 at `j = 1`**. (Corrected 2026-10-15: this
+said "+0.39 to +0.42 at every `j`", which the `j = 1` row contradicts.) That margin is the part that is genuinely about the individual. A
 random-direction control sits at 0.003.
 
 Two caveats we state ourselves:
 
 - **A single user's cosine is not evidence.** The random control's spread is roughly ±0.18 (about
-  `1/√d` at `d = 16`), so one user scoring 0.2 is inside guessing noise. Only population means and
+  the interquartile range of a random direction's cosine in 16 dimensions, whose standard
+  deviation is `1/√d = 0.25`), so one user scoring 0.2 is inside guessing noise. Only population means and
   the margin over the popularity control carry a claim.
 - **The overlap column is non-monotone** — it peaks near `j = 10` and falls by `j = 50`. That is
   the metric, not the attack: the observed items are excluded from the candidate pool, so the
@@ -89,13 +92,15 @@ means".
 | | bytes/query (one server) | median server time | privacy |
 |---|---|---|---|
 | B1, cleartext lookup | 260 | 0.0000047 ms | none |
-| **DPF-PIR (this work)** | **483** | 0.242 ms | index hidden from each server |
+| **DPF-PIR (this work)** | **483** | 0.238 ms and 0.082 ms in two committed runs | index hidden from each server |
 | B5, full download | 430,592 | 0.045 ms | trivially total |
 
 Read honestly, **DPF-PIR is the slowest of the three in server CPU** — 5× slower than B5's memcpy
-and about 50,000× slower than a cleartext lookup. Its win is entirely in communication: 446×
+and four orders of magnitude slower than a cleartext lookup. Its win is entirely in communication: 446×
 fewer bytes than B5 counting both servers. Setting the extra CPU against the saved bytes, PIR is
-the better choice on any link slower than **8.0 Gbit/s** — that is, on every real network, but we
+the better choice on any link slower than **8.0 Gbit/s in one committed run and 22.9 Gbit/s in
+the other** (the crossover is derived from absolute times, which drift with the laptop's thermal
+state; the CPU ratio itself held at 5.3 and 5.6) — that is, on every real network, but we
 would rather state the crossover than imply there isn't one.
 
 ### Two defences short of making the read private, and both fail
@@ -148,7 +153,8 @@ This is the argument for making the read private rather than patching around it.
 - **A6 is now demonstrated, not merely argued** — this bullet previously said the opposite and is
   retracted as of 2026-09-11. The three servers are three separate OS processes talking over TCP,
   and the transcript and distinguisher experiment the exit criterion asks for have both been run:
-  over 1800 recorded queries across three record indices, every frame is 228 bytes regardless of
+  over 1800 recorded queries across three record indices, every query frame is 228 bytes and every
+  reply 265 bytes regardless of
   the index, and an adversary trained on the raw wire bytes scores 0.490–0.500 with chance inside
   every 95% confidence interval. What we still do **not** fully claim is the *timing*
   channel — §9.4 now bounds the server-side half of it at under 2% of a call, with
@@ -261,7 +267,7 @@ recommendation quality. Measured, on ML-100K `u1` at `d=16`, nDCG@20:
 | 50 | 0.4531 | 0.4532 | **0.4502** | 0.4525 |
 
 **The prediction holds for every `ell >= 2`**: revealing nothing costs between
-0.002 and 0.005 of nDCG@20. The leakage of the singular-value trajectory buys
+0.0018 and 0.0041 of nDCG@20 (corrected 2026-10-15 from "0.002 and 0.005"). The leakage of the singular-value trajectory buys
 essentially no accuracy. What it costs instead is rounds — 11519 against 2191 at
 `ell=10`.
 
@@ -402,7 +408,7 @@ index, so there is **no data-dependent work and no data-dependent timing** in th
 answer path. `P2` receives nothing at all in this step.
 
 That the frames are input-independent is not only argued: over 1800 recorded
-queries every frame is 228 bytes whatever the record index, and a classifier
+queries every query frame is 228 bytes and every reply 265 bytes, whatever the record index, and a classifier
 trained on the raw wire bytes scores 0.490–0.500 against a 0.5 chance line.
 
 **Harvesting.** `h0 - h1` is a 2-of-2 additive sharing across `P0` and `P1`,
@@ -428,7 +434,7 @@ We take the second because it is what we actually ran: **every `b=64` quality
 number in `train_quality.jsonl` was produced on the revealing path.** Claiming
 the strong statement while reporting numbers from the weak one would be the
 dishonest version of this section. §7.6 gives the price of moving to the path
-that does close: 0.002–0.005 nDCG@20, and 5.3× the rounds.
+that does close: 0.0018 to 0.0041 nDCG@20, and 5.3× the rounds.
 
 **2. Composition across training rounds is argued, not proven.** Each round is
 covered above, and harvesting adds no new leak per §7.5. But the *sequence* —
@@ -492,9 +498,11 @@ One attacker can do almost nothing, and **the reason is the normalisation**:
 power iteration normalises every step, so past a point extra weight only fixes
 a *direction*. A single attacker captures one of the `d` components and the
 other `d−1` still carry the honest signal. It also cannot *aim* — the targets it
-promotes do not rise (mean rank 901 → 977 of 1682).
+promotes do not rise (mean rank 901 → 973 of 1682 at weight 10⁶, and 977 at weight 100).
 
-**The cliff is at exactly `d`.** Sixteen colluders with distinct target sets
+~~**The cliff is at exactly `d`.**~~ **Corrected 2026-10-15: the collapse lies between 8 and 16
+colluders.** Only 1, 2, 4, 8, 16 and 32 were run, so "exactly `d`" was more than the data shows.
+Sixteen colluders with distinct target sets
 capture all sixteen components and nothing honest is left. This is model
 destruction, not promotion, and it costs the attacker sixteen clients.
 
@@ -528,13 +536,14 @@ linear in the domain". Measured, `bench/bench_dos.cpp`:
 | domain bits | key bytes | amplification |
 |---|---|---|
 | 8 | 173 | 15× |
-| **11 (ours)** | **227** | **121×** |
+| **11 (ours)** | **227** | **121×** (142× in a second committed run) |
 | 14 | 281 | 909× |
 | 16 | 317 | 3495× |
 
 The key is `O(log N)` and the answer is `O(N)`, so **the amplification grows
 with the catalogue** — the opposite of the direction a defender wants. At our
-operating point, 227 bytes buys 121× its own cost in server work.
+operating point, 227 bytes buys 121× its own cost in server work in one committed run and 142×
+in another. The second run measured 4,323× at 16 bits.
 
 **The expensive attack is the one that looks legitimate.** A *malformed* key is
 cheap for the server: `DpfKey::Deserialize` rejects it before any expansion, and

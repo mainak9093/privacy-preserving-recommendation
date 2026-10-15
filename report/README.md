@@ -9,8 +9,10 @@ bibliography**, so notation and citations cannot drift apart across the semester
 | `latexmk -pdf midterm.tex` | `midterm.pdf` — two-page per-member contributions | 12 Sep 2026 | 5% |
 | `latexmk -pdf final.tex` | `final.pdf` — the final project report | 6 Nov 2026 | 15% |
 
-Only `survey.tex` is live. The other two are stubs with their structure sketched, so the
-shape of the semester is visible from day one.
+All three are now built. `survey.pdf` and `midterm.pdf` are the submitted versions of
+the first two milestones, and `final.pdf` is the final report, also built from the repository
+root by `mingw32-make report`. (Until September this said only `survey.tex` was live and the
+other two were stubs.)
 
 Without latexmk: `pdflatex survey && bibtex survey && pdflatex survey && pdflatex survey`.
 

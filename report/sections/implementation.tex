@@ -14,7 +14,10 @@
 in eighteen test binaries, with Python for the cleartext oracle, the export of
 fixed-point models and the leakage studies. The pseudorandom generator is fixed-key
 AES-128 in Davies--Meyer mode through AES-NI instructions, and key material comes
-from the operating system's generator. Table~\ref{tab:layout} maps the code.
+from the operating system's generator. Table~\ref{tab:layout} maps the code. The
+repository also vendors \nudgeplain{}'s Go reference implementation under
+\texttt{third\_party/}, under its MIT licence, as a reference to read alongside the
+paper. No build target compiles or links it.
 
 \begin{table}[t]
 \centering

@@ -60,6 +60,13 @@ bench/results/transcript.*.jsonl
 # The presentation deck, built from report/slides/survey_slides.tex, which IS
 # tracked -- the deck is reproducible from source (needs the metropolis theme).
 !report/slides/survey_slides.pdf
+# Milestone 3, the graded final deliverables, on the same reasoning: the final
+# report PDF (built by `mingw32-make report` from tracked sources and figures
+# generated from tracked data), and the presentation's PDF export and speaker
+# script. The .pptx itself is not matched by any ignore rule.
+!report/final.pdf
+!report/slides/OblivRec_final_presentation.pdf
+!report/slides/OblivRec_presentation_script.pdf
 
 # ─────────────────────────────────────────────────────────────
 #  Build

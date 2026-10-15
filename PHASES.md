@@ -213,10 +213,10 @@ evaluation beats a half-landed stretch goal. **Do not start 4.6/4.7 after Oct 22
 
 | # | Task | Owner | Deadline |
 |---|---|---|---|
-| 5.1 | Final report draft, full structure (below) | All | Oct 30 |
+| 5.1 | Final report draft, full structure (below) | All | Oct 30 · **done 2026-09-24, revised 2026-10-15.** `report/final.tex`, 40 pages, all ten sections and two appendices; `mingw32-make report` builds it with no overfull box and no undefined reference, and `scripts/check_report_style.py` finds no em dash, semicolon or draft note. |
 | 5.2 | **Code freeze.** Bug fixes and documentation only after this | All | **Nov 1** |
 | 5.3 | README audited by a stranger-simulating teammate; **`mingw32-make reproduce` from a clean checkout** verified (Docker substituted 2026-09-12 -- absent on the dev box, needs WSL2 or Hyper-V) | W4 | Nov 2 |
-| 5.4 | Review pass: every claim traced to a figure, a measurement, or a proof sketch | All | Nov 3 |
+| 5.4 | Review pass: every claim traced to a figure, a measurement, or a proof sketch | All | Nov 3 · **done 2026-10-15.** `bench/scripts/check_claims.py` recomputes 85 stated numbers from the newest committed rows and checks each against the report, the presentation script, the README, the threat model and the slides, plus 13 identities (additivity to the byte, zero residual, the closed forms tests assert). It exits 0, and a planted wrong number makes it fail. Drifted claims it surfaced were corrected in place with dated notes (`docs/threat-model.md`). The one number not in committed data, the 0.3428 of the gate-range bug, is labelled as such wherever it appears. |
 | 5.5 | Live demo rehearsed **with a recorded fallback video** | W1 + W3 | Nov 4 |
 | 5.6 | **Viva prep: each member explains every layer, not only their own** | All | Nov 4 |
 | 5.7 | Submit source + report + presentation | Mainak | **Nov 6** |

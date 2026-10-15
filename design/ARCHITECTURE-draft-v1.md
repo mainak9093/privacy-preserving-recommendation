@@ -2,6 +2,11 @@
 
 **System:** OblivRec — Private Matrix Factorization with Private Delivery
 
+> **Final submission note, 2026-10-15.** This draft predates the implementation and is kept for
+> its reasoning and its Decisions Log (§11), which records every place the built system departs
+> from it. The system as built is described in the final report, `report/final.pdf`, Sections 4
+> and 5.
+
 > ## ⚠ STATUS: NOT THE SOURCE OF TRUTH
 >
 > **This document predates the literature survey and parts of it are known to be wrong.**

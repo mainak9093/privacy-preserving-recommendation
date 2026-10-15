@@ -30,19 +30,31 @@ The speakers follow the attribution in the mid-term report the team submitted, s
 submissions tell the same story. The team can reassign, but the course handout allows a viva at
 any stage, so whoever presents an arc should be able to answer the questions listed at its end.
 
+## The deck
+
+The slides are `OblivRec_final_presentation.pptx`: 26 numbered slides for the talk, then five
+backup slides (27 to 31) for questions, which are not presented. Each slide's speaker notes hold
+its narration from this file, word for word, so the notes and this script cannot disagree. The
+deck embeds its fonts (Manrope and IBM Plex Mono), so it looks the same on any machine running
+PowerPoint. A PDF export sits beside it as a fallback.
+
 ## Figures on screen
 
-All figures come from `mingw32-make figures` and live in `report/figures/`.
+All figures come from `mingw32-make figures` and live in `report/figures/`. Where a slide shows
+one panel of a figure, the panel is cut from that same file and not redrawn.
 
 | Label | File | Slide |
 |---|---|---|
-| F1 | `fig_attack.pdf` | 10, 11 |
-| F5 | `fig_distinguisher.pdf` | viva backup for Arc 1 |
+| F1 | `fig_attack.pdf` | 10 (both panels), 11 (left panel) |
+| F2 | `fig_keysize.pdf` | backup 27 |
+| F3 | `fig_pir_cost.pdf` | backup 30 |
+| F4 | `fig_ell.pdf` | backup 28 |
+| F5 | `fig_distinguisher.pdf` | backup 29 |
 | F6 | `fig_decoy.pdf` | 12 |
-| F7 | `fig_sweep.pdf` | 20 |
-| F8 | `fig_compose.pdf` | 18, 22 |
-| F9 | `fig_stages.pdf` | 19 |
-| F10 | `fig_dp.pdf` | 13, 14, 15 |
+| F7 | `fig_sweep.pdf` | 20 (right panel) |
+| F8 | `fig_compose.pdf` | 18 (left panel), 22 (right panel) |
+| F9 | `fig_stages.pdf` | 19 (left panel) |
+| F10 | `fig_dp.pdf` | 14 (left panel), 15 (right panel) |
 | F11 | `fig_malicious.pdf` | 23 |
 | F12 | `fig_timing.pdf` | 24 |
 
@@ -76,9 +88,11 @@ rated, what it recommended, or what you actually opened?
 
 ### Slide 3: Two papers, two halves [1:30]
 
-*On screen:* two columns. Left, Nudge (USENIX Security 2026): private training, stops at the
-scores, with the quotation *"relies on other means to let users fetch data items in a private
-way."* Right, Pirsona (PoPETs 2021): private delivery, four-party training.
+*On screen:* the four stages of a recommender (collection, training, serving, delivery), with
+the stages each paper covers marked beneath. Nudge (USENIX Security 2026) covers the first three
+and stops at the scores. Pirsona (PoPETs 2021) covers delivery with four-party training. Below,
+Nudge's own sentence: *"relies on other means ... to let users fetch data items in a private
+way."*
 
 Our instructor pointed us at two papers, and each one solves half of this problem. The first is
 Nudge, from USENIX Security 2026. It trains the recommender on secret-shared ratings across three
@@ -87,9 +101,9 @@ relies on other means to let users fetch data items in a private way. So once yo
 to watch, fetching it tells the server exactly which film that was. The second paper is Pirsona,
 from PoPETs 2021. It does the fetching privately, using private information retrieval, and it
 has a lovely trick where the servers collect the next round of training data straight out of
-those private fetches. But its training runs a four-party protocol, and Nudge now trains better
-with one fewer server that has to be trusted not to collude. So neither paper does both halves
-well. Nudge has the better training and Pirsona has the private delivery, and nobody had put them
+those private fetches. But its training runs a four-party protocol, and Nudge's training needs
+one fewer server that has to be trusted not to collude. So neither paper does both halves well.
+Nudge has the training we want and Pirsona has the private delivery, and nobody had put them
 together, because nobody had built both.
 
 ### Slide 4: What we built [0:45]
@@ -100,7 +114,7 @@ measured."
 That is what we did. OblivRec composes Nudge's private training with Pirsona's private delivery
 into one system, and then measures the composition, because a composition is only interesting if
 you know what it costs. Everything we show you today runs. We wrote the cryptographic core
-ourselves, from the original papers rather than from a library. And every number on every slide
+ourselves, from the original papers rather than from a library. And every figure on these slides
 is regenerated from committed data by a single command.
 
 ### Slide 5: Private training [1:30]
@@ -235,7 +249,8 @@ one implements both halves.
 
 ### Slide 11: The control [1:15]
 
-*On screen:* **F1** again, with the popularity line and the random line highlighted.
+*On screen:* the left panel of **F1** enlarged, beside the three numbers that matter: the attack
+at 0.84, the popularity control at 0.44, and the margin between them.
 
 The part of this experiment we care about most is the control. Popular films sit near the top of
 almost everyone's list. So a guessing method can look impressive while having learned nothing
@@ -261,8 +276,9 @@ Adding popular items pulls the guess toward what is popular, which the control a
 
 ### Slide 13: Defence two, Nudge's own differential privacy [1:30]
 
-*On screen:* **F10, left panel.** Attack strength against recommendation quality, with the
-differential privacy points, the decoy points, and the popularity line.
+*On screen:* the mechanism. Power iteration runs on U transpose U plus a noise matrix E, the
+noise scale comes from Analyze Gauss, and rows are normalised by length because 200 of our 943
+users have fewer than 25 ratings.
 
 The second, more principled idea comes from Nudge itself. Its section nine adds differential
 privacy. We read that section before writing any code, and it was not what we expected. Nudge
@@ -277,8 +293,9 @@ versions.
 
 ### Slide 14: Why it fails [1:00]
 
-*On screen:* **F10, left panel**, with the differential privacy curve highlighted moving up and
-to the left.
+*On screen:* **F10, left panel.** Attack strength against recommendation quality, with the
+differential privacy points, the decoy points, and the popularity line, beside the two numbers
+that move the wrong way.
 
 Both results go the wrong way. At epsilon equal to one, recommendation quality falls by 71
 percent. And the attack does not get weaker. It gets stronger, from 0.82 to 0.92. That sounds like
@@ -303,7 +320,8 @@ dataset than ours. That is a statement about scale, and not a disagreement with 
 
 ### Slide 16: So the fetch must be private [0:30]
 
-*On screen:* both defences on one line, neither reaching the popularity floor.
+*On screen:* one scale of attack strength. Decoys move the attack from 0.84 to 0.71, differential
+privacy moves it from 0.82 to 0.92, and the popularity floor sits far away at 0.44.
 
 So we measured two cheaper defences, and neither one reaches the line that would mean the
 observer learned nothing. That is the case for making the fetch itself private, which is what our
@@ -341,7 +359,8 @@ by length makes the bound exactly one, which is what the privacy guarantee needs
 
 ### Slide 17: A distributed point function we can trust [0:45]
 
-*On screen:* "7.16 × 10⁹ checks. Every one passed."
+*On screen:* "7.16 × 10⁹ checks. Every one passed.", beside the two-line invariant the tests
+assert at every node of the tree.
 
 Thank you, Shrasti. Everything Shravan and Shrasti described rests on one primitive, the
 distributed point function, and we wrote it ourselves from the papers by Boyle, Gilboa and Ishai
@@ -390,8 +409,9 @@ only 4.4 percent, while the number of rounds did not change at all.
 
 ### Slide 21: What measuring quality found [1:00]
 
-*On screen:* "First measurement: privacy costs 10.8 points of quality. After the fix: a few
-thousandths."
+*On screen:* a bar chart. The first run, with the gate range too narrow: 0.3428 against 0.4513.
+After the fix: 0.4493 against 0.4513. Beside it, the rounds and bytes, identical both times, and a
+note that the first run's values are recorded in commit `d2138ad` and not in the committed data.
 
 Now a story about why we measure quality and not just cost. The first time we measured the
 version of training that reveals nothing, it looked as if privacy cost us almost eleven points of
@@ -434,9 +454,9 @@ tested the numbers in between. The fix costs one
 round per query. The two servers add up their shares of the key's output and compare the totals,
 which reveals only the weight and never the item. It closes weight inflation. It does not stop a
 forged key that spreads the weight across items, and closing that needs an audit we have not
-built. The right panel shows a second exposure. One 227-byte key buys about 120 times its own cost
-in server work, because the server has to touch every item to stay private. That one we measured
-but have not mitigated.
+built. The right panel shows a second exposure. One 227-byte key buys 142 times its own cost in
+server work in the run on screen, and more than a hundred times in every run we made, because the
+server has to touch every item to stay private. That one we measured but have not mitigated.
 
 ### Slide 24: Timing [0:30]
 
@@ -469,7 +489,7 @@ To sum up. We built both halves of a private recommender and composed them, whic
 had done. Composing them costs exactly the sum of the halves and nothing more. Private delivery is
 not optional, because ten observed fetches reveal most of your taste and both cheaper defences
 fail. And about seventy percent of the cost lies in one operation, truncation, which is where
-future work should go. Every number you have seen is regenerated from committed data by one
+future work should go. Every figure you have seen is regenerated from committed data by one
 command. Thank you.
 
 ### Questions a viva will ask about Arc 3
@@ -539,7 +559,7 @@ is given as well.
 | 23 | Eight colluders | −4.1% | distinct targets | `poison_study.jsonl`, F11 |
 | 23 | Sixteen colluders | nDCG@20 0.4536 to 0.0021 | d = 16. Only 1, 2, 4, 8, 16 and 32 were tested, so the collapse lies between 8 and 16 | `poison_study.jsonl`, F11 |
 | 23 | Weight check cost | 1 round, 2 ring elements | per query | `tests/test_harvest.cpp` |
-| 23 | DoS amplification | 121× | 2,048-entry domain, committed run | `bench_dos.jsonl`, F11 |
+| 23 | DoS amplification | 142× in the run the figure shows, 121× in an earlier committed run | 2,048-entry domain | `bench_dos.jsonl`, F11 |
 | 24 | Timing bound | below 2.0% of an 87 µs call, p = 0.60 | 8 items, 200 calls each | `bench_timing.jsonl`, F12 |
 | 26 | Truncation, rounded | about seventy percent | as slide 19 | `bench_stages.jsonl` |
 

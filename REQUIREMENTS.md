@@ -1,5 +1,10 @@
 # REQUIREMENTS
 
+> **Final submission note, 2026-10-15.** The status banner below dates from the literature
+> survey and is historical. What was built, and how the deliverables were finally scoped, is in
+> [`README.md`](README.md) and the final report, `report/final.pdf`. Where this document and the
+> report disagree, the report and `design/ARCHITECTURE-draft-v1.md`'s Decisions Log record why.
+
 **Project:** OblivRec — Private Matrix Factorization with Private Delivery
 **Course:** CS670, Cryptographic Techniques for Privacy Preservation, 2026-27 Semester I, IIT Kanpur
 **Instructor:** Adithya Vadapalli · **Registration TA:** Sonu Sharma
