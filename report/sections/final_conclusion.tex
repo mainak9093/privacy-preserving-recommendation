@@ -1,0 +1,45 @@
+%% ==========================================================================
+%%  FINAL REPORT --- SECTION 10, CONCLUSION
+%%  The survey's conclusion.tex concludes the survey and is left untouched.
+%% ==========================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+\nudgeplain{} trains a recommender privately and stops at the scores.
+\pirsonaplain{} delivers privately with a training core the field has moved past.
+\sys{} composes the two and measures the result, and three findings stand out.
+
+First, the composition is cheap in the way that matters to its designers and
+expensive in a way they did not measure. It costs exactly the sum of its halves,
+private training costs 96\,ms per user-session on a wide-area link when amortised
+over 943 users, and the normaliser that reveals nothing loses only a few
+thousandths of nDCG@20. But the rounds are dominated by truncation, not by the
+comparison gate that looks like the hard part, and delivery as built pays a round
+trip per recommendation, which lets a full catalogue download beat it on a
+wide-area link.
+
+Second, the private read is necessary, and the cheaper alternatives do not
+replace it. Because the item embeddings are public by design, ten fetches seen in
+the clear recover a user's taste to a cosine of 0.84. Decoys at five times the
+traffic leave the attack far above what popularity alone gives, and
+\nudgeplain{}'s own differential privacy strengthens the attack while removing
+most of the model's quality at our scale, for a reason that the ratio
+$\users/\sqrt{\items}$ explains.
+
+Third, composing creates a surface neither paper had. Once delivery feeds
+training, a client's query is also a vote, and an unchecked vote of weight $10^6$
+is available to anyone who calls the key generator directly. One round closes
+inflation. Redistribution and the denial of service that full-domain evaluation
+invites remain open, and both point to the same missing piece, an audit that a
+key encodes a genuine point function.
+
+The most useful practice in the project was measuring quality alongside cost.
+A benchmark that counted only rounds and bytes would have reported that
+revealing nothing costs 24\% of recommendation quality, when the real cost was a
+silently clamping comparison range, and the true figure is two thousandths.
+
+\paragraph{Next steps.} In order of value, the first is to batch the $\topk$ PIR
+queries into one round trip, which our model says reverses the wide-area result.
+The second is to drive the harvest from the networked servers, so that the loop
+runs as a deployment and not only in tests. The third is the key audit, and the
+fourth is private training at MovieLens-1M on a machine with the memory for it.

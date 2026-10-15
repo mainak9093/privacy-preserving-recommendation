@@ -43,7 +43,10 @@ STEPS = [
     (6, "the composition demo", 8),
     (7, "DP and poisoning studies", 150),
     (8, "benchmarks and baselines", 640),
-    (9, "figures", 25),
+    # (9, "figures", 25),
+    # Step 9 builds the report too since 2026-09-24: latexmk runs pdflatex and
+    # bibtex several times over a ~35-page document.
+    (9, "figures and the report", 60),
 ]
 TOTAL_W = sum(w for _, _, w in STEPS)
 

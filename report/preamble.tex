@@ -157,6 +157,15 @@
 \newcommand{\dpf}{\mathrm{DPF}}
 \newcommand{\fss}{\mathrm{FSS}}
 
+% ---- ideal functionalities (final report, section 2) ---------------------
+%  REQUIREMENTS.md section 3.2 defines F_train and F_serve. F_train^leaky is
+%  the weaker functionality docs/threat-model.md section 8.4 introduces for
+%  the normaliser that opens ||v||.
+\newcommand{\Ftrain}{\mathcal{F}_{\mathrm{train}}}
+\newcommand{\Fleaky}{\mathcal{F}_{\mathrm{train}}^{\mathrm{leaky}}}
+\newcommand{\Fserve}{\mathcal{F}_{\mathrm{serve}}}
+\newcommand{\Sim}{\mathcal{S}}
+
 % ---- shorthand for the two base papers ----------------------------------
 %  Use \pirsona and \nudge in prose so the naming stays uniform; the macros
 %  cite as well as name, so `\nudge{} publishes $\itemembed$ in the clear'

@@ -1,215 +1,156 @@
-# OblivRec — Private Matrix Factorization with Private Delivery
+# OblivRec: private training and private delivery for recommendation
 
 **CS670 · Cryptographic Techniques for Privacy Preservation · 2026-27 Semester I · IIT Kanpur**
-Course project, topic (a): *Privacy-Preserving Recommendation Systems*
+Course project, topic (a): privacy-preserving recommendation systems. Final submission, tag
+`v1.0-final`.
 
-**Mainak Sarkar · Shrasti Dwivedi ·  Shravan Agrawal**
-
----
-
-A recommender that **trains on secret-shared ratings across three non-colluding servers**, and
-then **delivers the recommended content without any server learning which item was fetched.**
-
-```
-   users' ratings ──► ⟦secret-shared⟧ ──► 3 servers, at most one compromised
-                                               │
-                            power iteration under MPC (matrix-vector work is FREE)
-                                               │
-                      item embeddings B (public)  +  user embeddings ⟦A⟧ (shared)
-                                               │
-                            ⟦scores⟧ = ⟦a⟧·B ──► user reconstructs, picks top-k
-                                               │      LOCALLY (see note)
-                                  DPF-PIR fetch of the actual content
-                                               │
-                          the server never learns what you watched
-```
-
-> **Note.** An earlier version of this diagram showed an *oblivious top-k* selector. That was
-> **cut on 2026-09-06**: the user reconstructs the score vector and selects locally, so no server
-> learns the selection whether or not an oblivious selector exists. See the Decisions Log in
-> `design/ARCHITECTURE-draft-v1.md` §11.
+**Shravan Agrawal (230984) · Shrasti Dwivedi (230982) · Mainak Sarkar (230619)**
 
 ---
 
-### 👉 Picking this project up? Read [`docs/HANDOVER.md`](docs/HANDOVER.md) first.
+OblivRec composes two systems the course pointed us to. **Nudge** (Henzinger, Dauterman,
+Corrigan-Gibbs and Boneh, USENIX Security 2026) trains a matrix-factorisation recommender across
+three servers under 2-of-3 replicated secret sharing, publishes the item embeddings, and leaves
+the fetch of the recommended item to "other means". **Pirsona** (Vadapalli, Bayatbabolghani and
+Henry, PoPETs 2021) fetches privately with multi-server PIR and harvests the next round's training
+data from the fetches, but trains with four parties over a Boolean circuit.
 
-It has the current status, a reading order, what is built and how to verify it, **and the list of
-unclaimed work** with file paths and acceptance criteria. Teammates filling in their mid-term
-contribution section should go straight to its sections 3 and 4.
+We built Nudge's power-iteration training and two-server DPF-based private retrieval, wired them
+together with Pirsona's harvest, and measured what the composition costs and what it leaks. Every
+protocol is written in C++17 from the papers, with no cryptographic library. The final report is
+`report/final.tex` (built PDF: `report/final.pdf`), and the presentation script is
+`report/slides/final_presentation.md`.
 
-## Why this shape
+**Security is semi-honest with at most one corrupted server. Two colluding servers learn
+everything.** The security argument is a real/ideal simulation sketch, not a proof.
 
-The project sits on two papers the instructor recommended, both in [`references/`](references/):
+## Results at a glance
 
-- **[NUDGE]** *(Henzinger, Dauterman, Corrigan-Gibbs, Boneh — USENIX Security 2026)* trains a
-  recommender privately at scale. Its trick: under 2-of-3 replicated secret sharing, multiplying a
-  shared matrix by a shared vector is **non-interactive**, so recasting matrix factorization as
-  *power iteration* makes nearly all of the work free — only truncation and normalization cost
-  rounds. But Nudge states plainly that it *"relies on other means … to let users fetch data items
-  in a private way."* It stops at the scores.
-- **[PIRSONA]** *(Vadapalli, Bayatbabolghani, Henry — PoPETs 2021)* closes that loop with PIR, and
-  even harvests the next round's training data straight out of the users' PIR queries — but its
-  training core is a 4PC Boolean matrix factorization that Nudge now outperforms with one fewer
-  non-colluding party.
+Every number below is recomputed from committed data by `bench/scripts/check_claims.py`, and
+every figure is drawn by `mingw32-make figures` from the raw rows in `bench/results/`.
 
-**Neither paper does both halves well. We compose them and measure the composition** — which
-nobody has done, because nobody has built both. See [REQUIREMENTS.md §2](REQUIREMENTS.md).
-
-Function secret sharing is the load-bearing primitive on *both* sides: it is the comparison gate
-inside Nudge's truncation and normalization, and it is the PIR read layer for delivery. One DPF
-implementation, written from scratch, serves the whole system.
-
----
-
-## Where we are: both halves are built
-
-> This section said *"No implementation yet, deliberately"* until 13 September 2026. That was true
-> during the literature survey and is no longer. The two concerns recorded here then — that Nudge
-> ships a reference implementation, and that a user could just download the public `B` — were both
-> settled at the instructor meeting, and the system has been built since.
-
-**Milestone 1 (survey) and Milestone 2 (mid-term) are submitted. Both halves of the composition
-now run.**
-
-| | Status |
-|---|---|
-| **S1 — private serving and delivery** | complete, demonstrated across three OS processes over TCP |
-| **S2 — private training** | complete; power iteration under 2-of-3 replicated sharing |
-| **S3 — composition and evaluation** | **the loop is closed** — `demo --a/--b` serves a privately trained model; tasks 4.1–4.5 done |
-
-Some numbers, all reproducible from committed data (`mingw32-make figures`):
-
-- The DPF is verified **exhaustively** — every `alpha` against every `x`, 7.16 × 10⁹ leaf checks.
-- `demo --user 42` returns ten real film titles, each fetched by two-server DPF-PIR and verified
-  byte-exact against a cleartext lookup.
-- **Ten observed fetches recover a user's private embedding to `cos = 0.84`** and predict 56% of
-  their next twenty recommendations — the measured argument for why delivery must be private.
-  A decoy defence was measured and **fails**; a trained distinguisher on the wire sits at chance.
-- Private training matches the cleartext oracle within **±0.007 nDCG@20** at every `ell`, and the
-  **spec-faithful normaliser — the one that reveals nothing — costs only 0.002–0.005 more**. What
-  it costs instead is rounds: 11519 against 2191.
-- **Composing costs exactly the sum of its halves**: `FULL = B2 + B3 − B1` to the byte. On a
-  30 ms / 100 Mbit link, private delivery adds **2.5 ms** per session and private training **96 ms**
-  amortised over 943 users.
-- **Truncation is ~73% of every communication round** and ~80% of bytes; the FSS comparison gate is
-  **3%**. The breakdown reconciles to zero residual, so it accounts for every round.
-- An honest negative: because delivery is `k` sequential round trips, **on a WAN the full-catalogue
-  download beats DPF-PIR by 4.6×** despite sending 45× more bytes. Batching the queries into one
-  round trip reverses it — and is not yet implemented.
-
-Start at [`docs/HANDOVER.md`](docs/HANDOVER.md).
-
-## Where to start
-
-| Read this | For |
-|---|---|
-| **[report/](report/)** | **The live work.** The survey's LaTeX skeleton, the reading tracks, the bibliography, and per-paper notes. Start at [`report/README.md`](report/README.md). |
-| **[report/notes/_synthesis.md](report/notes/_synthesis.md)** | The argument the survey is built to make — and the list of things that would kill it. |
-| **[REQUIREMENTS.md](REQUIREMENTS.md)** | Scope, the instructor's steer, the gap, and the explicit non-goals. Note the status banner: the deliverable list is provisional. |
-| **[PHASES.md](PHASES.md)** | Schedule, the three graded milestones, and the risk register. |
-| **[references/](references/)** | The two base papers. **Read both in full before anything else.** |
-| [design/ARCHITECTURE-draft-v1.md](design/ARCHITECTURE-draft-v1.md) | The drafted protocol design. **Superseded pending the survey** — do not implement from it. |
-
----
-
-## Milestones
-
-| Milestone | Weight | Deadline |
+| Result | Value | Data |
 |---|---|---|
-| Literature survey — report + 30-minute recorded presentation | 10% | **31 August 2026** |
-| Mid-term report — two pages, per-member contributions | 5% | **12 September 2026** |
-| Final — complete source code, report, and demonstration | 15% | **6 November 2026** |
+| Composing costs exactly the sum of the halves | FULL = B2 + B3 − B1 = 64,760,124 bytes | `bench_compose.jsonl` |
+| Per session on a 30 ms, 100 Mbit/s link | private delivery +2.5 ms, private training +96 ms (one run shared by 943 users) | `bench_compose.jsonl` |
+| Nudge's Theorem 4.2, measured | input matrix 4× larger, traffic +4.4%, rounds unchanged at 2,686 | `bench_sweep.jsonl` |
+| Where the rounds go | truncation 68.6 to 74.4% of rounds, the FSS comparison gate 3.1% | `bench_stages.jsonl` |
+| Quality cost of the normaliser that reveals nothing | 0.0018 to 0.0041 nDCG@20, for 5.3× the rounds | `train_quality.jsonl`, `bench_stages.jsonl` |
+| Fetches observed in the clear | ten fetches recover a user's private embedding to cosine 0.84 (popularity control 0.44) | `leakage_attack.jsonl` |
+| Decoys | 40 per query, five times the traffic: the attack only falls from 0.84 to 0.71 | `leakage_attack.jsonl` |
+| Nudge's own differential privacy, ε = 1 | quality −71%, and the attack gets stronger, 0.82 to 0.92 | `dp_study.jsonl` |
+| The result that goes against us | on that link, downloading the whole catalogue is 4.6× faster than our unbatched private read | `bench_compose.jsonl` |
+| Malicious client | sixteen colluders with unchecked weights take nDCG@20 from 0.4536 to 0.0021. A one-round check now closes weight inflation, not redistribution | `poison_study.jsonl`, `tests/test_harvest.cpp` |
+| Wire and timing | every query frame 228 B, a classifier on the bytes at chance, server-side timing bounded below 2% of a call | `distinguisher_result.jsonl`, `bench_timing.jsonl` |
 
-> **Log your work in [`docs/contributions.md`](docs/contributions.md) after every session.** The
-> mid-term report is explicitly a per-member contribution summary, and a viva may be called at any
-> stage on any part of the project.
+## Running it
 
-<!-- ---
+Tested on Windows 11 with MSYS2's mingw64 toolchain. The randomness (Windows CNG) and the
+sockets (Winsock) are Windows APIs, so other platforms are not supported.
 
-## Workstreams
+**You need**
 
-| Stream | Owner | Scope |
-|---|---|---|
-| **W1** | Mainak Sarkar | FSS core and private delivery: the DPF (AES-NI GGM tree), the FSS comparison gates, the DPF-PIR read layer. |
-| **W2** | Aditya Anand | 3PC substrate and non-linear protocols: replicated sharing, the PRF model, `Trunc_t`, `ApproxNormalize`. |
-| **W3** | Shrasti Dwivedi | Factorization and serving: power iteration, `SetOrthogonal`, score computation, oblivious top-*k*, model quality. |
-| **W4** | Shravan Agrawal | Evaluation and security analysis: benchmark harness, WAN emulation, baselines, threat model, leakage analysis. |
+- MSYS2 with the mingw64 g++ and `mingw32-make` (tested with g++ 16.1.0 and GNU Make 4.4.1).
+  Put `C:\msys64\mingw64\bin` **first** on `PATH`, otherwise g++ fails silently. The build checks
+  this and says so.
+- Python 3.13 as `py -3.13`, with `numpy`, `matplotlib` and `scikit-learn`
+  (tested with 2.2.6, 3.10.3 and 1.6.1).
+- For the report only: a TeX distribution with `latexmk` (TinyTeX works).
 
-Workstreams touch each other only through `include/oblivrec/`.
-`dpf.hpp` and `nonlinear.hpp` are frozen in week one — they are everyone's critical path.
-
---- -->
-
-## Staging
-
-The system is two halves and 12 weeks is tight, so they are built to be separable:
-
-**S1** serving + delivery (on a cleartext-trained model) → **S2** private training →
-**S3** the composition and its evaluation.
-
-S1 ships regardless and demos early; its DPF is a prerequisite for S2's non-linear gates anyway.
-
----
-
-## Layout
-
-```
-report/             THE LIVE WORK — survey.tex, midterm.tex, final.tex,
-                    one shared preamble.tex and references.bib,
-                    sections/, notes/, figures/, slides/
-references/         the two instructor-recommended papers
-design/             the drafted protocol design (superseded, see above)
-archive/            parked scaffolding, nothing deleted
-docs/               contribution log (required by the mid-term report)
-scripts/            fetch_data.py — MovieLens downloader, checksum-verified
-data/               downloaded datasets (gitignored)
-```
-
----
-
-## Build
-
-The survey needs only a LaTeX toolchain (TinyTeX is enough):
+**One command**
 
 ```bash
-git clone <repo-url> && cd privacy-preserving-recommendation/report
-latexmk -pdf survey.tex
+export PATH=/c/msys64/mingw64/bin:$PATH      # Git Bash; or set PATH in cmd/PowerShell
+mingw32-make reproduce
 ```
 
-Data, for later:
+This fetches MovieLens-100K, builds everything, runs all 18 test binaries, trains the 18 private
+models, runs the leakage and malicious-client studies and every benchmark, then draws the 12
+figures and builds the report. It takes on the order of a quarter of an hour. It is quiet for most
+of that time, so `mingw32-make reproduce-bg` followed by `mingw32-make watch` runs it in the
+background with a progress bar and an estimated finish time.
 
-```bash
-python scripts/fetch_data.py    # MovieLens-100K and 1M; data/ is not committed
+If the download fails (no network, a proxy, or a certificate this Python does not trust),
+`scripts/fetch_data.py` says so and prints what to do: download
+`https://files.grouplens.org/datasets/movielens/ml-100k.zip` (and `ml-1m.zip`) by hand, place the
+zip files in `data/`, and run it again. The checksum is verified either way. The data is not
+redistributed in this repository.
+
+**Piece by piece**
+
+| Command | What it does |
+|---|---|
+| `py -3.13 scripts/fetch_data.py` | MovieLens-100K and 1M into `data/`, checksum-verified |
+| `mingw32-make test` | builds and runs the 18 test binaries |
+| `mingw32-make check` | the same tests under a hardened build: undefined-behaviour traps, `_GLIBCXX_DEBUG`, bounds-checked spans |
+| `mingw32-make test-exhaustive` | the full DPF sweep, every index against every input up to 16 domain bits (slow) |
+| `py -3.13 model/export.py` | the cleartext oracle and the fixed-point model the demo serves |
+| `./build/train.exe --d 16 --ell 10 --b 128 --normalizer fss --out model/out/B_private_fss_b128_ell10.bin` | private training with the normaliser that reveals nothing |
+| `py -3.13 model/score_private.py` | scores the trained models and writes the private model files the demo reads |
+| `./build/demo.exe --user 42 --k 10 --a model/out/A_private_fss_b128_ell10.bin --b model/out/B_private_fss_b128_ell10.bin --expect model/out/top10_u42_private_fss_b128_ell10.txt` | serves the privately trained model and fetches ten records by DPF-PIR, each checked byte for byte |
+| `mingw32-make demo-net` | the same protocol across three separate server processes over TCP |
+| `mingw32-make distinguisher` | records 1,800 queries and trains a classifier on the wire bytes |
+| `mingw32-make bench` | every benchmark, appending rows to `bench/results/` (about 12 minutes) |
+| `mingw32-make figures` | redraws all 12 figures into `report/figures/` from the committed rows |
+| `py -3.13 bench/scripts/check_claims.py` | recomputes the report's headline numbers from the data and checks the documents state them |
+| `mingw32-make report` | builds `report/final.pdf` |
+
+Benchmarks append rows tagged with the current commit, and the figures use the newest commit's
+rows. Absolute times on a laptop drift with its thermal state, so a rerun will show different
+milliseconds. Rounds, bytes and quality will not change.
+
+## Where things are
+
+```
+include/oblivrec/   the public headers, one per component
+src/dpf/            the distributed point and comparison functions (written from the papers)
+src/mpc/            replicated sharing, zero shares, truncation, the comparison gate, inverse square root
+src/mf/             power iteration under sharing, both normalisers, the truncation schedule
+src/serve/  src/pir/  scoring, the catalogue, the PIR server and client, the harvest
+src/net/            TCP framing, the transcript recorder, channel-level network emulation
+src/apps/           the three servers, the training driver, the demo, the distinguisher's probe
+tests/              18 test binaries, each checking a component against a cleartext twin
+bench/              7 benchmarks, raw results in bench/results/, figures from bench/scripts/
+model/              the cleartext oracle, model export, the attack, the DP and poisoning studies
+report/             final.tex and its sections, the figures, the presentation script
+docs/               threat model, contribution log, handover notes
+design/             the original design draft, with its decisions log
+third_party/nudge/  Nudge's Go reference implementation, vendored for reading only (see below)
+references/         reading list (the paper PDFs are not part of the submission zip)
 ```
 
----
+**Report section to code**
 
-## Ground rules
+| Report | Code |
+|---|---|
+| §5.1 The DPF | `src/dpf/`, `tests/test_dpf_*.cpp` |
+| §5.2 Serving and delivery | `src/serve/`, `src/pir/`, `src/net/`, `tests/test_pir.cpp`, `tests/test_serve.cpp` |
+| §5.3 The training substrate | `src/mpc/mpc.cpp`, `tests/test_mpc.cpp` |
+| §5.4 Truncation | `src/mpc/nonlinear/trunc.cpp`, `tests/test_trunc.cpp` |
+| §5.5 The comparison gate and normaliser | `src/dpf/dcf.cpp`, `src/mpc/nonlinear/msnzb.cpp`, `tests/test_dcf.cpp`, `tests/test_msnzb.cpp` |
+| §5.6 Power iteration | `src/mf/factor.cpp`, `src/apps/train.cpp`, `tests/test_factor.cpp` |
+| §6 Evaluation | `bench/*.cpp`, `bench/scripts/make_figures.py` |
+| §7 Leakage and the malicious client | `model/attack.py`, `model/dp_study.py`, `model/poison_study.py`, `bench/bench_dos.cpp`, `src/pir/harvest.cpp` |
+| Appendix A, protocols | the files named in each algorithm's caption |
 
-- **The DPF is written by us**, from the Boyle–Gilboa–Ishai papers. Third-party crypto appears only
-  under `third_party/`, and only as a benchmark baseline.
-- **Security claims are stated exactly as implemented.** The system is semi-honest with an honest
-  majority and tolerates **at most one** compromised server. Two colluding servers break it. That
-  appears in the abstract, not buried in a limitations section.
-- **Approximate protocols ship with measured error bounds.** `Trunc_t` and `ApproxNormalize` are
-  tested against cleartext oracles; an unmeasured approximation is not finished.
-- **No benchmark number ships without its network profile.** "40 ms" is meaningless;
-  "40 ms on `wan_a` (30 ms RTT, 100 Mbps)" is a result.
-- **Raw benchmark data is committed; figures are generated.** Every figure comes out of
-  `make figures`, never a hand edit.
-- **Branch per workstream** (`w1/…`, `w2/…`), never commit to `main` directly. Changes to
-  `include/oblivrec/` change the contract between members — flag them before merging.
+## What we claim, and what we do not
 
----
+- **One semi-honest server learns nothing beyond the stated leakage.** The item embeddings are
+  public by design, as in Nudge, and the report measures what that costs.
+- **Two colluding servers learn everything.** A deviating server is out of scope.
+- **MovieLens-100K only.** Larger scales are analysed from public parameters, not run.
+- **Wide-area numbers come from channel-level emulation** on one laptop, not real networks.
+- **The harvest is built and tested but not driven by the running servers.** Every model in
+  the report was trained on ratings read from disk.
+- **A malicious client can still redistribute vote weight with a forged key**, and full-domain
+  evaluation remains a denial-of-service lever. Closing both needs an audit we did not build.
 
-## Status
+## Provenance
 
-**Phase 0/1 — mobilisation and literature survey.** Next actions, in order:
-
-1. **Book the instructor meeting** he offered. Questions Q1 and Q2 in
-   [REQUIREMENTS.md §11](REQUIREMENTS.md) unblock the architecture.
-2. **Everyone reads both base papers end to end**, then tracks are assigned at the kickoff.
-3. **Run the forward-citation sweep** (PHASES task 1.4) before drafting — the survey's central
-   claim depends on it.
-
-See [PHASES.md](PHASES.md).
+- **The cryptography is ours.** The DPF, DCF, truncation, comparison gate and power iteration
+  are written in C++ from the papers. `third_party/nudge/` holds Nudge's MIT-licensed Go
+  reference implementation, vendored early on to read alongside the paper. No build target
+  compiles or links it. `third_party/NOTICE.md` records what it is and how it was used.
+- **Figures are generated, never edited.** Raw results are committed, append-only.
+- **MovieLens data is fetched, not redistributed** (`data/` is gitignored).
+- Who did what up to the mid-term is logged session by session in `docs/contributions.md`.

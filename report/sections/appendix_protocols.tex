@@ -1,0 +1,122 @@
+%% ==========================================================================
+%%  FINAL REPORT --- APPENDIX A, PROTOCOLS
+%%  Each algorithm follows the code it names, including where rounds are
+%%  charged. Round counts are the ones the tests and bench_stages assert.
+%% ==========================================================================
+\section{Protocols}
+\label{app:protocols}
+
+The algorithms below follow the code line by line where it matters, including
+the points at which rounds are charged. $\shr{x}$ is a 2-of-3 replicated sharing
+over $\Ztwo{\bits}$, and $\gg_{\mathrm{pair}}$ denotes a call to
+Algorithm~\ref{alg:trunc}.
+
+\begin{algorithm}[h]
+\caption{$\ApproxFactor$ under sharing (\texttt{src/mf/factor.cpp}).}
+\label{alg:factor}
+\begin{algorithmic}[1]
+\Require $\shr{\ratings}$ at scale 0, parameters $\dime, \iters, \fracbits$, a
+  truncation schedule proven to fit, a normaliser $\Normalize$
+\Ensure $\itemembed \in \ring^{\dime \times \items}$, public
+\State $\shr{\ratings^{\top}} \gets$ local relabelling of $\shr{\ratings}$
+  \Comment{0 rounds}
+\For{$c = 1, \dots, \dime$}
+  \State $\shr{\mathbf{v}} \gets$ shares of a small random start vector
+  \State $\shr{\mathbf{v}} \gets \Normalize(\SetOrthogonal(\shr{\mathbf{v}},
+    \itemembed_{1..c-1}))$
+  \For{$j = 1, \dots, \iters$}
+    \State $\shr{\mathbf{w}} \gets \shr{\ratings}\shr{\mathbf{v}}$
+      \Comment{1 round, $3\users$ elements}
+    \State $\shr{\mathbf{v}} \gets \shr{\ratings^{\top}}\shr{\mathbf{w}}$
+      \Comment{1 round, $3\items$ elements}
+    \State $\shr{\mathbf{v}} \gets \shr{\mathbf{v}} \gg_{\mathrm{pair}} s$
+      \Comment{public shift $s$ from the schedule, 3 rounds}
+    \State $\shr{\mathbf{v}} \gets \SetOrthogonal(\shr{\mathbf{v}},
+      \itemembed_{1..c-1})$ \Comment{local products, then 1 or 2 truncations}
+    \State $\shr{\mathbf{v}} \gets \Normalize(\shr{\mathbf{v}})$
+  \EndFor
+  \State $\itemembed_c \gets \mathrm{Open}(\shr{\mathbf{v}})$
+    \Comment{1 round, leaked by design}
+\EndFor
+\State \Return $\itemembed$ \Comment{$\shr{\userembed} = \shr{\ratings}\,\itemembed^{\top}$
+  is then local}
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[h]
+\caption{$\mathsf{TruncatePair}$, truncation by $t$ bits with helper $h$
+(\texttt{src/mpc/nonlinear/trunc.cpp}). Parties $a$ and $b$ are the other two.}
+\label{alg:trunc}
+\begin{algorithmic}[1]
+\Require $\shr{x}$, shift $t$, helper index $h$
+\Ensure $\shr{y}$ with $y = x \gg t$ up to one unit
+\State $h$ draws uniform $r$ and sends $a$ and $b$ additive shares of $r$ and of
+  $r \gg t$ \Comment{round 1, 4 elements}
+\State $a$ and $b$ exchange masked values and both learn $c = x - r$
+  \Comment{round 2, 2 elements}
+\State $a$ sets $y_a \gets (c \gg t) + (r \gg t)_a$ and $b$ sets $y_b \gets
+  (r \gg t)_b$
+\State $a$ and $b$ draw a pairwise mask $\mu$ that $h$ cannot compute, set
+  $y_a \mathrel{+}= \mu$ and $y_b \mathrel{-}= \mu$, and $h$ advances its generator
+  to stay in step
+\State reshare $(y_a, y_b, 0)$ into replicated form \Comment{round 3, 2 elements}
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[h]
+\caption{The MSNZB gate and the shared inverse square root
+(\texttt{src/mpc/nonlinear/msnzb.cpp}).}
+\label{alg:msnzb}
+\begin{algorithmic}[1]
+\Require $\shr{S}$ with $\mathrm{msnzb}(S) \in [\mathit{lo}, \mathit{hi}]$, a
+  bound the caller must guarantee, and Newton step count $N$
+\Ensure $\shr{y}$ encoding $1/\sqrt{S}$ at scale $\fracbits$, where $S$ is itself
+  at scale $\fracbits$
+\Statex \textit{Offline, by a dealer:}
+\State draw $r$ uniform on $[0, 2^{L + \kappa})$ with $\kappa = 40$
+\For{$k = \mathit{lo}, \dots, \mathit{hi}$}
+  \State DCF keys for the threshold $2^k + r$ over a domain of $L + \kappa + 1$
+    bits
+\EndFor
+\Statex \textit{Online:}
+\State open $c = S + r$ \Comment{round 1, every threshold shares it}
+\State each party evaluates every key at $c$, giving shares of $1[S \ge 2^k]$ for
+  all $k$
+\State $\shr{y} \gets \sum_k \delta_k \shr{1[S \ge 2^k]}$, where the public
+  $\delta_k$ make $y = 2^{\lfloor(3\fracbits - \mathrm{msnzb}(S))/2\rfloor}$
+\State reshare $\shr{y}$ \Comment{round 2}
+\For{$i = 1, \dots, N$}
+  \State $\shr{y} \gets \shr{y}\,(3 - \shr{S}\shr{y}^2) / 2$
+    \Comment{3 products and 3 truncations, 12 rounds}
+\EndFor
+\State \Return $\shr{y}$ \Comment{$N = 4$: 50 rounds, worst relative error
+  $1.41 \times 10^{-6}$}
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[h]
+\caption{The harvest and the weight check (\texttt{src/pir/harvest.cpp}).}
+\label{alg:harvest}
+\begin{algorithmic}[1]
+\Require for each PIR query, the expansions $e_0 = \EvalFull(k_0)$ at
+  $\party{0}$ and $e_1 = \EvalFull(k_1)$ at $\party{1}$
+\Statex \textit{Per query, the weight check:}
+\State $\party{0}$ computes $s_0 = \sum_j e_0[j]$ and $\party{1}$ computes
+  $s_1 = \sum_j e_1[j]$ \Comment{local}
+\State exchange $s_0, s_1$ and reject the query unless $s_0 - s_1 = 1$
+  \Comment{1 round, 2 elements}
+\State $h_0 \mathrel{+}= e_0$ at $\party{0}$ and $h_1 \mathrel{+}= e_1$ at
+  $\party{1}$ \Comment{local}
+\Statex \textit{Once per training round, the conversion:}
+\For{each item $j$}
+  \State $\party{0}$ and $\party{1}$ draw a pairwise mask $\mu_j$, and
+    $\party{2}$ advances its generator
+  \State $x_0 \gets h_0[j] + \mu_j$, \quad $x_1 \gets -h_1[j] - \mu_j$, \quad
+    $x_2 \gets 0$
+\EndFor
+\State reshare $(x_0, x_1, x_2)$ into replicated form, so that
+  $x_0 + x_1 + x_2 = h_0 - h_1$ \Comment{1 round, $3\items$ elements}
+\end{algorithmic}
+\end{algorithm}
+
+\clearpage

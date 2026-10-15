@@ -1,0 +1,74 @@
+%% ==========================================================================
+%%  FINAL REPORT --- SECTION 8, RELATED WORK
+%%  Self-contained restatement of the survey's systems_both.tex, whose text
+%%  refers to "this survey" and to survey-only sections. Quotations are the
+%%  survey's, from papers read in full (reading tier A in references.bib).
+%% ==========================================================================
+\section{Related work}
+\label{sec:related}
+
+Our literature survey, submitted as the project's first milestone, covers the
+field in full. This section places \sys{} against the work it builds on and the
+work closest to it.
+
+\paragraph{\pirsonaplain{}.} \pirsona{} is the system closest in spirit, and the
+only one we found that spans collection, training and delivery. Its authors
+describe private information retrieval and collaborative filtering as
+``seemingly antithetical primitives'': PIR exists to hide which item a user
+fetches, and collaborative filtering works by relating users through exactly
+that. Its resolution is the harvest we reuse. Delivery uses the multi-server PIR
+of Hafiz and Henry~\cite{hafiz2019}, the servers extract secret-shared consumption
+from the query traffic itself, and training runs a four-party Boolean matrix
+factorisation over it. \sys{} keeps the harvest and the PIR layer and replaces
+the training core with \nudgeplain{}'s, one fewer non-colluding party and an
+arithmetic rather than Boolean computation.
+
+\paragraph{\nudgeplain{}.} \nudge{} is our training core. Users secret-share
+ratings, three servers factorise by power iteration, and the servers compute each
+user's scores in shared form. Its non-goal is our starting point: it ``relies on
+other means (e.g., Apple's private relay, Tor, or cryptographic private
+information retrieval) to let users fetch data items in a private way''. We add
+three things it does not report: a private fetch composed with its training, a
+measurement of what leaks when the fetch is not private, and a measurement of its
+own differential-privacy extension against that leak.
+
+\paragraph{Private training more broadly.} The first practical private matrix
+factorisation, that of Nikolaenko et al.~\cite{nikolaenko2013}, evaluates
+gradient descent inside a garbled circuit across two
+servers.\footnote{We could not obtain this paper. The characterisation follows
+\nudgeplain{}'s description of it, as our survey's did.} A garbled circuit's
+communication scales with the circuit, and so with the whole rating matrix, and
+later work moved to secret sharing. General frameworks such as MP-SPDZ~\cite{mpspdz2020} and the ABY
+family~\cite{aby2015,aby22021} could run the same factorisation, and a generic
+MPC baseline was part of our original evaluation plan. We did not build it, for
+reasons Section~\ref{sec:limits} gives. The fixed-point costs that dominate our
+measurements are a known theme: SecureML~\cite{secureml2017} and Escudero et
+al.~\cite{escudero2020} both treat truncation as a first-class cost.
+
+\paragraph{Function secret sharing and PIR.} The DPF is that of Boyle, Gilboa and
+Ishai~\cite{gilboa2014,bgi2015,bgi2016}, and the comparison gate follows the
+FSS-based secure computation of Boyle et al.~\cite{boyle2021}, which evaluates
+comparison gates in a constant number of rounds by masking the input. Two-server
+PIR from a DPF is a special case of Hafiz and Henry's family~\cite{hafiz2019}.
+Single-server PIR such as SimplePIR~\cite{simplepir2023} removes the
+non-collusion assumption at the price of a large client-side hint, and
+Floram~\cite{floram2017} and \duoramplain{}~\cite{duoram2023} build distributed
+oblivious memory from the same DPF machinery we use. \textsc{Sabre}'s
+audit~\cite{sabre2022}, which proves that a DPF key encodes a genuine point
+function, is the mechanism our malicious-client analysis names as the missing
+piece.
+
+\paragraph{Private retrieval without a recommender.} A separate line of work
+retrieves privately over embeddings, from secure nearest-neighbour
+search~\cite{sanns2020} to private web search~\cite{tiptoe2023} and more recent
+sublinear schemes~\cite{pacmann2025,compass2025,panther2025,wally2024}. These
+take a corpus and its embeddings as given and are not connected to a privately
+trained model. \pirsonaplain{} predates almost all of them, which is part of why
+the composition we build had not been attempted with a modern training core.
+
+\paragraph{What leaks through the output.} Calandrino et
+al.~\cite{calandrino2011} address the privacy risks of collaborative filtering
+itself.\footnote{We could not obtain this paper either, and cite it only for the
+claim its title makes.} Our reconstruction attack concerns a narrower channel. It
+needs no access to the recommender's output, only to which items a user fetched,
+together with the public $\itemembed$ that \nudgeplain{}'s design releases.

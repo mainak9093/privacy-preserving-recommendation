@@ -1,0 +1,142 @@
+%% ==========================================================================
+%%  FINAL REPORT --- SECTION 3, BACKGROUND
+%%
+%%  WHY THIS IS A NEW FILE AND NOT \input{primitives} + \input{background}.
+%%  final.tex's original header said to reuse the survey's sections wholesale.
+%%  They cannot be reused as they stand: they refer to themselves as "this
+%%  survey" throughout and cross-reference sections that exist only in the
+%%  survey (sec:training, sec:retrieval, sec:taxonomy, sec:open:*), which would
+%%  print as "??" here. Editing them is not an option either, because they are
+%%  the source of the submitted Milestone 1 PDF. So this file restates what the
+%%  final report needs, with the same citations and the same notation.
+%% ==========================================================================
+\section{Background}
+\label{sec:background}
+
+This section fixes the primitives the rest of the report is built from. It is
+deliberate about \emph{costs}, and in particular about rounds, because on a
+wide-area link the round count decides the running time of every protocol here.
+
+\subsection{Matrix factorisation by power iteration}
+\label{sec:background:mf}
+
+Collaborative filtering predicts a user's preferences from the preferences of
+other users, and matrix factorisation is its dominant latent-factor
+technique~\cite{koren2009,hu2008}. Given the rating matrix $\ratings \in
+\R^{\users \times \items}$, it seeks $\ratings \approx \userembed \itemembed$
+with $\userembed \in \R^{\users \times \dime}$, $\itemembed \in \R^{\dime \times
+\items}$ and $\dime \ll \min(\users, \items)$. The predicted affinity of user $i$
+for item $j$ is the inner product of their embeddings, and a user's
+recommendations are the $\topk$ highest-scoring items the user has not already
+rated.
+
+\nudgeplain{} computes the factorisation by power iteration rather than by
+gradient descent. For each of $\dime$ components it starts from a random vector
+$\mathbf{v}$, and $\iters$ times it multiplies by $\ratings^{\top}\ratings$,
+projects out the components already found, and normalises. The converged
+$\mathbf{v}$ becomes a row of $\itemembed$, and finally $\userembed =
+\ratings\itemembed^{\top}$. Power iteration on $\ratings^{\top}\ratings$
+converges to the top-$\dime$ right singular subspace of $\ratings$, at a rate set
+by the gap between consecutive singular values. What makes this formulation
+attractive under secret sharing is its shape: almost all of the work is
+matrix--vector products, with one normalisation per step.
+
+\subsection{Replicated secret sharing}
+\label{sec:background:rss}
+
+In 2-out-of-3 replicated sharing over the ring $\ring = \Ztwo{\bits}$, a value
+$x$ is written as $x = x_0 + x_1 + x_2$, and party $\party{i}$ holds the pair
+$(x_i, x_{i+1})$ with indices taken modulo three~\cite{araki2016}. Any two parties
+can reconstruct $x$, while a single party holds two uniformly random summands and
+learns nothing. We write $\shr{x}$ for a sharing of $x$. Addition, and
+multiplication by a public constant, are local.
+
+Multiplication of two shared values is where the structure pays off. Because
+each party holds two of the three summands of each factor, it can compute three
+of the nine cross terms of $xy$ on its own, and between them the three parties
+cover all nine. Each party therefore produces an additive share $z_i$ of $xy$
+locally. To return to replicated form, each party masks $z_i$ with a share of
+zero and sends it to one neighbour: one round and one ring element per party per
+product. The zero shares cost no communication in the \emph{PRF model}, where
+each pair of parties holds a shared pseudorandom-function key and the three
+parties derive $\alpha_i = F(k_i, \mathit{ctr}) - F(k_{i-1}, \mathit{ctr})$,
+which sum to zero~\cite{araki2016}.
+
+The consequence \nudgeplain{} builds on is its Theorem~4.2. An inner product is a
+sum of products, and the sum can be taken before resharing, so a whole inner
+product costs one ring element per party, not one per term. A matrix--vector
+product is one inner product per output entry. Its communication is therefore
+proportional to the length of the \emph{output} vector, whatever the size of the
+matrix.
+
+\subsection{Fixed-point arithmetic and truncation}
+\label{sec:background:fixed}
+
+Recommendation works over the reals and the sharing works over a ring, so a real
+$v$ is encoded as the integer $\lfloor v \cdot 2^{\fracbits} \rceil \in \ring$
+with $\fracbits$ fractional bits. Addition then works unchanged, but the product
+of two values at scale $\fracbits$ is at scale $2\fracbits$ and must be
+\emph{truncated} back, or the scale grows until the ring overflows. Truncating
+shares naively, by having each party shift its own share, fails: the shares are
+uniform over the ring, so their sum wraps with high probability, and a wrap turns
+into an error of $2^{\bits - \fracbits}$ in the result. Correct truncation needs
+an interactive protocol. It is the most frequent non-linear step in fixed-point
+secure computation, and prior work treats it as a first-class
+cost~\cite{secureml2017,escudero2020}. Section~\ref{sec:eval:stages} shows that
+it dominates ours.
+
+\subsection{Function secret sharing}
+\label{sec:background:fss}
+
+Function secret sharing splits a \emph{function} rather than a
+value~\cite{bgi2015,bgi2016}. A two-party scheme turns $f\colon \{0,1\}^{D} \to
+\ring$ into keys $k_0, k_1$ such that each key alone hides $f$ and the two
+evaluations recombine to $f(x)$ at every $x$. A \emph{distributed point function}
+(DPF) is the case where $f = f_{\alpha,\beta}$ is $\beta$ at $x = \alpha$ and zero
+elsewhere~\cite{gilboa2014}. The construction of Boyle, Gilboa and Ishai is a
+binary tree of pseudorandom seeds, and each key holds one seed and one correction
+word per level~\cite{bgi2016}. Keys are therefore \emph{logarithmic} in the domain
+size $2^{D}$, while evaluating the whole domain costs linear work, a trade made
+concrete in Section~\ref{sec:impl:dpf}.
+
+A \emph{distributed comparison function} (DCF) shares the step function
+$f_{<\alpha}(x) = \beta \cdot 1[x < \alpha]$ in the same way~\cite{boyle2021}. A
+DCF key hides its threshold and is evaluated at a public point. Secure
+computation needs the opposite, a secret input compared against a public
+threshold, and Boyle et al.\ obtain it by masking. A dealer draws a random $r$
+and builds keys for the threshold shifted by $r$. The parties open $c = x + r$,
+which reveals nothing about $x$ if $r$ is drawn from a wide enough range, and
+evaluate their keys at $c$. The evaluation yields shares of the comparison on
+$x$~\cite{boyle2021}. Every threshold evaluated at the same opening costs no
+further round.
+
+\subsection{Two-server private information retrieval}
+\label{sec:background:pir}
+
+Private information retrieval lets a client fetch record $\alpha$ of a database
+$D$ without the server learning $\alpha$~\cite{chor1995}. With two servers that
+do not collude, a DPF gives a simple scheme~\cite{bgi2015,hafiz2019}. The client
+generates keys for $f_{\alpha,1}$ and sends one to each server. Server $c$
+expands its key over the whole domain and answers with
+%
+\[
+  \mathrm{ans}_c \;=\; \sum_{j} \EvalFull(k_c)[j] \cdot D[j],
+\]
+%
+and because the two expansions recombine to the indicator of $\alpha$, the two
+answers recombine to $D[\alpha]$. The upload is one logarithmic-size key per
+server. The price is on the server side: each answer touches every record, and
+it must, because a server that skipped records would learn which ones the client
+could not have wanted.
+
+\subsection{Measuring recommendation quality}
+\label{sec:background:ndcg}
+
+We report normalised discounted cumulative gain at 20, nDCG@20, over the held-out
+ratings of MovieLens-100K's predefined \texttt{u1} split~\cite{movielens2016},
+with an item counted as relevant when its held-out rating is at least four and
+with items already rated in training excluded from the ranking. The split has 943
+users and 1{,}682 items. Our metric was cross-checked against an independent
+implementation on two hundred random instances. Because the relevance convention
+differs, our absolute values are a within-project baseline and are not comparable
+to the numbers \nudgeplain{} reports on Netflix data.

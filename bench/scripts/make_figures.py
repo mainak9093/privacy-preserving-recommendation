@@ -914,7 +914,11 @@ def fig_malicious(poison_rows, dos_rows):
         ax1.set_xticklabels([str(v) for v in x])
         ax1.set_xlabel("colluding clients, each with distinct targets")
         ax1.set_ylabel("nDCG@20 for the HONEST users")
-        ax1.set_title("The cliff is at exactly $d$", fontsize=9)
+        # ax1.set_title("The cliff is at exactly $d$", fontsize=9)
+        # Only powers of two were run (1, 2, 4, 8, 16, 32), so the data puts
+        # the collapse BETWEEN 8 and 16. "Exactly d" was more than it shows.
+        ax1.set_title("The model collapses between 8 and 16 colluders",
+                      fontsize=9)
         ax1.legend(fontsize=7.5, loc="lower left")
         ax1.grid(axis="x", visible=False)
 
@@ -968,7 +972,8 @@ def fig_malicious(poison_rows, dos_rows):
                   f"{min(r['ndcg_rel_pct'] for r in below):+.1f}%, "
                   f"{min(r['attackers'] for r in at)} colluders cost "
                   f"{min(r['ndcg_rel_pct'] for r in at):+.1f}% -- the model is "
-                  f"gone at d")
+                  # f"gone at d")
+                  f"gone somewhere between them (only powers of 2 were run)")
     if amp:
         here = next((r for r in amp if r["domain_bits"] == 11), amp[0])
         print(f"    malicious: at db={here['domain_bits']}, "

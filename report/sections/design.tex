@@ -1,0 +1,181 @@
+%% ==========================================================================
+%%  FINAL REPORT --- SECTION 4, SYSTEM DESIGN
+%%  Source: design/ARCHITECTURE-draft-v1.md sections 1-7 and its Decisions
+%%  Log, corrected wherever the implementation settled a question differently.
+%% ==========================================================================
+\section{System design}
+\label{sec:design}
+
+\sys{} has three stages that form a cycle (Figure~\ref{fig:system}). Training
+runs periodically over all users and produces the model. Serving and delivery
+run per user, online. The harvest carries what users fetched back into the next
+round of training.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    font=\small,
+    box/.style={draw, rounded corners=2pt, align=center, inner sep=4pt,
+                minimum height=10mm},
+    note/.style={font=\scriptsize, align=left, text width=44mm},
+    >={Stealth[length=5pt]}
+  ]
+  \node[box, minimum width=44mm] (train) at (0,0)
+    {\textbf{Training} \quad $\party{0}, \party{1}, \party{2}$\\
+     power iteration on $\shr{\ratings}$};
+  \node[box, minimum width=44mm] (serve) at (7.2,0)
+    {\textbf{Serving} \quad $\party{0}, \party{1}, \party{2}$\\
+     $\shr{\mathbf{s}} = \shr{\avec{i}}\,\itemembed$, local};
+  \node[box, minimum width=44mm] (user) at (7.2,-2.7)
+    {\textbf{User}\\ reconstructs $\mathbf{s}$, picks top $\topk$};
+  \node[box, minimum width=44mm] (pir) at (0,-2.7)
+    {\textbf{Delivery} \quad $\party{0}, \party{1}$\\
+     DPF-PIR, one key per fetch};
+
+  \draw[->] (train) -- node[above, font=\scriptsize]{$\itemembed$ public,
+    $\shr{\userembed}$ shared} (serve);
+  \draw[->] (serve) -- node[right, font=\scriptsize]{score shares} (user);
+  \draw[->] (user) -- node[above, font=\scriptsize]{$\topk$ DPF key pairs} (pir);
+  \draw[->, dashed] (pir) -- node[left, font=\scriptsize, align=right]
+    {harvest: shared\\ consumption counts} (train);
+
+  \node[note, below=3mm of pir] {each server expands its key over all
+    $2^{11}$ records, so the work never depends on the index};
+  \node[note, below=3mm of user] {selection happens on the user's machine,
+    so no server learns the ranking};
+\end{tikzpicture}
+\caption{The \sys{} cycle. Solid arrows run in every experiment in this report.
+The dashed harvest arrow is implemented and tested as a library path
+(Section~\ref{sec:design:harvest}) but is not yet driven by the networked server
+binaries, and every training run here reads its ratings from disk.}
+\label{fig:system}
+\end{figure}
+
+\subsection{Training}
+\label{sec:design:train}
+
+Training takes $\shr{\ratings}$ and runs \nudgeplain{}'s $\ApproxFactor$ under
+replicated sharing: for each component, $\iters$ rounds of two shared
+matrix--vector products, a projection against the rows of $\itemembed$ already
+found, and a normalisation. Appendix~\ref{app:protocols} gives it as
+Algorithm~\ref{alg:factor}. Three pieces of it need design decisions of their
+own.
+
+\paragraph{Where truncations go.} Ratings are integers, held at scale zero, so the
+two matrix products need no truncation of their own, only a fixed rescaling
+shift afterwards that keeps $\norm{\mathbf{v}}^2$ from overflowing. The remaining
+truncations sit in orthogonalisation and normalisation, and each costs a
+three-round protocol. Orthogonalisation can be \emph{deferred}: subtract the
+projections at scale $3\fracbits$ and truncate once by $2\fracbits$. Or it can be
+\emph{immediate}: truncate the inner products first and the result afterwards,
+two truncations that never exceed scale $2\fracbits$. Deferral saves a
+truncation and costs $\fracbits$ bits of headroom, and whether that fits depends
+on $\bits$, $\fracbits$, $\items$ and $\dime$. So \sys{} derives the schedule from
+public parameters at start-up, proves it fits with at least eight spare bits, and
+refuses to run otherwise. At $\bits = 64$ on MovieLens-100K the deferred schedule
+does not fit and training uses the immediate one, with 21 bits to spare. At
+$\bits = 128$ the deferred schedule fits with 67.
+
+\paragraph{How to normalise.} Normalising needs $1/\norm{\mathbf{v}}$ on a
+shared $\mathbf{v}$. \sys{} has two implementations behind one interface. The
+spec-faithful one follows \nudgeplain{}: a DCF-based gate finds the most
+significant non-zero bit of $\norm{\mathbf{v}}^2$, which gives a first
+approximation to $1/\norm{\mathbf{v}}$, and Newton--Raphson refines it. It
+reveals nothing. The second opens $\norm{\mathbf{v}}^2$, divides in the clear,
+and rescales by a public constant. It is far cheaper and it leaks, and
+Section~\ref{sec:threat:gaps} states exactly what that costs the security
+argument. Every result records which normaliser produced it.
+
+\paragraph{Keeping $\itemembed$ public.} Because each finished row of
+$\itemembed$ is opened, projecting against it is a product of shares with public
+values, which needs no multiplication protocol. Our implementation priced the
+alternative: keeping $\itemembed$ shared makes one small orthogonalisation cost
+6 rounds and 1{,}800 bytes where the public version costs none. We keep
+\nudgeplain{}'s choice, and Section~\ref{sec:leak} measures its consequence.
+
+\subsection{Serving}
+\label{sec:design:serve}
+
+Each server holds a share of the user's embedding $\avec{i}$ and the public
+$\itemembed$, so it computes its share of all $\items$ scores locally, with no
+communication between servers. The user also supplies a shared mask carrying a
+large negative sentinel at the items it has already rated. The servers add it to
+their shares, which is again local, and send the result to the user, who
+reconstructs the score vector and selects the top $\topk$.
+
+The design draft specified an oblivious top-$\topk$ selector run by the servers.
+We cut it: once the user reconstructs the scores, no server learns the selection
+whether or not an oblivious selector exists, so the selector would protect
+something already protected. The cost is that the user downloads a score share of
+length $\items$ from each server, which Section~\ref{sec:limits} returns to.
+
+\subsection{Delivery}
+\label{sec:design:deliver}
+
+Records are packed to a fixed width of $L = 256$ bytes, since a variable-width
+record would leak its identity through the reply length. MovieLens-100K's 1{,}682
+items pad to a domain of $2^{11} = 2{,}048$ entries, and padding records are all
+zero, which leaks nothing because they are the same width as real ones. The DPF
+is a two-party primitive, so $\party{0}$ and $\party{1}$ answer PIR queries and
+$\party{2}$ does not. All three servers hold the catalogue, which is public. For
+each of its $\topk$ recommendations the user sends one key to each PIR server,
+and the difference of the two answers is the record.
+
+\subsection{Closing the loop}
+\label{sec:design:harvest}
+
+When a PIR server expands a key, the expansion it computes is its share of the
+indicator vector of the fetched item. \pirsonaplain{}'s observation is that this
+is exactly a secret-shared record of consumption, already computed and normally
+thrown away. \sys{}'s answer routine returns the expansion alongside the answer,
+an accumulator sums it over queries, and a one-round conversion turns the two PIR
+servers' 2-of-2 shares into the 2-of-3 replicated form training consumes. A
+further one-round check, added after Section~\ref{sec:leak:malicious} found the
+need for it, confirms that each query carries weight exactly one.
+Algorithm~\ref{alg:harvest} gives both.
+
+We state the extent of this plainly. The harvest, the conversion and the weight
+check are implemented, and a test drives real PIR queries through them and
+multiplies the result under the training substrate. The networked server
+binaries do not yet accumulate expansions across sessions or retrain from them,
+and every training run in this report reads MovieLens ratings from disk.
+
+\subsection{Design decisions}
+\label{sec:design:decisions}
+
+Table~\ref{tab:decisions} collects the decisions that shape everything else,
+each with the reason recorded when it was taken.
+
+\begin{table}[t]
+\centering
+\small
+\caption{The design decisions that matter most, from the project's decisions
+log.}
+\label{tab:decisions}
+\begin{tabular}{@{}p{5.0cm} p{9.6cm}@{}}
+\toprule
+Decision & Reason \\
+\midrule
+Power iteration, not gradient descent & Matrix--vector products cost
+  communication in the output length only, so only truncation and normalisation
+  are expensive. This is \nudgeplain{}'s core idea. \\
+Three servers, 2-of-3 replicated sharing, semi-honest & Matches \nudgeplain{}
+  exactly, one fewer non-colluding party than \pirsonaplain{}'s four. \\
+$\itemembed$ opened row by row & Makes orthogonalisation local. The cost is the
+  leakage measured in Section~\ref{sec:leak}. \\
+One DPF implementation for both halves & The same primitive is the PIR query and,
+  through the DCF built beside it, the comparison gate. Forking it would double
+  the code most likely to be wrong. \\
+Top-$\topk$ on the user's machine & The user reconstructs the scores anyway, so a
+  server-side oblivious selector would protect nothing further. \\
+Fixed-width records & A variable width leaks the record through the reply
+  length. \\
+Ring width a template parameter & Whether $\bits = 64$ suffices was an open
+  question, and the answer turned out to depend on which normaliser runs
+  (Section~\ref{sec:eval:ring}). \\
+Three OS processes, no threads & Each server serves one client to completion, so
+  nothing is concurrent, and separate processes make that true rather than
+  likely. \\
+\bottomrule
+\end{tabular}
+\end{table}

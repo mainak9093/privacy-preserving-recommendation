@@ -1,0 +1,83 @@
+%% ==========================================================================
+%%  FINAL REPORT --- APPENDIX B, REPRODUCING EVERY FIGURE
+%%  Replaces the stub's optional "appendix_extra_figures": a map from each
+%%  figure to its data and to the command that writes the data is worth more
+%%  to a reader checking a claim than overflow figures would be.
+%% ==========================================================================
+\section{Reproducing every figure and number}
+\label{app:reproduce}
+
+Every figure in this report is drawn by \texttt{mingw32-make figures} from raw
+rows committed under \texttt{bench/results/}, and none is edited by hand. Each
+row carries the commit it was produced at, and the figure script uses the newest
+commit's rows in each file. One command rebuilds everything from a clean
+checkout, on MSYS2's g++ and Python~3.13:
+%
+\begin{center}
+\texttt{mingw32-make reproduce}
+\end{center}
+%
+It fetches MovieLens-100K, builds, runs all eighteen test binaries, trains the
+eighteen private models, runs the studies and benchmarks, and draws the figures
+and this report. It takes on the order of a quarter of an hour on the
+development laptop, and
+\texttt{mingw32-make reproduce-bg} followed by \texttt{mingw32-make watch} runs it
+in the background with a progress bar. Table~\ref{tab:reproduce} gives the
+producer of each figure's data, for a reader who wants to rerun one piece.
+
+\begin{table}[h]
+\centering
+\footnotesize
+\caption{Where each figure's data comes from.}
+\label{tab:reproduce}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{4.3cm}
+                >{\raggedright\arraybackslash}p{4.6cm}
+                >{\raggedright\arraybackslash}p{5.6cm}@{}}
+\toprule
+Figure & Data file in \texttt{bench/results/} & Written by \\
+\midrule
+\ref{fig:keysize}, key size & none, a closed form & asserted by
+  \texttt{tests/test\_dpf\_serialize.cpp} \\
+\ref{fig:ell}, quality against $\iters$ & \texttt{oracle\_ell\_sweep.jsonl} &
+  checked by \texttt{model/ell\_sweep.py} \\
+\ref{fig:compose}, each half isolated & \texttt{bench\_compose.jsonl} &
+  \texttt{mingw32-make bench} \\
+\ref{fig:pircost}, the read against baselines & \texttt{bench\_baseline.jsonl} &
+  \texttt{mingw32-make bench} \\
+\ref{fig:sweep}, scaling & \texttt{bench\_sweep.jsonl} &
+  \texttt{mingw32-make bench} \\
+\ref{fig:stages}, where rounds go & \texttt{bench\_stages.jsonl} &
+  \texttt{mingw32-make bench} \\
+\ref{fig:distinguisher}, wire distinguisher & \texttt{distinguisher\_result.jsonl}
+  & \texttt{mingw32-make distinguisher} \\
+\ref{fig:timing}, server timing & \texttt{bench\_timing.jsonl} &
+  \texttt{mingw32-make bench} \\
+\ref{fig:attack}, reconstruction attack & \texttt{leakage\_attack.jsonl} &
+  \texttt{model/attack.py} \\
+\ref{fig:decoy}, decoys & \texttt{leakage\_attack.jsonl} &
+  \texttt{model/attack.py} \\
+\ref{fig:dp}, differential privacy & \texttt{dp\_study.jsonl} &
+  \texttt{model/dp\_study.py} \\
+\ref{fig:malicious}, malicious client & \texttt{poison\_study.jsonl},
+  \texttt{bench\_dos.jsonl} & \texttt{model/poison\_study.py},
+  \texttt{mingw32-make bench} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three further sources back numbers that no figure shows. Private-training
+quality (Table~\ref{tab:quality}) is in \texttt{train\_quality.jsonl}, written by
+\texttt{model/score\_private.py} from the eighteen trained models. The
+ring-width study is in \texttt{train.jsonl}, written by \texttt{train
+-{}-headroom-only}. And every number quoted from a test, such as the 227-byte key,
+the one-round weight check, the truncation error bound and the inverse
+square root's error, is printed by \texttt{mingw32-make test}, which must pass
+for any of the above to run.
+
+\paragraph{Two caveats on rerunning.} The oracle's $\iters$ sweep is the one data
+file written by a one-off run rather than by a script in the pipeline. The
+pipeline therefore recomputes it and checks every committed row instead of
+appending new ones, and all six rows reproduce exactly. And rerunning a
+benchmark appends rows at a new commit, which the figures then use, so absolute
+times in a rerun will differ from the ones quoted here by the thermal variation
+Section~\ref{sec:eval:setup} describes. Rounds, bytes and quality will not.

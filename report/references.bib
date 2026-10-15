@@ -24,6 +24,10 @@
 %%  not be confirmed. The DBLP-verified ePrint record is also included as
 %%  nudge2026eprint.
 %%
+%%  A SECOND hand-built entry, analyzegauss2014, was added on 2026-09-24 for
+%%  the final report. It is flagged at the entry itself and must be checked
+%%  against DBLP before submission.
+%%
 %%  READING TIER (governs what the survey may assert about each work):
 %%    A = full PDF read      -- mechanism, quotes, specific numbers permitted
 %%    B = abstract/intro read -- problem, setting, headline claim only
@@ -44,6 +48,26 @@
   isbn         = {978-1-939133-58-8},
   url          = {https://www.usenix.org/conference/usenixsecurity26/presentation/henzinger},
   note         = {Full version: IACR ePrint 2026/179}
+}
+% HAND-BUILT 2026-09-24, NOT DBLP-VERIFIED. The final report needs it: the
+% DP study (model/dp_study.py) calibrates its noise by this paper's Gaussian
+% mechanism, which Nudge section 9 cites without stating. DBLP answered with a
+% bot-check page from this machine, so the fields below were entered by hand
+% (intended DBLP key conf/stoc/DworkTT014). Check author list, pages and DOI
+% against DBLP before the final submission, then replace this comment with the
+% usual "% dblp:" line.
+@inproceedings{analyzegauss2014,
+  author       = {Cynthia Dwork and
+                  Kunal Talwar and
+                  Abhradeep Thakurta and
+                  Li Zhang},
+  title        = {Analyze Gauss: Optimal Bounds for Privacy-Preserving Principal
+                  Component Analysis},
+  booktitle    = {Symposium on Theory of Computing, {STOC} 2014},
+  pages        = {11--20},
+  publisher    = {{ACM}},
+  year         = {2014},
+  doi          = {10.1145/2591796.2591883}
 }
 % dblp: conf/ccs/NikolaenkoIWJTB13
 @inproceedings{nikolaenko2013,

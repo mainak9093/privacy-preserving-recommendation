@@ -1,0 +1,125 @@
+%% ==========================================================================
+%%  FINAL REPORT --- SECTION 1, INTRODUCTION
+%%  Self-contained: the survey's introduction.tex describes the survey and is
+%%  left untouched, since it is the source of a submitted document.
+%% ==========================================================================
+\section{Introduction}
+\label{sec:intro}
+
+A recommender system is built from the most revealing data its users produce:
+what they watched, read and bought. That this data is identifying, and not
+merely sensitive, was shown by Narayanan and Shmatikov~\cite{narayanan2008}, who
+matched records in the anonymised Netflix Prize dataset to public profiles and
+report ``uncovering their apparent political preferences and other potentially
+sensitive information''. A recommender that its operator cannot read therefore
+has to protect more than one thing. It has to protect the ratings the model is
+trained on, and it has to protect what the user does with the recommendations
+afterwards, because fetching a recommended item says which item it was.
+
+\subsection{Two papers, two halves}
+\label{sec:intro:gap}
+
+The course handed us two systems that each address one of these. \nudge{}
+trains a matrix factorisation of the rating matrix across three servers, at most
+one of them compromised, under 2-of-3 replicated secret sharing. Its central
+observation is that a matrix--vector product under this sharing costs
+communication proportional to the output vector rather than to the matrix, so an
+algorithm written as a chain of such products with a few non-linear steps
+between them is cheap. Power iteration has that shape. \nudgeplain{} publishes
+the resulting item embeddings $\itemembed$ in the clear, by design, and computes
+each user's scores in shared form. It then stops, and says so: the system
+``relies on other means (e.g., Apple's private relay, Tor, or cryptographic
+private information retrieval) to let users fetch data items in a private
+way''~\cite{nudge2026}.
+
+\pirsona{} addresses the fetch. Users retrieve items by multi-server private
+information retrieval (PIR), and the servers harvest a secret-shared record of
+what each user consumed directly from the PIR queries, so the next round of
+training needs no separate upload. Its training core is a ``carefully optimized
+4PC Boolean matrix factorization'', and its authors are explicit that they
+``opted for the most performant primitives available (at the expense of rather
+strong non-collusion assumptions)''~\cite{pirsona2021}.
+
+Neither paper builds both halves well, and neither measures what happens when
+they meet. That meeting point is where this project sits. \nudgeplain{}'s public
+$\itemembed$ is a complete latent-factor model of the catalogue, known to
+everyone, so a fetch observed in the clear is not an isolated fact about a user.
+It is a projection of that user's private embedding onto a basis the observer
+already holds. Section~\ref{sec:leak} measures how quickly those projections
+give the user away.
+
+\subsection{What we built and what we found}
+\label{sec:intro:contrib}
+
+\sys{} is the composition: \nudgeplain{}'s training core, followed by
+two-server PIR built from a distributed point function (DPF), with
+\pirsonaplain{}'s harvest connecting delivery back to training. Everything
+cryptographic is written from scratch in C++17, including the DPF, which serves
+both as the read layer and as the comparison gate inside training. Our
+contributions are these.
+
+\begin{enumerate}
+  \item \textbf{A working composition.} Private training runs end to end on
+    MovieLens-100K, the trained model is served from three separate server
+    processes over TCP, and each recommended record is fetched by DPF-PIR and
+    checked byte for byte against a cleartext lookup
+    (Sections~\ref{sec:design} and~\ref{sec:impl}).
+
+  \item \textbf{The cost of the composition, measured half by half.} Composing
+    costs exactly the sum of the halves, which the benchmark asserts to the
+    byte. \nudgeplain{}'s Theorem~4.2 is measured rather than quoted:
+    quadrupling the input matrix raises traffic by 4.4\% and leaves the round
+    count unchanged. Truncation accounts for 68.6 to 74.4\% of all rounds, and
+    the FSS comparison gate for 3.1\%. A normaliser that reveals nothing costs
+    between 0.0018 and 0.0041 of nDCG@20 and 5.3 times the rounds, and it
+    cannot run in a 64-bit ring at all (Section~\ref{sec:eval}).
+
+  \item \textbf{Why the fetch must be private, and why cheaper defences fail.}
+    Ten observed fetches recover a user's private embedding to a cosine of
+    0.84, well above a popularity control. Decoy traffic at five times the
+    real volume leaves the attack far above that control, and \nudgeplain{}'s
+    own differential-privacy mechanism makes the attack stronger while
+    removing 71\% of recommendation quality. We reconcile that figure with
+    \nudgeplain{}'s own 17\% (Section~\ref{sec:leak}).
+
+  \item \textbf{A malicious-client hole in the composition, and its partial
+    fix.} The harvest path accepted a vote of any weight. We measure what that
+    buys an attacker, close weight inflation with a one-round check, show by
+    construction what the check does not close, and measure the
+    denial-of-service amplification that full-domain evaluation invites
+    (Section~\ref{sec:leak:malicious}).
+
+  \item \textbf{A stated security argument.} A threat model with six adversary
+    classes, a leakage profile, and a real/ideal simulation sketch that walks
+    every message. The sketch shows that one of our two normalisers is not
+    simulable against the intended functionality, and we say which numbers
+    came from it (Section~\ref{sec:threat}).
+\end{enumerate}
+
+We also report results that go against us, because a reader deciding whether to
+build this needs them. On a wide-area link, downloading the entire catalogue
+beats our private read by a factor of 4.6, since delivery costs one round trip
+per recommendation and we did not batch them. The spec-faithful normaliser loses
+most of its quality at a single power iteration. And one bug, a silently
+clamping comparison range, would have been reported as ``privacy costs 24\% of
+recommendation quality'' had we measured only cost.
+
+\paragraph{What this report does not claim.} Security is semi-honest, and two
+colluding servers learn everything. The evaluation runs on MovieLens-100K, not
+on MovieLens-1M or Netflix scale. Wide-area profiles are emulated at the channel
+level, not with kernel network emulation. The security argument is a sketch.
+Section~\ref{sec:limits} states each of these in full.
+
+\subsection{Organisation}
+\label{sec:intro:org}
+
+Section~\ref{sec:threat} fixes the threat model and the security argument.
+Section~\ref{sec:background} covers the primitives, and
+Section~\ref{sec:design} the system design. Section~\ref{sec:impl} describes the
+implementation and how it was verified, and Section~\ref{sec:eval} evaluates its
+cost and quality. Section~\ref{sec:leak} measures what the composition leaks and
+what a malicious client can do. Section~\ref{sec:related} places the work,
+Section~\ref{sec:limits} lists its limitations, and
+Section~\ref{sec:conclusion} concludes. Appendix~\ref{app:protocols} gives the
+protocols as pseudocode, and Appendix~\ref{app:reproduce} maps every figure to
+the command and the data file that produce it.

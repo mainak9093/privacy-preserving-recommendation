@@ -1,5 +1,10 @@
 # OblivRec — handover, status, and what is left before 12 September
 
+> **Final submission note, 2026-10-15.** This is the September working handover, kept as the
+> record of how the work was divided at the time. It is not the current status. For the final
+> state of the project read [`README.md`](../README.md) and the final report,
+> `report/final.pdf`. Every task listed below as open was closed or explicitly scoped out there.
+
 **Written 2026-09-09, updated 2026-09-11. Milestone 2 is due Saturday 12 September.**
 
 > **Update 2026-09-11: Task A below is DONE.** The networking landed, so the Phase 2 exit
