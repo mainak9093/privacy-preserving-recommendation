@@ -6,25 +6,32 @@ at plotting time, not deleted, so these files only grow.
 
 ## What writes what
 
-| Program | Run with | Data file | What it measures |
-|---|---|---|---|
-| `bench_compose.cpp` | `mingw32-make bench` | `bench_compose.jsonl` | The five arms B1, B2, B3, FULL and B5, and that composing costs exactly the sum of the halves |
-| `bench_sweep.cpp` | `mingw32-make bench` | `bench_sweep.jsonl` | Rounds and bytes against `d`, `ell`, `m`, `b` and `k`, one factor at a time, on four network profiles |
-| `bench_stages.cpp` | `mingw32-make bench` | `bench_stages.jsonl` | Every round and byte attributed to a stage, with the residual checked to be zero |
-| `bench_baseline.cpp` | `mingw32-make bench` | `bench_baseline.jsonl` | One private read against a cleartext lookup and a full download |
-| `bench_dpf.cpp` | `mingw32-make bench` | `bench_dpf.jsonl` | The DPF primitive: generate, evaluate, whole-domain evaluate, serialise |
-| `bench_dos.cpp` | `mingw32-make bench` | `bench_dos.jsonl` | Server work bought by one key, against catalogue size |
-| `bench_timing.cpp` | `mingw32-make bench` | `bench_timing.jsonl` | Server time per record, interleaved across eight records |
-| `scripts/distinguisher.py` | `mingw32-make distinguisher` | `distinguisher_result.jsonl` | A classifier trained on raw wire bytes, with a shuffled-label control |
-| `src/apps/train.cpp` | `./build/train.exe`, and with `--headroom-only` | `train.jsonl` | Rounds and bytes of each training run, its time projected onto each network profile, and whether a truncation schedule fits at three dataset scales |
-| `model/score_private.py` | `reproduce`, step 5 | `train_quality.jsonl` | nDCG@20 of every privately trained model, against the oracle |
-| `model/attack.py` | `py -3.13 model/attack.py` | `leakage_attack.jsonl` | The reconstruction attack, its controls, and decoys |
-| `model/dp_study.py` | `py -3.13 model/dp_study.py` | `dp_study.jsonl` | Nudge's differential privacy: quality, attack strength, signal to noise |
-| `model/poison_study.py` | `py -3.13 model/poison_study.py` | `poison_study.jsonl` | What a malicious client's weighted votes do to the model |
-| A run on 2026-09-06, rechecked by `model/ell_sweep.py` | `py -3.13 model/ell_sweep.py` | `oracle_ell_sweep.jsonl` | The cleartext oracle at each `ell`. The script recomputes every row and fails on a mismatch, and appends nothing |
+`mingw32-make bench` runs the seven benchmarks and appends to one file each:
 
-Commands run from the repository root. The raw wire captures behind the distinguisher (`distinguisher.jsonl`, about 1.5 MB, and
-`transcript.*.jsonl`) are regenerated rather than committed, so `results/` keeps the analysis and its confidence intervals.
+| Program | Data file | What it measures |
+|---|---|---|
+| `bench_compose.cpp` | `bench_compose.jsonl` | The five arms B1, B2, B3, FULL and B5, and that composing costs exactly the sum of the halves |
+| `bench_sweep.cpp` | `bench_sweep.jsonl` | Rounds and bytes against `d`, `ell`, `m`, `b` and `k`, one factor at a time, on four network profiles |
+| `bench_stages.cpp` | `bench_stages.jsonl` | Every round and byte attributed to a stage, with the residual checked to be zero |
+| `bench_baseline.cpp` | `bench_baseline.jsonl` | One private read against a cleartext lookup and a full download |
+| `bench_dpf.cpp` | `bench_dpf.jsonl` | The DPF primitive: generate, evaluate, whole-domain evaluate, serialise |
+| `bench_dos.cpp` | `bench_dos.jsonl` | Server work bought by one key, against catalogue size |
+| `bench_timing.cpp` | `bench_timing.jsonl` | Server time per record, interleaved across eight records |
+
+The rest come from their own commands, run from the repository root:
+
+| Command | Data file | What it measures |
+|---|---|---|
+| `./build/train.exe`, with or without `--headroom-only` | `train.jsonl` | Rounds and bytes of each training run, its time projected onto each network profile, and whether a truncation schedule fits at three dataset scales |
+| `py -3.13 model/score_private.py` | `train_quality.jsonl` | nDCG@20 of every privately trained model, against the oracle |
+| `py -3.13 model/attack.py` | `leakage_attack.jsonl` | The reconstruction attack, its controls, and decoys |
+| `py -3.13 model/dp_study.py` | `dp_study.jsonl` | Nudge's differential privacy: quality, attack strength, signal to noise |
+| `py -3.13 model/poison_study.py` | `poison_study.jsonl` | What a malicious client's weighted votes do to the model |
+| `mingw32-make distinguisher` | `distinguisher_result.jsonl` | A classifier trained on raw wire bytes, with a shuffled-label control |
+| `py -3.13 model/ell_sweep.py` | `oracle_ell_sweep.jsonl` | The cleartext oracle at each `ell`, from a run on 2026-09-06. This script recomputes every row and fails on a mismatch, and appends nothing |
+
+The raw wire captures behind the distinguisher (`distinguisher.jsonl`, about 1.5 MB, and `transcript.*.jsonl`) are regenerated
+rather than committed, so `results/` keeps the analysis and its confidence intervals.
 
 ## The row format
 
