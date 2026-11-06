@@ -16,8 +16,8 @@
 //  entirely locally, with no communication and no multiplication protocol.
 //
 //  The user then reconstructs the score vector and takes the top k IN THE
-//  CLEAR, on their own machine. That is the corrected design recorded in
-//  MEMORY.md section 8 on 2026-08-20: the servers never learn T because the
+//  CLEAR, on their own machine. That is the corrected design, settled on
+//  2026-08-20: the servers never learn T because the
 //  user selects it, not because an oblivious selector hides it. The
 //  oblivious top-k apparatus was cut on 2026-09-06 for exactly this reason.
 //

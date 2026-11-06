@@ -13,7 +13,7 @@
 namespace oblivrec {
 
 template <typename Ring>
-MsnzbGate<Ring>::MsnzbGate(Mpc3<Ring>& s, std::uint32_t lo, std::uint32_t hi,
+MsnzbGate<Ring>::MsnzbGate(Mpc3<Ring>& /*s*/, std::uint32_t lo, std::uint32_t hi,
                            std::uint32_t value_bits)
     : lo_(lo), hi_(hi) {
   if (hi < lo) throw std::invalid_argument("MsnzbGate: hi < lo");

@@ -1,5 +1,5 @@
 // ==========================================================================
-//  test_aes.cpp -- the AES correctness oracle (RULES.md C3).
+//  test_aes.cpp -- the AES correctness oracle.
 //
 //  Two layers:
 //    1. FIPS-197 Appendix C.1 known-answer test on the scalar reference.

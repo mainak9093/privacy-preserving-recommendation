@@ -1,5 +1,5 @@
-// Minimal test harness. No framework, because RULES.md A7 forbids new
-// dependencies without asking and this is 40 lines.
+// Minimal test harness. No framework, because the project takes on no new
+// dependencies and this is 40 lines.
 #ifndef OBLIVREC_TEST_HPP
 #define OBLIVREC_TEST_HPP
 #include <cstdio>

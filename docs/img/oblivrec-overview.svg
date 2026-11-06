@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 486" width="1200" height="486" role="img" aria-labelledby="t d">
+  <title id="t">OblivRec: one recommendation session, and what each server sees</title>
+  <desc id="d">Four stages left to right. Private training on secret shares across three servers. Private scoring, where each server multiplies its share by the public item matrix. Local ranking on the user's device. Private fetch from two servers using one short key per film. A dashed arrow returns from the fetch to training, for the harvest. At most one server may be corrupted.</desc>
+  <style>
+    .sans { font-family: 'Manrope', 'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif; }
+    .mono { font-family: 'IBM Plex Mono', SFMono-Regular, Consolas, Menlo, monospace; }
+    .tag  { font-size: 11px; fill: #A2B0A9; letter-spacing: .04em; }
+    .name { font-size: 21px; font-weight: 700; fill: #E7EDE4; }
+    .body { font-size: 14.5px; fill: #C9D3CC; }
+    .sees { font-size: 14px; fill: #E7EDE4; }
+    .note { font-size: 14px; fill: #A2B0A9; }
+    .hot  { font-size: 14px; font-weight: 700; fill: #EE7A50; }
+  </style>
+  <rect width="1200" height="486" rx="16" fill="#0E1714"/>
+  <text x="41" y="46" class="mono tag">ONE SESSION, AND WHAT EACH SERVER SEES</text>
+
+  <!-- stage 1 -->
+  <rect x="41" y="66" width="254" height="226" rx="16" fill="#1B2A25"/>
+  <text x="61" y="96" class="mono tag">TRAINING, 3 SERVERS</text>
+  <text x="61" y="128" class="sans name">Private training</text>
+  <text x="61" y="156" class="sans body">Power iteration on ratings</text>
+  <text x="61" y="176" class="sans body">split into secret shares</text>
+  <line x1="61" y1="196" x2="275" y2="196" stroke="#2A3A34"/>
+  <text x="61" y="218" class="mono tag">A SERVER SEES</text>
+  <text x="61" y="242" class="sans sees">Random-looking shares,</text>
+  <text x="61" y="262" class="sans sees">and the public matrix B</text>
+
+  <!-- stage 2 -->
+  <rect x="329" y="66" width="254" height="226" rx="16" fill="#1B2A25"/>
+  <text x="349" y="96" class="mono tag">SERVING, 3 SERVERS</text>
+  <text x="349" y="128" class="sans name">Private scoring</text>
+  <text x="349" y="156" class="sans body">Each server multiplies its</text>
+  <text x="349" y="176" class="sans body">share of your vector by B</text>
+  <line x1="349" y1="196" x2="563" y2="196" stroke="#2A3A34"/>
+  <text x="349" y="218" class="mono tag">A SERVER SEES</text>
+  <text x="349" y="242" class="sans sees">Shares only, and no</text>
+  <text x="349" y="262" class="sans sees">server-to-server traffic</text>
+
+  <!-- stage 3 -->
+  <rect x="617" y="66" width="254" height="226" rx="16" fill="#1E463B"/>
+  <text x="637" y="96" class="mono tag">YOUR DEVICE</text>
+  <text x="637" y="128" class="sans name">Local ranking</text>
+  <text x="637" y="156" class="sans body">Adds the score shares and</text>
+  <text x="637" y="176" class="sans body">picks the top ten films</text>
+  <line x1="637" y1="196" x2="851" y2="196" stroke="#3B7563"/>
+  <text x="637" y="218" class="mono tag">A SERVER SEES</text>
+  <text x="637" y="242" class="sans sees">Nothing. No server ever</text>
+  <text x="637" y="262" class="sans sees">forms a ranking</text>
+
+  <!-- stage 4 -->
+  <rect x="905" y="66" width="254" height="226" rx="16" fill="#1B2A25"/>
+  <text x="925" y="96" class="mono tag">DELIVERY, 2 SERVERS</text>
+  <text x="925" y="128" class="sans name">Private fetch</text>
+  <text x="925" y="156" class="sans body">One 227-byte key per server,</text>
+  <text x="925" y="176" class="sans body">expanded over every film</text>
+  <line x1="925" y1="196" x2="1139" y2="196" stroke="#2A3A34"/>
+  <text x="925" y="218" class="mono tag">A SERVER SEES</text>
+  <text x="925" y="242" class="sans sees">A pseudorandom key,</text>
+  <text x="925" y="262" class="sans sees">not which film you chose</text>
+
+  <!-- forward arrows -->
+  <g stroke="#6C7D75" stroke-width="2" fill="none">
+    <line x1="299" y1="179" x2="321" y2="179"/>
+    <line x1="587" y1="179" x2="609" y2="179"/>
+    <line x1="875" y1="179" x2="897" y2="179"/>
+  </g>
+  <g fill="#6C7D75">
+    <path d="M325 179 l-8 -5 v10 z"/>
+    <path d="M613 179 l-8 -5 v10 z"/>
+    <path d="M901 179 l-8 -5 v10 z"/>
+  </g>
+
+  <!-- the harvest loop -->
+  <path d="M1032 296 V344 H168 V304" fill="none" stroke="#EE7A50" stroke-width="2" stroke-dasharray="7 6"/>
+  <path d="M168 296 l-5 9 h10 z" fill="#EE7A50"/>
+  <rect x="244" y="330" width="712" height="28" fill="#0E1714"/>
+  <text x="600" y="349" text-anchor="middle" class="sans"><tspan class="hot">Harvest</tspan><tspan class="note">  Each fetch also yields shares of what was consumed, the input to the next training round</tspan></text>
+
+  <!-- the assumption -->
+  <line x1="41" y1="392" x2="1159" y2="392" stroke="#2A3A34"/>
+  <text x="41" y="424" class="sans sees">Assumes at most one corrupted server, and that servers follow the protocol.</text>
+  <text x="41" y="450" class="sans note">Two colluding servers learn everything. The item matrix B is public by design, which is why the fetch has to be private.</text>
+</svg>

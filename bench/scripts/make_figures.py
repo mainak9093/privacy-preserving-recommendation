@@ -1,9 +1,9 @@
 """Regenerate every figure in the report from bench/results/*.jsonl.
 
-ARCHITECTURE section 10 and RULES B5 both require that every figure comes from
-this script and is never hand-edited. That is the whole point of it: a figure
-that was touched by hand cannot be regenerated, and a number that cannot be
-regenerated is a number nobody can defend in a viva.
+ARCHITECTURE section 10 requires that every figure comes from this script and
+is never hand-edited. That is the whole point of it: a figure that was touched
+by hand cannot be regenerated, and a number that cannot be regenerated is a
+number nobody can defend.
 
 The results files are APPEND-ONLY. A bad run is superseded by a new one and
 filtered out here by git_sha, never deleted. By default each figure uses the

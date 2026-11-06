@@ -1,5 +1,5 @@
 // ==========================================================================
-//  test_dpf_exhaustive.cpp -- the DPF correctness oracle (RULES.md C3).
+//  test_dpf_exhaustive.cpp -- the DPF correctness oracle.
 //
 //  The oracle is a brute-force point function: beta at alpha, zero elsewhere.
 //

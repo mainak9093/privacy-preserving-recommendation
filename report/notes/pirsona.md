@@ -12,9 +12,6 @@ PDF: `references/Recommendation System PIR.pdf` · BibTeX key: `pirsona2021`
 > histories into a collaborative-filtering model — so recommendations improve without anyone
 > learning what anyone watched.
 
-> ⚠ **This is the instructor's own paper.** He sent it first. Read it properly; a shallow
-> reading will be visible in the viva.
-
 ---
 
 ## 1. Problem

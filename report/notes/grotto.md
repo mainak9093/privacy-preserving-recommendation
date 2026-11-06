@@ -172,7 +172,7 @@ Table 2, vs **LLAMA** (Gupta et al., PoPETs 2022) — selected rows:
 
 ### What we take
 1. **The `(2+1)` PIR-from-selection-vectors construction (§3.2)** is a working blueprint for our
-   delivery layer, from the instructor's own group, in C++.
+   delivery layer, in C++.
 2. **The rotation trick (Observation 1)** — precompute at a random index, exchange one offset,
    rotate locally — is the shared spine of Grotto's PIR *and* Duoram's online phase. One idea,
    two papers.

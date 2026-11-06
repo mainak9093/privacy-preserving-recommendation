@@ -20,8 +20,8 @@
 //
 //  ARCHITECTURE section 10 fixes the phase enum, and bench.hpp ABORTS on a
 //  phase outside it, deliberately, so a typo cannot silently produce rows the
-//  plot script drops. Adding "baseline" would mean amending section 10, which
-//  RULES requires be done before the code, not alongside it.
+//  plot script drops. Adding "baseline" would mean amending section 10 first,
+//  since the architecture is changed before the code, not alongside it.
 //
 //  It would also be the wrong model. These three rows measure the SAME
 //  operation -- retrieve one record -- by three methods. That is exactly what
