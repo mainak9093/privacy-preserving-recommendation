@@ -1,0 +1,8 @@
+# What GitHub's language bar should count: the code we wrote.
+#
+# third_party/ is Nudge's Go reference implementation, kept for reading and never
+# built. The report and docs are documentation, and the results are data.
+third_party/**      linguist-vendored
+report/**           linguist-documentation
+docs/**             linguist-documentation
+bench/results/**    linguist-generated

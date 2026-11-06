@@ -1,6 +1,5 @@
 # ─────────────────────────────────────────────────────────────
-#  PRIVATE — local only, never pushed to the team repo
-#  (see RULES.md B1/B2)
+#  Local working files, not part of the project
 # ─────────────────────────────────────────────────────────────
 RULES.md
 MEMORY.md
@@ -10,6 +9,7 @@ AGENTS.md
 .local/
 project_survey/
 graphify-out/
+.graphifyignore
 
 # ─────────────────────────────────────────────────────────────
 #  Data — downloaded by scripts/fetch_data.py, never committed
@@ -43,28 +43,16 @@ bench/results/distinguisher.jsonl
 bench/results/transcript.jsonl
 bench/results/transcript.*.jsonl
 *.pdf
-!docs/**/*.pdf
-# The two instructor-recommended papers are open access and shared with the team,
-# so everyone reads the same version.
-!references/*.pdf
-# The built survey PDF ships alongside its sources.
-!report/survey.pdf
-# The report PDFs, so teammates can read them without a LaTeX toolchain.
-# midterm.pdf was held back while the only build on disk was the stale
-# 2026-08-15 stub, since tracking that would have shipped a misleading
-# artefact. The real two-page report landed 2026-09-11, so the exception this
-# comment promised is now added. It is the GRADED deliverable; it belongs in
-# the repo.
-!report/midterm_technical.pdf
-!report/midterm.pdf
-# The presentation deck, built from report/slides/survey_slides.tex, which IS
-# tracked -- the deck is reproducible from source (needs the metropolis theme).
-!report/slides/survey_slides.pdf
-# Milestone 3, the graded final deliverables, on the same reasoning: the final
-# report PDF (built by `mingw32-make report` from tracked sources and figures
-# generated from tracked data), and the presentation's PDF export and speaker
-# script. The .pptx itself is not matched by any ignore rule.
+# Reference papers are linked from references/INDEX.md, not redistributed.
+#
+# The project's own documents are tracked, so anyone can read them without
+# a LaTeX toolchain: the final report, the literature survey, the mid-term
+# report and its technical companion, and the two presentation decks.
 !report/final.pdf
+!report/survey.pdf
+!report/midterm_report.pdf
+!report/midterm_technical.pdf
+!report/slides/survey_slides.pdf
 !report/slides/OblivRec_final_presentation.pdf
 !report/slides/OblivRec_presentation_script.pdf
 
@@ -97,7 +85,7 @@ venv/
 .ruff_cache/
 
 # ─────────────────────────────────────────────────────────────
-#  LaTeX (report sources under docs/)
+#  LaTeX build output
 # ─────────────────────────────────────────────────────────────
 *.aux
 *.log

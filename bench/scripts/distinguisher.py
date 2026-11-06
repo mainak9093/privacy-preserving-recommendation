@@ -65,10 +65,10 @@ def git_sha():
     except Exception as e:
         # Do NOT fail silently. This bit for real on 2026-09-10: under memory
         # pressure the git subprocess could not spawn, and every result row was
-        # stamped "unknown", which RULES D5 forbids. A swallowed provenance
+        # stamped "unknown", which loses its provenance. A swallowed provenance
         # failure is invisible in the data and only shows up much later.
         print(f"WARNING: git sha unavailable ({type(e).__name__}: {e}); "
-              "rows will be stamped 'unknown' and RULES D5 is not satisfied",
+              "rows will be stamped 'unknown' and lose their provenance",
               file=sys.stderr)
         return "unknown"
 

@@ -1,7 +1,7 @@
 // ==========================================================================
 //  test_pir.cpp -- the DPF-PIR read layer, against the real catalogue.
 //
-//  The correctness oracle (RULES.md C3) is Catalogue::Record(j) itself: a
+//  The correctness oracle is Catalogue::Record(j) itself: a
 //  private fetch of record j must return byte-for-byte what a direct
 //  cleartext lookup returns. Anything less is not a working delivery layer.
 //

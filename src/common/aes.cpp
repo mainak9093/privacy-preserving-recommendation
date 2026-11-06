@@ -96,7 +96,7 @@ const FixedKeyPrg& Prg() {
 }
 
 // --------------------------------------------------------------------------
-//  Scalar AES-128 reference. Test oracle only (RULES.md C3). Deliberately
+//  Scalar AES-128 reference. Test oracle only. Deliberately
 //  written the textbook way rather than optimised, so that a disagreement
 //  with the AES-NI path points at the AES-NI path.
 // --------------------------------------------------------------------------

@@ -230,7 +230,7 @@ is exactly the instrument for exposing it.
   work, `O(k·b)` to the user. **No DORAM needed.** Simple, shippable, and already the headline win.
 - **(b) Stretch:** *sublinear* selection over an **index** — cluster centroids or an ANN graph —
   traversed obliviously with Duoram/PRAC. This is where the DORAM genuinely belongs, it is the
-  Pacmann/Compass idea rebuilt with the instructor's own tools, and it is the research contribution.
+  Pacmann/Compass idea rebuilt with DORAM tools.
 
 ### 6.4 Why this composes unusually cleanly
 - **Trust models match exactly** (§2) — no new assumption.

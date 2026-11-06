@@ -10,7 +10,9 @@ reliably catch that, so this does it mechanically:
      newest-sha rule make_figures.py uses (its own loader is imported, so the
      two cannot disagree about which rows count);
   2. the recomputed value, formatted as the documents state it, must appear in
-     a specific phrase in each document that states it.
+     a specific phrase in each document that states it: the report, the speaker
+     script, the README, the threat model, the results and architecture pages,
+     and the slides.
 
 So the check fails if the data moves or if a document's wording drifts away
 from its number. Either way the fix is to re-trace that sentence.
@@ -109,6 +111,8 @@ def load_docs(deck):
         "script": norm_md(open("report/slides/final_presentation.md", encoding="utf-8").read()),
         "readme": norm_md(open("README.md", encoding="utf-8").read()),
         "threat": norm_md(open("docs/threat-model.md", encoding="utf-8").read()),
+        "results": norm_md(open("docs/results.md", encoding="utf-8").read()),
+        "arch": norm_md(open("docs/architecture.md", encoding="utf-8").read()),
     }
     if deck:
         docs["deck"] = deck_text(deck)
@@ -124,6 +128,15 @@ CHECKS = []      # (id, ok, detail) for identities asserted directly
 
 def claim(cid, value, *anchors):
     CLAIMS.append((cid, str(value), list(anchors)))
+
+
+def also(cid, doc, pattern):
+    """Another place a claim is stated. Fails loudly on a claim id that does not exist."""
+    for c in CLAIMS:
+        if c[0] == cid:
+            c[2].append((doc, pattern))
+            return
+    raise KeyError(cid)
 
 
 def check(cid, ok, detail):
@@ -541,6 +554,15 @@ def build():
     claim("ring.b128.ml100k", str(h[("ml-100k", 128, 20)]["headroom_bits"]),
           ("report", r"deferred schedule fits with {v}"))
 
+    # ---- the normalisers' cost per call ---------------------------------------------
+    per_call = {r["op"]: r["rounds"] for r in st}
+    claim("stages.normalize.reveal", str(per_call["normalize_reveal"]),
+          ("arch", r"Normalise, revealing \| {v} \|"),
+          ("threat", r"one scalar per call \| {v} \|"))
+    claim("stages.normalize.fss", str(per_call["normalize_fss"]),
+          ("arch", r"Normalise, no leak \| {v} \|"),
+          ("threat", r"nothing \| {v} \|"))
+
     # ---- closed forms the tests assert ---------------------------------------------
     key = 1 + 4 + 16 + 18 * 11 + 64 // 8
     claim("dpf.key.11", str(key),
@@ -551,7 +573,80 @@ def build():
     claim("dpf.exhaustive", f"{leaves / 1e9:.2f}",
           ("report", r"which is {v} × 10\^9 leaf comparisons"),
           ("script", r"That is {v} billion checks"),
-          ("deck", r"\| {v} × 109 \|"))
+          ("deck", r"\| {v} × 109 \|"),
+          ("readme", r"{v} × 10⁹ comparisons"),
+          ("arch", r"{v} × 10⁹ comparisons"))
+
+    # ---- docs/results.md and docs/architecture.md state these as well ---------------
+    for cid, doc, pat in (
+        ("attack.cos.j1", "results", r"One observed fetch gives a cosine of {v}"),
+        ("attack.cos.j10", "results", r"Ten give {v}"),
+        ("attack.next20.j10", "results", r"name {v}% of the user's next"),
+        ("attack.control.j10", "results", r"reaches {v}, so the margin"),
+        ("attack.margin.j1", "results", r"The margin is {v} after one fetch"),
+        ("attack.margin.min.j2+", "results", r"between {v} and \d\.\d\d from two"),
+        ("attack.margin.max.j2+", "results", r"between \d\.\d\d and {v} from two"),
+        ("attack.random", "results", r"A random direction scores {v}"),
+        ("attack.constraints.j50", "results", r"\({v} against 0\.91 at fifty"),
+        ("attack.cos.j50", "results", r"against {v} at fifty"),
+        ("decoys.r0", "results", r"from {v} to 0\.705"),
+        ("decoys.r40", "results", r"to {v}, against"),
+        ("decoys.floor", "results", r"popularity control at {v}"),
+        ("dp.ndcg.base", "results", r"rows normalised \| {v} \|"),
+        ("dp.ndcg.e1", "results", r"\| {v} \| 0\.9212"),
+        ("dp.drop.pct", "results", r"Quality falls by {v}%"),
+        ("dp.scale", "results", r"which is {v} times larger for Netflix"),
+        ("dp.noise_over_signal", "results", r"by a factor of {v}"),
+        ("dp.users.under25", "results", r"leaves {v} of our 943"),
+        ("compose.full.bytes", "results", r"it is {v} bytes"),
+        ("compose.delivery.ms", "results", r"Private delivery adds {v} ms"),
+        ("compose.training.ms", "results", r"private training adds {v} ms"),
+        ("compose.b5.faster", "results", r"B5 is {v} times faster"),
+        ("compose.b5.bytes", "results", r"sends {v} times as many bytes"),
+        ("compose.batched.ms", "results", r"would take {v} ms"),
+        ("compose.b5.ms", "results", r"against B5's {v} ms"),
+        ("sweep.mb.235", "results", r"traffic from {v} to"),
+        ("sweep.mb.943", "results", r"to {v} MB"),
+        ("sweep.growth.pct", "results", r"an increase of {v}%"),
+        ("sweep.per_user", "results", r"linear at {v} bytes"),
+        ("sweep.wan_a.total", "results", r"one run takes {v} s"),
+        ("sweep.wan_a.latency", "results", r"of which {v} s is latency"),
+        ("stages.trunc.rounds.min", "results", r"Truncation is {v} to"),
+        ("stages.trunc.rounds.max", "results", r"to {v}% of rounds"),
+        ("stages.gate", "results", r"is {v}%\."),
+        ("stages.total.fss", "results", r"Total \| 2,686 \| 2,191 \| {v} \|"),
+        ("stages.total.fss", "arch", r"\| {v} \| 143\.94 MB"),
+        ("stages.ratio", "results", r"by a factor of {v}"),
+        ("quality.noleak.min", "results", r"between {v} and 0\.0041"),
+        ("quality.noleak.max", "results", r"between 0\.0018 and {v}"),
+        ("quality.control.diff", "results", r"at most {v}"),
+        ("quality.ell10.gap", "results", r"the gap is {v}"),
+        ("oracle.ndcg.range", "results", r"stays between {v}"),
+        ("poison.8", "results", r"8, distinct targets \| 0\.4351 \| −{v}%"),
+        ("dos.11.newest", "results", r"buys {v} times its own cost"),
+        ("dos.11.earlier", "results", r"and {v} times in an earlier"),
+        ("dos.16.newest", "results", r"that run measures {v} times"),
+        ("timing.mean.us", "results", r"mean call is {v} µs"),
+        ("timing.spread.us", "results", r"records is {v} µs"),
+        ("timing.within.us", "results", r"the {v} µs of noise"),
+        ("timing.p", "results", r"gives p = {v}\."),
+        ("timing.bound.pct", "results", r"below {v}% of a call"),
+        ("pir.bytes", "results", r"sends {v} bytes per server"),
+        ("pir.fewer", "results", r"{v} times fewer"),
+        ("pir.cpu.ratios", "results", r"\({v} in two committed runs\)"),
+        ("pir.crossover.report", "results", r"below {v} Gbit/s"),
+        ("wire.frame", "results", r"every query frame is {v} bytes"),
+        ("wire.acc.min", "results", r"scores between {v} and"),
+        ("wire.acc.max", "results", r"and {v} on held-out"),
+        ("wire.shuffled", "results", r"labels scores {v}\."),
+        ("ring.b64.t20", "results", r"with {v} spare bits"),
+        ("dpf.key.11", "results", r"that is {v} bytes against"),
+        ("dpf.key.11", "arch", r"DPF key k0 \({v} B\)"),
+        ("ring.b128.ml100k", "arch", r"fits with {v}\."),
+    ):
+        if cid == "dp.users.under25" and not any(c[0] == cid for c in CLAIMS):
+            continue                 # data/ml-100k absent, already reported as skipped
+        also(cid, doc, pat)
 
 
 # --------------------------------------------------------------------------

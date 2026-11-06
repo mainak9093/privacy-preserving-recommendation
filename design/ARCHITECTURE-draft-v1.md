@@ -2,10 +2,9 @@
 
 **System:** OblivRec — Private Matrix Factorization with Private Delivery
 
-> **Final submission note, 2026-10-15.** This draft predates the implementation and is kept for
-> its reasoning and its Decisions Log (§11), which records every place the built system departs
-> from it. The system as built is described in the final report, `report/final.pdf`, Sections 4
-> and 5.
+> **Kept for its reasoning and its Decisions Log (§11).** This draft predates the implementation, and
+> the log records every place the built system departs from it. For the system as built, see
+> [`docs/architecture.md`](../docs/architecture.md) and the [final report](../report/final.pdf).
 
 > ## ⚠ STATUS: NOT THE SOURCE OF TRUTH
 >
@@ -37,7 +36,7 @@
 > is built; any code that contradicts it is a bug in one of the two.* That role is suspended
 > until this document is promoted back.
 
-**References**, both in [`references/`](references/):
+**References**, both in [`references/`](../references/):
 - **[PIRSONA]** Vadapalli, Bayatbabolghani, Henry. *You May Also Like… Privacy: Recommendation Systems Meet PIR.* PoPETs 2021(4):30–53.
 - **[NUDGE]** Henzinger, Dauterman, Corrigan-Gibbs, Boneh. *Nudge: A Private Recommendations Engine.* USENIX Security 2026.
 
@@ -336,8 +335,7 @@ are the critical path for everyone.
 
 ## 9. Threat model and leakage profile
 
-> A **graded deliverable** (D7), not documentation. Most groups will not write one. It costs one
-> page and it is the strongest available signal of maturity.
+> A deliverable in its own right (D7), not documentation.
 
 ### 9.1 Adversary classes
 

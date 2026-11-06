@@ -41,7 +41,7 @@
 //  and the norm is not; using RevealNorm departs from that.
 //
 //  WHAT THE DEPARTURE COSTS IS NOW MEASURED, not an open question. Quality:
-//  0.002 to 0.005 of nDCG@20 for every ell >= 2 (threat-model.md section 7.6).
+//  0.0018 to 0.0041 of nDCG@20 for every ell >= 2 (threat-model.md section 7.6).
 //  Security: the revealing path is NOT simulable against F_train at all and
 //  needs a weaker functionality to be described honestly (section 8.4). So the
 //  trade is a few thousandths of nDCG against a strictly weaker security

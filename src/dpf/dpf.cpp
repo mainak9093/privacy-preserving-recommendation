@@ -1,7 +1,7 @@
 // ==========================================================================
 //  dpf.cpp -- Boyle-Gilboa-Ishai (2,2)-DPF.
 //
-//  Written by us, per REQUIREMENTS D2 and RULES C1. This is the
+//  Written by us, per REQUIREMENTS D2. This is the
 //  pedagogically load-bearing component and the thing a viva probes hardest,
 //  so it is not a library import.
 //

@@ -23,8 +23,8 @@
 //    size is carried as an `iters` extra and a reader can recover the batch
 //    time by multiplying.
 //
-//    ONE ROW PER REPETITION, never an aggregate. RULES B5 calls the JSONL raw
-//    and append-only. Aggregating inside the binary would hide the
+//    ONE ROW PER REPETITION, never an aggregate. The JSONL is raw and
+//    append-only. Aggregating inside the binary would hide the
 //    distribution and force a `stat` field. Medians belong in the plot script.
 //
 //    git_sha, host and timestamp are filled by Emit and are never caller

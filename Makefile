@@ -2,9 +2,9 @@
 #  OblivRec build.
 #
 #  Hand-written rather than CMake: cmake is not installed on the dev box and
-#  installing it would breach the standing no-new-dependencies rule
-#  (RULES.md A7). REQUIREMENTS.md section 9 specifies CMake; amended by a
-#  Decisions Log entry.
+#  installing it would breach the project's no-new-dependencies rule.
+#  docs/history/REQUIREMENTS.md section 9 specified CMake, amended by a
+#  Decisions Log entry in design/ARCHITECTURE-draft-v1.md.
 #
 #  RUN AS:   mingw32-make <target>
 #  with /c/msys64/mingw64/bin FIRST on PATH. Two separate reasons:
@@ -35,6 +35,7 @@
 #    watch            live bar + ETA for a reproduce-bg run. Reads the log
 #                     only, so it adds no load to an already busy machine.
 #    figures          redraw all 12 figures from the committed bench/results rows
+#    readme-figures   the same figures as PNGs in docs/img/, for GitHub
 #    report           build report/final.pdf (needs latexmk; run figures first)
 #    demo             serve the cleartext-trained model to user 42 (in-process)
 #    demo-net         the same protocol across three server processes over TCP
@@ -79,7 +80,7 @@ BENCHBIN := $(patsubst bench/%.cpp,$(BUILD)/bench/%.exe,$(BENCHSRC))
 EXHAUSTIVE_BITS ?= 16
 CHECK_BITS      ?= 8
 
-.PHONY: all test test-exhaustive check bench figures report clean check-toolchain apps demo demo-net distinguisher reproduce reproduce-bg watch FORCE
+.PHONY: all test test-exhaustive check bench figures readme-figures report clean check-toolchain apps demo demo-net distinguisher reproduce reproduce-bg watch FORCE
 
 all: check-toolchain $(TESTBIN) $(APPBIN)
 
@@ -133,7 +134,7 @@ test: all
 #
 #  Deliberately NOT part of `test`. A suite that takes fifteen minutes stops
 #  being run, and then it stops catching anything. Run this after a meaningful
-#  change to the DPF, and record the SHA, date and wall time in MEMORY.md.
+#  change to the DPF.
 # --------------------------------------------------------------------------
 test-exhaustive: all
 	@echo "full DPF sweep to domain_bits=$(EXHAUSTIVE_BITS). At 16 this is ~15 min."
@@ -199,13 +200,13 @@ check: check-toolchain
 #
 #  FORCE is not decoration. GIT_SHA is baked in through CXXFLAGS, and make does
 #  not track CXXFLAGS, so an unchanged bench source at a new HEAD would relink
-#  nothing and every row would silently carry the PREVIOUS commit's SHA. RULES
-#  D5 requires every benchmark number to carry its SHA, so the one translation
-#  unit holding that macro is rebuilt on every invocation. It costs a second.
+#  nothing and every row would silently carry the PREVIOUS commit's SHA. Every
+#  benchmark number has to carry its SHA, so the one translation unit holding
+#  that macro is rebuilt on every invocation. It costs a second.
 #
 #  The binary writes JSONL to stdout and its human-readable table to stderr.
 #  The redirect lives here rather than in C++, so the binary has no file I/O
-#  and no cwd assumption, and append-only-ness (RULES B5) is visible in the
+#  and no cwd assumption, and the results being append-only is visible in the
 #  recipe. A bad run is superseded by a new one and filtered by git_sha at
 #  plotting time, never deleted.
 # --------------------------------------------------------------------------
@@ -226,17 +227,16 @@ bench: check-toolchain $(BENCHBIN)
 	done
 
 # --------------------------------------------------------------------------
-#  ARCHITECTURE section 10 and RULES B5 both require that every figure comes
-#  from this target and is never hand-edited. The script is Day 6 work, so the
-#  target fails with an explanation rather than a Python traceback.
+#  Every figure comes from this target and is never hand-edited. See
+#  bench/scripts/make_figures.py.
 # --------------------------------------------------------------------------
 figures:
-	@test -f bench/scripts/make_figures.py || { \
-	  echo "bench/scripts/make_figures.py does not exist yet. It is Day 6 work."; \
-	  echo "ARCHITECTURE section 10 requires every figure to come from this"; \
-	  echo "target, so figures stay unbuildable until it lands, deliberately."; \
-	  exit 1; }
 	$(PY) bench/scripts/make_figures.py
+
+# The same figures as PNGs in docs/img/, for the README and docs/results.md,
+# since GitHub shows PNG inline but not the report's PDF figures.
+readme-figures:
+	$(PY) scripts/readme_figures.py
 
 # --------------------------------------------------------------------------
 #  The final report, built from report/final.tex. It \includegraphics the
