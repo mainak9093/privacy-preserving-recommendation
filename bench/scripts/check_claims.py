@@ -641,7 +641,7 @@ def build():
         ("wire.shuffled", "results", r"labels scores {v}\."),
         ("ring.b64.t20", "results", r"with {v} spare bits"),
         ("dpf.key.11", "results", r"that is {v} bytes against"),
-        ("dpf.key.11", "arch", r"DPF key k0 \({v} B\)"),
+        ("dpf.key.11", "arch", r"one {v}-byte key to each"),
         ("ring.b128.ml100k", "arch", r"fits with {v}\."),
     ):
         if cid == "dp.users.under25" and not any(c[0] == cid for c in CLAIMS):

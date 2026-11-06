@@ -21,7 +21,7 @@ It composes two published systems that each solve one half:
 library, and the system runs end to end on MovieLens-100K. The contribution is the composition and
 the measurement of it: what it costs, what leaks without it, and where it breaks.
 
-Built by **Shravan Agrawal, Shrasti Dwivedi and Mainak Sarkar** for CS670, Cryptographic Techniques
+Built by **Mainak Sarkar, Shrasti Dwivedi and Shravan Agrawal** for CS670, Cryptographic Techniques
 for Privacy Preservation, at IIT Kanpur, 2026. This is a research prototype. It has not been
 audited and is not for production use.
 
@@ -34,7 +34,7 @@ functions · private information retrieval · TCP · Python (NumPy, Matplotlib, 
 
 | Question | Measured answer |
 |---|---|
-| What does composing the two halves cost? | Exactly their sum: FULL = B2 + B3 − B1 = 64,760,124 bytes, asserted to the byte. On a 30 ms, 100 Mbit/s link, private delivery +2.5 ms and private training +96 ms per session, with one training run shared by 943 users. |
+| What does composing the two halves cost? | Exactly their sum, asserted to the byte: FULL = B2 + B3 − B1 = 64,760,124 bytes, where B1 is a cleartext baseline, B2 adds private delivery and B3 adds private training. On a 30 ms, 100 Mbit/s link, private delivery +2.5 ms and private training +96 ms per session, with one training run shared by 943 users. |
 | Does the fetch really have to be private? | Yes. Ten fetches seen in the clear recover a user's private embedding to cosine 0.84 (popularity control 0.44), enough to predict 56% of that user's next twenty recommendations. |
 | Would something cheaper do? | No. Decoys at 40 per query, five times the traffic: the attack only falls from 0.84 to 0.71. Nudge's own differential privacy at ε = 1: quality −71%, and the attack gets stronger, 0.82 to 0.92. |
 | Where does the cost go? | Not where you would guess: truncation 68.6 to 74.4% of rounds, the FSS comparison gate 3.1%. The breakdown accounts for every round and byte, with a residual of zero. |
@@ -50,9 +50,9 @@ functions · private information retrieval · TCP · Python (NumPy, Matplotlib, 
 above the popularity control is what is learned about the individual rather than about what is
 popular.*
 
-Every number above is recomputed from the committed data by
+These numbers are recomputed from the committed data by
 [`bench/scripts/check_claims.py`](bench/scripts/check_claims.py), and every figure is drawn from raw
-rows in [`bench/results/`](bench/results/). [All twelve figures, explained →](docs/results.md)
+rows in [`bench/results/`](bench/results/). [All twelve figures, explained →](docs/results.md) · [How the data is organised →](bench/README.md)
 
 ---
 
@@ -96,7 +96,7 @@ pseudorandom zero shares, a three-round truncation protocol, a comparison gate t
 bit of a secret value, and an inverse square root under sharing.
 
 **It is verified exhaustively, not sampled.** The point function was checked for every secret index
-against every input in every domain up to 16 bits: 7.16 × 10⁹ comparisons, all correct. All 18 test
+against every input in every domain up to 16 bits (15 on the 128-bit ring): 7.16 × 10⁹ comparisons, all correct. All 18 test
 binaries also run in a hardened build with undefined-behaviour traps, checked iterators and
 bounds-checked spans. Each private component is tested against a cleartext twin.
 
@@ -106,7 +106,7 @@ nothing costs 24% of recommendation quality". The real cause was a comparison ga
 a range, which clamps silently. Rounds and bytes were identical either way, so no cost benchmark
 could have seen it. With the range fixed, the gap is 0.0020.
 
-**Other bugs that only tests found:**
+**Other bugs that testing and review found:**
 
 - A malformed DPF key with an invalid party byte silently evaluated as the other party.
 - The first DPF seeded its keys from a Mersenne Twister, which can be reconstructed from its output.
@@ -235,7 +235,7 @@ Section 9 of the [report](report/final.pdf) has the full list.
 
 ## Credits
 
-Course project for CS670 at IIT Kanpur, by Shravan Agrawal, Shrasti Dwivedi and Mainak Sarkar. The
+Course project for CS670 at IIT Kanpur, by Mainak Sarkar, Shrasti Dwivedi and Shravan Agrawal. The
 state frozen for the course is tag [`v1.0-final`](https://github.com/mainak9093/privacy-preserving-recommendation/releases/tag/v1.0-final).
 
 - [Nudge](https://www.usenix.org/conference/usenixsecurity26/presentation/henzinger): Henzinger,

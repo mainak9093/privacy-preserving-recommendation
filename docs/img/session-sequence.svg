@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 690" width="1200" height="690" role="img" aria-labelledby="t d">
+  <title id="t">The messages in one recommendation session</title>
+  <desc id="d">The user sends a share of the seen-item mask to each of three servers. Each server computes its share of the scores locally and returns it. The user reconstructs the scores and picks the top ten. Then, once per recommended film, the user sends a 227-byte DPF key to each of P0 and P1, each expands its key over all 2,048 records and returns a 256-byte answer share, and the difference of the two answers is the record. P2 takes no part in the fetch.</desc>
+  <style>
+    .sans { font-family: 'Manrope', 'Segoe UI', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif; }
+    .mono { font-family: 'IBM Plex Mono', SFMono-Regular, Consolas, Menlo, monospace; }
+    .tag  { font-size: 11px; fill: #A2B0A9; letter-spacing: .04em; }
+    .who  { font-size: 17px; font-weight: 700; fill: #E7EDE4; text-anchor: middle; }
+    .msg  { font-size: 14px; fill: #E7EDE4; }
+    .note { font-size: 14px; fill: #C9D3CC; text-anchor: middle; }
+    .mute { font-size: 13px; fill: #A2B0A9; text-anchor: middle; }
+  </style>
+  <rect width="1200" height="690" rx="16" fill="#0E1714"/>
+
+  <!-- lifelines -->
+  <g stroke="#2A3A34" stroke-width="2">
+    <line x1="150" y1="84" x2="150" y2="662"/>
+    <line x1="560" y1="84" x2="560" y2="662"/>
+    <line x1="800" y1="84" x2="800" y2="662"/>
+    <line x1="1040" y1="84" x2="1040" y2="662"/>
+  </g>
+
+  <!-- parties -->
+  <rect x="70" y="30" width="160" height="54" rx="8" fill="#1E463B"/>
+  <text x="150" y="63" class="sans who">Your device</text>
+  <rect x="490" y="30" width="140" height="54" rx="8" fill="#1B2A25"/>
+  <text x="560" y="63" class="sans who">P0</text>
+  <rect x="730" y="30" width="140" height="54" rx="8" fill="#1B2A25"/>
+  <text x="800" y="63" class="sans who">P1</text>
+  <rect x="970" y="30" width="140" height="54" rx="8" fill="#1B2A25"/>
+  <text x="1040" y="63" class="sans who">P2</text>
+
+  <!-- training done -->
+  <rect x="490" y="102" width="620" height="36" rx="8" fill="#1B2A25"/>
+  <text x="800" y="125" class="sans note">Training is done. Each server holds shares of A, and the public B.</text>
+
+  <!-- mask, to all three -->
+  <text x="172" y="172" class="sans msg">A share of the seen-item mask, to each server</text>
+  <line x1="150" y1="184" x2="1030" y2="184" stroke="#6C7D75" stroke-width="2"/>
+  <path d="M1038 184 l-10 -5.5 v11 z" fill="#6C7D75"/>
+  <circle cx="560" cy="184" r="4.5" fill="#6C7D75"/>
+  <circle cx="800" cy="184" r="4.5" fill="#6C7D75"/>
+
+  <!-- scoring -->
+  <rect x="490" y="202" width="620" height="36" rx="8" fill="#1B2A25"/>
+  <text x="800" y="225" class="sans note">Each computes its share of the scores locally, with no server-to-server rounds.</text>
+
+  <!-- score shares back -->
+  <text x="172" y="272" class="sans msg">A share of all 1,682 scores, from each server</text>
+  <line x1="1040" y1="284" x2="162" y2="284" stroke="#6C7D75" stroke-width="2" stroke-dasharray="7 6"/>
+  <path d="M152 284 l10 -5.5 v11 z" fill="#6C7D75"/>
+  <circle cx="560" cy="284" r="4.5" fill="#6C7D75"/>
+  <circle cx="800" cy="284" r="4.5" fill="#6C7D75"/>
+
+  <!-- ranking -->
+  <rect x="44" y="302" width="310" height="36" rx="8" fill="#1E463B"/>
+  <text x="199" y="325" class="sans note" fill="#E7EDE4">Adds the shares and picks the top 10 here</text>
+
+  <!-- the fetch loop -->
+  <rect x="24" y="358" width="1152" height="312" rx="16" fill="none" stroke="#EE7A50" stroke-width="1.5" stroke-dasharray="7 6"/>
+  <text x="44" y="384" class="mono tag" style="fill:#EE7A50">ONCE PER RECOMMENDED FILM</text>
+
+  <text x="172" y="414" class="sans msg">DPF key k0, 227 bytes</text>
+  <line x1="150" y1="426" x2="550" y2="426" stroke="#EE7A50" stroke-width="2"/>
+  <path d="M558 426 l-10 -5.5 v11 z" fill="#EE7A50"/>
+
+  <text x="172" y="462" class="sans msg">DPF key k1, 227 bytes</text>
+  <line x1="150" y1="474" x2="790" y2="474" stroke="#EE7A50" stroke-width="2"/>
+  <path d="M798 474 l-10 -5.5 v11 z" fill="#EE7A50"/>
+
+  <rect x="430" y="492" width="500" height="36" rx="8" fill="#1B2A25"/>
+  <text x="680" y="515" class="sans note">Each expands its key over all 2,048 records</text>
+  <text x="1040" y="515" class="sans mute" style="paint-order:stroke;stroke:#0E1714;stroke-width:6px">takes no part</text>
+
+  <text x="172" y="556" class="sans msg">Answer share, 256 bytes</text>
+  <line x1="560" y1="568" x2="162" y2="568" stroke="#6C7D75" stroke-width="2" stroke-dasharray="7 6"/>
+  <path d="M152 568 l10 -5.5 v11 z" fill="#6C7D75"/>
+
+  <text x="172" y="600" class="sans msg">Answer share, 256 bytes</text>
+  <line x1="800" y1="612" x2="162" y2="612" stroke="#6C7D75" stroke-width="2" stroke-dasharray="7 6"/>
+  <path d="M152 612 l10 -5.5 v11 z" fill="#6C7D75"/>
+
+  <rect x="44" y="624" width="310" height="34" rx="8" fill="#1E463B"/>
+  <text x="199" y="646" class="sans note" fill="#E7EDE4">The difference of the two is the record</text>
+</svg>

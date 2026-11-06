@@ -17,6 +17,7 @@ Everything in this repository, by what you want to know.
 
 | Document | What it is |
 |---|---|
+| [`../bench/README.md`](../bench/README.md) | Which program writes which results file, the row format, and how rows become figures and checked claims |
 | [`finding-ell-vs-quality.md`](finding-ell-vs-quality.md) | Why ten power iterations are enough, the measurement behind the operating point |
 | [`../report/survey.pdf`](../report/survey.pdf) | The literature survey that came first: cryptographic approaches to private recommendation |
 | [`../report/README.md`](../report/README.md) | Every document under `report/`, and how to build it |

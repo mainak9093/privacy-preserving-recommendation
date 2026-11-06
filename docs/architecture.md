@@ -21,30 +21,9 @@ of them follow the protocol.
 
 ## One session
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant P0
-    participant P1
-    participant P2
-    Note over P0,P2: Training is done. Each server holds shares of A and the public B.
-    U->>P0: share of the seen-item mask
-    U->>P1: share of the seen-item mask
-    U->>P2: share of the seen-item mask
-    Note over P0,P2: Each computes its share of a x B locally, with no rounds
-    P0-->>U: score shares
-    P1-->>U: score shares
-    P2-->>U: score shares
-    Note over U: Reconstruct the scores and pick the top 10 here
-    loop once per recommended film
-        U->>P0: DPF key k0 (227 B)
-        U->>P1: DPF key k1 (227 B)
-        Note over P0,P1: Each expands its key over all 2,048 records and takes an inner product
-        P0-->>U: answer share (256 B)
-        P1-->>U: answer share (256 B)
-        Note over U: answer0 minus answer1 is the record
-    end
-```
+![The messages in one session: mask shares up, score shares down, then one 227-byte DPF key to each of two servers per film](img/session-sequence.svg)
+
+Each fetch sends one 227-byte key to each PIR server and gets back a 256-byte answer share from each. `P2` holds the catalogue too but takes no part in the fetch, because the DPF is a two-party primitive.
 
 ## Training
 
